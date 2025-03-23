@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
 
@@ -28,12 +28,6 @@ const Dashboard = () => {
   const { data: invoices, isLoading: invoicesLoading } = useQuery('invoices', api.invoices.getAll, {
     onError: (error) => {
       addNotification(`Error fetching invoices: ${error.message}`, 'error');
-    }
-  });
-
-  const { data: contacts, isLoading: contactsLoading } = useQuery('contacts', api.contacts.getAll, {
-    onError: (error) => {
-      addNotification(`Error fetching contacts: ${error.message}`, 'error');
     }
   });
 
@@ -87,7 +81,6 @@ const Dashboard = () => {
     const totalOutstanding = totalInvoiced - totalPaid;
     
     // Calculate quote conversion
-    // This is a simple estimate - assumes quotes and invoices with same client are related
     const invoicedClients = new Set(periodInvoices.map(invoice => invoice.clientName));
     const quotedClients = new Set(periodQuotes.map(quote => quote.clientName));
     const convertedClients = [...quotedClients].filter(client => invoicedClients.has(client));
@@ -108,39 +101,6 @@ const Dashboard = () => {
 
   const metrics = calculateMetrics();
 
-  // Action buttons for creating new items
-  const actionButtons = [
-    { label: 'New Quote', icon: 'document-text', action: () => navigate('/quotes/new') },
-    { label: 'New Invoice', icon: 'document', action: () => navigate('/invoices/new') },
-    { label: 'Add Contact', icon: 'user-add', action: () => navigate('/contacts/new') }
-  ];
-
-  // Render icon based on name
-  const renderIcon = (iconName) => {
-    switch (iconName) {
-      case 'document-text':
-        return (
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        );
-      case 'document':
-        return (
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-        );
-      case 'user-add':
-        return (
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-          </svg>
-        );
-      default:
-        return null;
-    }
-  };
-
   // Format currency function
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-GB', {
@@ -150,7 +110,7 @@ const Dashboard = () => {
   };
 
   // Loading state
-  if (quotesLoading || invoicesLoading || contactsLoading) {
+  if (quotesLoading || invoicesLoading) {
     return (
       <PageLayout title="Dashboard">
         <Loading message="Loading dashboard data..." />
@@ -161,42 +121,30 @@ const Dashboard = () => {
   return (
     <PageLayout title="Dashboard">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to your Dashboard</h1>
+        <h1 className="text-2xl font-bold mb-2">Welcome to your Dashboard</h1>
         <p className="text-gray-600">Here's what's happening with your business</p>
       </div>
 
       {/* Period selector */}
-      <div className="flex justify-end mb-6">
-        <div className="inline-flex shadow-sm rounded-md">
+      <div className="mb-6">
+        <div className="filter-buttons">
           <button
             type="button"
-            className={`px-4 py-2 text-sm font-medium rounded-l-md ${
-              period === 'week' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            } border border-gray-300`}
+            className={`btn ${period === 'week' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setPeriod('week')}
           >
             Week
           </button>
           <button
             type="button"
-            className={`px-4 py-2 text-sm font-medium ${
-              period === 'month' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            } border-t border-b border-gray-300`}
+            className={`btn ${period === 'month' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setPeriod('month')}
           >
             Month
           </button>
           <button
             type="button"
-            className={`px-4 py-2 text-sm font-medium rounded-r-md ${
-              period === 'year' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            } border border-gray-300`}
+            className={`btn ${period === 'year' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setPeriod('year')}
           >
             Year
@@ -205,8 +153,8 @@ const Dashboard = () => {
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
+      <div className="dashboard-stats">
+        <div className="stat-card">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -215,13 +163,13 @@ const Dashboard = () => {
             </div>
             <div>
               <p className="text-gray-500 text-sm font-medium">Invoiced</p>
-              <p className="text-2xl font-bold text-gray-900">{formatCurrency(metrics.totalInvoiced)}</p>
+              <p className="stat-number">{formatCurrency(metrics.totalInvoiced)}</p>
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-4">{metrics.invoiceCount} invoices this {period}</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="stat-card">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -230,7 +178,7 @@ const Dashboard = () => {
             </div>
             <div>
               <p className="text-gray-500 text-sm font-medium">Outstanding</p>
-              <p className="text-2xl font-bold text-gray-900">{formatCurrency(metrics.totalOutstanding)}</p>
+              <p className="stat-number">{formatCurrency(metrics.totalOutstanding)}</p>
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-4">
@@ -238,7 +186,7 @@ const Dashboard = () => {
           </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="stat-card">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -247,7 +195,7 @@ const Dashboard = () => {
             </div>
             <div>
               <p className="text-gray-500 text-sm font-medium">Quotes Created</p>
-              <p className="text-2xl font-bold text-gray-900">{metrics.quoteCount}</p>
+              <p className="stat-number">{metrics.quoteCount}</p>
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-4">
@@ -258,43 +206,60 @@ const Dashboard = () => {
 
       {/* Quick Actions */}
       <div className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {actionButtons.map((button, index) => (
-            <button
-              key={index}
-              className="flex items-center justify-center p-6 bg-white rounded-lg shadow border border-gray-200 hover:bg-gray-50 transition-colors"
-              onClick={button.action}
-            >
-              <div className="mr-3 text-blue-600">
-                {renderIcon(button.icon)}
-              </div>
-              <span className="text-gray-800 font-medium">{button.label}</span>
-            </button>
-          ))}
+        <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+        <div className="quick-actions">
+          <div onClick={() => navigate('/quotes/new')} className="quick-action-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <span>New Quote</span>
+          </div>
+
+          <div onClick={() => navigate('/invoices/new')} className="quick-action-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <span>New Invoice</span>
+          </div>
+
+          <div onClick={() => navigate('/contacts/new')} className="quick-action-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+              <line x1="20" y1="8" x2="20" y2="14"></line>
+              <line x1="23" y1="11" x2="17" y2="11"></line>
+            </svg>
+            <span>Add Contact</span>
+          </div>
         </div>
       </div>
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Recent Quotes */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Quotes</h2>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+        <div className="card">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Recent Quotes</h2>
+            <button 
+              className="btn btn-sm btn-secondary" 
               onClick={() => navigate('/quotes')}
             >
               View All
-            </Button>
+            </button>
           </div>
-          <div className="divide-y divide-gray-200">
+          <div className="recent-items">
             {quotes && quotes.length > 0 ? (
               quotes.slice(0, 5).map((quote) => (
                 <div 
                   key={quote.id} 
-                  className="px-6 py-4 hover:bg-gray-50 cursor-pointer"
+                  className="recent-item"
                   onClick={() => navigate(`/quotes/${quote.id}`)}
                 >
                   <div className="flex justify-between items-center">
@@ -315,7 +280,7 @@ const Dashboard = () => {
                 </div>
               ))
             ) : (
-              <div className="px-6 py-4 text-center text-gray-500">
+              <div className="text-center text-gray-500 py-4">
                 No recent quotes found
               </div>
             )}
@@ -323,23 +288,22 @@ const Dashboard = () => {
         </div>
 
         {/* Recent Invoices */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Invoices</h2>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+        <div className="card">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Recent Invoices</h2>
+            <button 
+              className="btn btn-sm btn-secondary" 
               onClick={() => navigate('/invoices')}
             >
               View All
-            </Button>
+            </button>
           </div>
-          <div className="divide-y divide-gray-200">
+          <div className="recent-items">
             {invoices && invoices.length > 0 ? (
               invoices.slice(0, 5).map((invoice) => (
                 <div 
                   key={invoice.id} 
-                  className="px-6 py-4 hover:bg-gray-50 cursor-pointer"
+                  className="recent-item"
                   onClick={() => navigate(`/invoices/${invoice.id}`)}
                 >
                   <div className="flex justify-between items-center">
@@ -367,7 +331,7 @@ const Dashboard = () => {
                 </div>
               ))
             ) : (
-              <div className="px-6 py-4 text-center text-gray-500">
+              <div className="text-center text-gray-500 py-4">
                 No recent invoices found
               </div>
             )}

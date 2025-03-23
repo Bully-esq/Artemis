@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAppContext } from '../context/AppContext';
 import api from '../services/api';
 import { formatDate } from '../utils/formatters';
@@ -13,8 +13,10 @@ import Dialog from '../components/common/Dialog';
 
 const Quotes = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { addNotification } = useAppContext();
-  const { isAuthenticated } = useAuth();
+  
+  // Local state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -153,17 +155,6 @@ const Quotes = () => {
     </Button>
   );
 
-  // If not authenticated, redirect or show login message
-  if (!isAuthenticated) {
-    return (
-      <PageLayout title="Quotes">
-        <div className="bg-white shadow rounded-lg p-6">
-          <p>Please log in to view and manage quotes.</p>
-        </div>
-      </PageLayout>
-    );
-  }
-
   // Show loading state
   if (isLoading) {
     return (
@@ -196,6 +187,11 @@ const Quotes = () => {
 
   return (
     <PageLayout title="Quotes" actions={pageActions}>
+      {/* Import global table styles */}
+      <style jsx>{`
+        @import url('./global-table-styles.css');
+      `}</style>
+
       {/* Filters and search */}
       <div className="bg-white shadow rounded-lg p-6 mb-6">
         <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
@@ -252,22 +248,22 @@ const Quotes = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Client
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Quote
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Valid Until
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -276,37 +272,39 @@ const Quotes = () => {
                 {filteredQuotes.map((quote) => {
                   const status = getQuoteStatus(quote);
                   return (
-                    <tr key={quote.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {quote.clientName || 'Unknown Client'}
-                        </div>
-                        {quote.clientCompany && (
-                          <div className="text-sm text-gray-500">
-                            {quote.clientCompany}
+                    <tr key={quote.id}>
+                      <td>
+                        <div className="client-info" title={quote.clientName || 'Unknown Client'}>
+                          <div className="font-medium text-gray-900">
+                            {quote.clientName || 'Unknown Client'}
                           </div>
-                        )}
+                          {quote.clientCompany && (
+                            <div className="text-sm text-gray-500">
+                              {quote.clientCompany}
+                            </div>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                      <td>
+                        <div className="text-gray-900">
                           {quote.name || `Quote #${quote.id.substr(0, 8)}`}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
+                      <td className="date-cell">
+                        <div className="text-gray-500">
                           {quote.date ? formatDate(quote.date) : 'N/A'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
+                      <td className="date-cell">
+                        <div className="text-gray-500">
                           {quote.validUntil ? formatDate(quote.validUntil) : 'N/A'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td>
                         <StatusBadge status={status} />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex justify-end space-x-2">
+                      <td className="text-right">
+                        <div className="action-buttons">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -376,6 +374,20 @@ const Quotes = () => {
           </Button>
         </div>
       </Dialog>
+
+      <style jsx>{`
+        .client-info {
+          max-width: 200px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        
+        .action-buttons {
+          display: flex;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+      `}</style>
     </PageLayout>
   );
 };

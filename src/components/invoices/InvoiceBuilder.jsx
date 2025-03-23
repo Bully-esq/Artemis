@@ -1,22 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useAppContext } from '../../context/AppContext';
 import api from '../../services/api';
+import pdfGenerator from '../../services/pdfGenerator';
+import { formatDate } from '../../utils/formatters';
 
 // Components
-import PageLayout from '../../components/common/PageLayout';
-import Button from '../../components/common/Button';
-import Loading from '../../components/common/Loading';
+import Button from '../common/Button';
+import Loading from '../common/Loading';
+import FormField from '../common/FormField';
+import Tabs from '../common/Tabs';
 
 const InvoiceBuilder = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const quoteId = searchParams.get('quoteId');
-  const { addNotification } = useAppContext();
+  const { addNotification, settings } = useAppContext();
   
   // Local state
+  const [activeTab, setActiveTab] = useState('create');
   const [invoiceDetails, setInvoiceDetails] = useState({
     invoiceNumber: '',
     clientName: '',
@@ -29,7 +33,8 @@ const InvoiceBuilder = () => {
     amount: 0,
     description: '',
     status: 'pending',
-    quoteId: quoteId || ''
+    quoteId: quoteId || '',
+    type: 'Deposit (50%)'
   });
   
   // Fetch invoice if we have an ID
@@ -141,203 +146,304 @@ const InvoiceBuilder = () => {
       addNotification(`Error updating invoice: ${error.message}`, 'error');
     }
   };
+
+  // Generate PDF
+  const handleExportPDF = async () => {
+    try {
+      await pdfGenerator.generateInvoicePDF(invoiceDetails, settings);
+      addNotification('Invoice PDF generated successfully', 'success');
+    } catch (error) {
+      addNotification(`Error generating PDF: ${error.message}`, 'error');
+    }
+  };
+
+  // Handle emails
+  const handleEmailInvoice = () => {
+    // Email logic would go here
+    addNotification('Email functionality coming soon!', 'info');
+  };
+
+  // Handle save invoice
+  const handleSaveInvoice = async () => {
+    try {
+      await handleSubmit({ preventDefault: () => {} });
+    } catch (error) {
+      console.error('Error saving invoice:', error);
+    }
+  };
   
   if (isLoadingInvoice || (quoteId && isLoadingQuote)) {
-    return (
-      <PageLayout title={id ? 'Edit Invoice' : 'New Invoice'}>
-        <Loading message="Loading data..." />
-      </PageLayout>
-    );
+    return <Loading message="Loading data..." />;
   }
   
   return (
-    <PageLayout 
-      title={id ? 'Edit Invoice' : 'New Invoice'}
-      actions={
-        <Button variant="secondary" onClick={() => navigate('/invoices')}>
-          Back to Invoices
-        </Button>
-      }
-    >
-      <div className="bg-white p-6 rounded-md shadow">
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Invoice Number
-              </label>
-              <input
-                type="text"
-                className="w-full p-2 border border-gray-300 rounded-md"
-                value={invoiceDetails.invoiceNumber || ''}
-                onChange={(e) => setInvoiceDetails({...invoiceDetails, invoiceNumber: e.target.value})}
-                required
-              />
+    <div className="p-4 bg-gray-100 min-h-screen">
+      <div className="container mx-auto">
+        <h1 className="text-2xl font-bold mb-4">Invoice Management</h1>
+        
+        <div className="flex mb-4">
+          {/* Main tabs */}
+          <div className="flex-grow">
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex">
+                <button
+                  className={`mr-6 py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'create' 
+                      ? 'border-blue-500 text-blue-600' 
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                  onClick={() => setActiveTab('create')}
+                >
+                  Create Invoice
+                </button>
+                <button
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'list' 
+                      ? 'border-blue-500 text-blue-600' 
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                  onClick={() => navigate('/invoices')}
+                >
+                  Invoice List
+                </button>
+              </nav>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Client Name
-              </label>
-              <input
-                type="text"
-                className="w-full p-2 border border-gray-300 rounded-md"
-                value={invoiceDetails.clientName || ''}
-                onChange={(e) => setInvoiceDetails({...invoiceDetails, clientName: e.target.value})}
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Company
-              </label>
-              <input
-                type="text"
-                className="w-full p-2 border border-gray-300 rounded-md"
-                value={invoiceDetails.clientCompany || ''}
-                onChange={(e) => setInvoiceDetails({...invoiceDetails, clientCompany: e.target.value})}
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                className="w-full p-2 border border-gray-300 rounded-md"
-                value={invoiceDetails.clientEmail || ''}
-                onChange={(e) => setInvoiceDetails({...invoiceDetails, clientEmail: e.target.value})}
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone
-              </label>
-              <input
-                type="text"
-                className="w-full p-2 border border-gray-300 rounded-md"
-                value={invoiceDetails.clientPhone || ''}
-                onChange={(e) => setInvoiceDetails({...invoiceDetails, clientPhone: e.target.value})}
-              />
-            </div>
-            
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Address
-              </label>
-              <textarea
-                className="w-full p-2 border border-gray-300 rounded-md"
-                rows="3"
-                value={invoiceDetails.clientAddress || ''}
-                onChange={(e) => setInvoiceDetails({...invoiceDetails, clientAddress: e.target.value})}
-              ></textarea>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Invoice Date
-              </label>
-              <input
-                type="date"
-                className="w-full p-2 border border-gray-300 rounded-md"
-                value={invoiceDetails.invoiceDate || ''}
-                onChange={(e) => setInvoiceDetails({...invoiceDetails, invoiceDate: e.target.value})}
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Due Date
-              </label>
-              <input
-                type="date"
-                className="w-full p-2 border border-gray-300 rounded-md"
-                value={invoiceDetails.dueDate || ''}
-                onChange={(e) => setInvoiceDetails({...invoiceDetails, dueDate: e.target.value})}
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Amount
-              </label>
-              <input
-                type="number"
-                className="w-full p-2 border border-gray-300 rounded-md"
-                value={invoiceDetails.amount || ''}
-                onChange={(e) => setInvoiceDetails({...invoiceDetails, amount: parseFloat(e.target.value) || 0})}
-                step="0.01"
-                min="0"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                className="w-full p-2 border border-gray-300 rounded-md"
-                value={invoiceDetails.status || 'pending'}
-                onChange={(e) => setInvoiceDetails({...invoiceDetails, status: e.target.value})}
-                required
-              >
-                <option value="pending">Pending</option>
-                <option value="paid">Paid</option>
-              </select>
-            </div>
-            
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                className="w-full p-2 border border-gray-300 rounded-md"
-                rows="3"
-                value={invoiceDetails.description || ''}
-                onChange={(e) => setInvoiceDetails({...invoiceDetails, description: e.target.value})}
-                required
-              ></textarea>
+          </div>
+        </div>
+        
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Left column - Form */}
+          <div className="w-full lg:w-1/2 bg-white rounded-lg shadow">
+            <div className="p-4">
+              <form onSubmit={handleSubmit}>
+                {/* Invoice Type */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Invoice Type
+                  </label>
+                  <select
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    value={invoiceDetails.type || 'Deposit (50%)'}
+                    onChange={(e) => setInvoiceDetails({...invoiceDetails, type: e.target.value})}
+                  >
+                    <option value="Deposit (50%)">Deposit (50%)</option>
+                    <option value="Interim Payment (25%)">Interim Payment (25%)</option>
+                    <option value="Final Payment (25%)">Final Payment (25%)</option>
+                    <option value="Full Payment">Full Payment</option>
+                    <option value="Custom">Custom</option>
+                  </select>
+                </div>
+                
+                {/* Invoice/Due Date */}
+                <div className="flex flex-wrap -mx-2 mb-4">
+                  <div className="w-full md:w-1/2 px-2 mb-4 md:mb-0">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Invoice Date
+                    </label>
+                    <input
+                      type="date"
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      value={invoiceDetails.invoiceDate || ''}
+                      onChange={(e) => setInvoiceDetails({...invoiceDetails, invoiceDate: e.target.value})}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="w-full md:w-1/2 px-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Due Date
+                    </label>
+                    <input
+                      type="date"
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      value={invoiceDetails.dueDate || ''}
+                      onChange={(e) => setInvoiceDetails({...invoiceDetails, dueDate: e.target.value})}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                {/* Additional Notes */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Additional Notes
+                  </label>
+                  <textarea
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    rows="4"
+                    value={invoiceDetails.notes || ''}
+                    onChange={(e) => setInvoiceDetails({...invoiceDetails, notes: e.target.value})}
+                  ></textarea>
+                </div>
+                
+                {/* Description Details */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description Details
+                  </label>
+                  <input
+                    type="text"
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    placeholder="e.g. for staircase, for balustrading, etc."
+                    value={invoiceDetails.description || ''}
+                    onChange={(e) => setInvoiceDetails({...invoiceDetails, description: e.target.value})}
+                    required
+                  />
+                </div>
+                
+                {/* Amount */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Amount (£)
+                  </label>
+                  <input
+                    type="number"
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    step="0.01"
+                    min="0"
+                    value={invoiceDetails.amount || ''}
+                    onChange={(e) => setInvoiceDetails({...invoiceDetails, amount: parseFloat(e.target.value) || 0})}
+                    required
+                  />
+                </div>
+                
+                <div className="mt-4">
+                  <Button
+                    type="button"
+                    variant="green"
+                    onClick={handleSaveInvoice}
+                    className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    Generate Invoice
+                  </Button>
+                </div>
+              </form>
             </div>
           </div>
           
-          <div className="border-t border-gray-200 pt-4">
-            <div className="flex justify-end space-x-3">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => navigate('/invoices')}
-              >
-                Cancel
-              </Button>
+          {/* Right column - Preview */}
+          <div className="w-full lg:w-1/2 flex flex-col gap-4">
+            {/* Action buttons */}
+            <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-2">
+              <Link to="/quotes" className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Quotes
+              </Link>
               
-              {id && (
-                <Button
-                  type="button"
-                  variant="success"
-                  onClick={handleMarkAsPaid}
-                  disabled={invoiceDetails.status === 'paid'}
-                >
-                  Mark as Paid
-                </Button>
-              )}
-              
-              <Button
-                type="submit"
-                variant="primary"
+              <button
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                onClick={handleSaveInvoice}
               >
+                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
                 Save Invoice
-              </Button>
+              </button>
+              
+              <button
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                onClick={handleExportPDF}
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export PDF
+              </button>
+              
+              <button
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                onClick={handleEmailInvoice}
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Email Invoice
+              </button>
+              
+              <button
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                onClick={handleMarkAsPaid}
+                disabled={invoiceDetails.status === 'paid'}
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Paid
+              </button>
+              
+              <button
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Delete Invoice
+              </button>
+              
+              <button
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                onClick={() => navigate('/settings')}
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Settings
+              </button>
+            </div>
+            
+            {/* Invoice Preview */}
+            <div className="bg-white rounded-lg shadow flex-1">
+              <div className="p-4 border-b border-gray-200">
+                <h2 className="text-lg font-medium">Invoice Preview</h2>
+              </div>
+              <div className="p-4 flex items-center justify-center h-96 text-gray-500">
+                <p>No invoice selected. Generate or select an invoice to preview.</p>
+              </div>
+            </div>
+            
+            {/* Connected Quote */}
+            <div className="bg-white rounded-lg shadow">
+              <div className="p-4 border-b border-gray-200">
+                <h2 className="text-lg font-medium">Connected Quote</h2>
+              </div>
+              <div className="p-4">
+                <p className="text-gray-700">
+                  No quote connected. Please go back to quotes page and select a quote to invoice.
+                </p>
+              </div>
+            </div>
+            
+            {/* Payment Schedule */}
+            <div className="bg-white rounded-lg shadow">
+              <div className="p-4 border-b border-gray-200">
+                <h2 className="text-lg font-medium">Payment Schedule</h2>
+              </div>
+              <div className="p-4">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stage</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due When</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    <tr>
+                      <td className="px-4 py-2" colSpan="5">No payment schedule available</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </form>
+        </div>
       </div>
-    </PageLayout>
+    </div>
   );
 };
 
