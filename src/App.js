@@ -7,19 +7,19 @@ import { ReactQueryDevtools } from 'react-query/devtools';
 import { AppProvider } from '/context/AppContext.jsx';
 
 // Pages
-import Dashboard from './pages/Dashboard';
-import QuoteList from './pages/QuoteList';
-import QuoteBuilder from './pages/QuoteBuilder';
-import InvoiceList from './pages/InvoiceList';
-import InvoiceBuilder from './pages/InvoiceBuilder';
-import ContactList from './pages/ContactList';
-import ContactDetails from './pages/ContactDetails';
+import Dashboard from '/pages/Dashboard';
+import QuoteList from '/pages/QuoteList';
+import QuoteBuilder from '/pages/QuoteBuilder';
+import InvoiceList from '/pages/InvoiceList';
+import InvoiceBuilder from '/pages/InvoiceBuilder';
+import ContactList from '/pages/ContactList';
+import ContactDetails from '/pages/ContactDetails';
 import Settings from '/pages/Settings';
 import NotFound from './pages/NotFound';
 
 // Components
-import Notifications from './components/common/Notifications';
-import NetworkStatusIndicator from './components/common/NetworkStatusIndicator';
+import Notifications from '/components/common/Notifications';
+import NetworkStatusIndicator from '/components/common/NetworkStatusIndicator';
 
 // Create a client for React Query
 const queryClient = new QueryClient({
