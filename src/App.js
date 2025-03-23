@@ -14,7 +14,7 @@ import InvoiceList from './pages/InvoiceList';
 import InvoiceBuilder from './pages/InvoiceBuilder';
 import ContactList from './pages/ContactList';
 import ContactDetails from './pages/ContactDetails';
-import Settings from './pages/Settings';
+import Settings from '/pages/Settings';
 import NotFound from './pages/NotFound';
 
 // Components
