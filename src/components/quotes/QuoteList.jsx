@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 
 // Components
-import PageLayout from '../components/common/PageLayout';
-import Button from '../components/common/Button';
-import Loading from '../components/common/Loading';
-import Dialog from '../components/common/Dialog';
-import FormField from '../components/common/FormField';
+import PageLayout from '../../components/common/PageLayout';
+import Button from '../../components/common/Button';
+import Loading from '../../components/common/Loading';
+import Dialog from '../../components/common/Dialog';
+import FormField from '../../components/common/FormField';
 
 // API and Hooks
-import { useAppContext } from '../context/AppContext';
-import api from '../services/api';
+import { useAppContext } from '../../context/AppContext';
+import api from '../../services/api';
 
 const QuoteList = () => {
   const navigate = useNavigate();
@@ -173,65 +173,39 @@ const QuoteList = () => {
             )}
           </div>
         ) : (
-          <ul className="divide-y divide-gray-200">
-            {sortedQuotes.map((quote) => {
-              // Format client display name
-              const clientName = quote.clientName || 'Unknown Client';
-              const clientCompany = quote.clientCompany ? ` (${quote.clientCompany})` : '';
-              
-              // Format dates
-              const createdDate = quote.savedAt 
-                ? new Date(quote.savedAt).toLocaleDateString('en-GB') 
-                : 'No date';
-                
-              const expiryDate = quote.validUntil 
-                ? new Date(quote.validUntil).toLocaleDateString('en-GB')
-                : 'No expiry';
-              
-              // Check if quote is expired
-              const isExpired = quote.validUntil 
-                ? new Date(quote.validUntil) < new Date() 
-                : false;
-              
-              return (
-                <li key={quote.id}>
-                  <div className="px-6 py-4 flex items-center">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {quote.name || `Quote for ${clientName}`}
-                        </p>
-                        {isExpired && (
-                          <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800">
-                            Expired
-                          </span>
-                        )}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quote</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {sortedQuotes.map((quote) => (
+                  <tr key={quote.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{quote.clientName || 'Unknown'}</div>
+                      {quote.clientCompany && <div className="text-sm text-gray-500">{quote.clientCompany}</div>}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{quote.name || `Quote #${quote.id.substring(0, 8)}`}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">
+                        {quote.date ? new Date(quote.date).toLocaleDateString() : 'No date'}
                       </div>
-                      <div className="mt-1 sm:flex sm:justify-between">
-                        <div className="sm:flex">
-                          <p className="flex items-center text-sm text-gray-500">
-                            {clientName}{clientCompany}
-                          </p>
-                        </div>
-                        <div className="mt-1 flex items-center text-sm text-gray-500 sm:mt-0">
-                          <p>Created: {createdDate} | Valid until: {expiryDate}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="ml-6 flex-shrink-0 flex gap-2">
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Button
                         variant="secondary"
                         size="sm"
+                        className="mr-2"
                         onClick={() => navigate(`/quotes/${quote.id}`)}
                       >
                         Edit
-                      </Button>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => navigate(`/invoices/new?quoteId=${quote.id}`)}
-                      >
-                        Create Invoice
                       </Button>
                       <Button
                         variant="danger"
@@ -240,12 +214,12 @@ const QuoteList = () => {
                       >
                         Delete
                       </Button>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
       
@@ -263,14 +237,14 @@ const QuoteList = () => {
           <p className="mb-6 text-red-600">This action cannot be undone.</p>
           
           <div className="flex justify-end gap-3">
-            <Button
-              variant="secondary"
+            <Button 
+              variant="secondary" 
               onClick={() => setDeleteDialogOpen(false)}
             >
               Cancel
             </Button>
-            <Button
-              variant="danger"
+            <Button 
+              variant="danger" 
               onClick={handleDelete}
               isLoading={deleteQuoteMutation.isLoading}
             >

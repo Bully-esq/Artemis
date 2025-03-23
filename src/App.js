@@ -4,22 +4,22 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { ReactQueryDevtools } from 'react-query/devtools';
 
 // Context providers
-import { AppProvider } from './context/AppContext.jsx';
+import { AppProvider } from './context/AppContext';
 
 // Pages
 import Dashboard from './pages/Dashboard';
-import QuoteList from './pages/QuoteList';
-import QuoteBuilder from './pages/QuoteBuilder';
-import InvoiceList from './pages/InvoiceList';
-import InvoiceBuilder from './pages/InvoiceBuilder';
-import ContactList from './pages/ContactList';
-import ContactDetails from './pages/ContactDetails';
+import QuoteList from './components/quotes/QuoteList';
+import QuoteBuilder from './components/quotes/QuoteBuilder';
+import InvoiceList from './components/invoices/InvoiceList';
+import InvoiceBuilder from './components/invoices/InvoiceBuilder';
+import ContactList from './components/contacts/ContactList';
+import ContactDetails from './components/contacts/ContactDetails';
 import Settings from './pages/Settings';
 import NotFound from './pages/NotFound';
 
 // Components
-import Notifications from './components/common/Notifications';
-import NetworkStatusIndicator from './components/common/NetworkStatusIndicator';
+import Notifications from './components/common/Notification';
+import NetworkStatusIndicator from './components/common/NetworkStatus';
 
 // Create a client for React Query
 const queryClient = new QueryClient({

@@ -3,16 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 
 // API and Hooks
-import { contactsApi } from '../services/api';
-import { useAppContext } from '../context/AppContext';
+import { contactsApi } from '../../services/api';
+import { useAppContext } from '../../context/AppContext';
 
 // Components
-import PageLayout from '../components/common/PageLayout';
-import Button from '../components/common/Button';
-import Dialog from '../components/common/Dialog';
-import FormField from '../components/common/FormField';
-import Loading from '../components/common/Loading';
-import ContactForm from '../components/contacts/ContactForm';
+import PageLayout from '../common/PageLayout';
+import Button from '../common/Button';
+import Dialog from '../common/Dialog';
+import FormField from '../common/FormField';
+import Loading from '../common/Loading';
+import ContactForm from '../contacts/ContactForm';
 
 const ContactList = () => {
   const navigate = useNavigate();
