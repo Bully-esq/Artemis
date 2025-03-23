@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/Artemis/static/css/main.e6c13ad2.css",
+    "main.js": "/Artemis/static/js/main.27c82743.js",
+    "static/js/453.7c7184a7.chunk.js": "/Artemis/static/js/453.7c7184a7.chunk.js",
+    "index.html": "/Artemis/index.html",
+    "main.e6c13ad2.css.map": "/Artemis/static/css/main.e6c13ad2.css.map",
+    "main.27c82743.js.map": "/Artemis/static/js/main.27c82743.js.map",
+    "453.7c7184a7.chunk.js.map": "/Artemis/static/js/453.7c7184a7.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e6c13ad2.css",
+    "static/js/main.27c82743.js"
+  ]
+}
