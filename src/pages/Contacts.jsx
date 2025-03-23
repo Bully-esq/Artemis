@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 
 // API and hooks
 import { contactsApi } from '../services/api';
-import { useAppContext } from '../context/AppContext';
+import { useAppContext } from '../../context/AppContext';
 
 // Components
 import PageLayout from '../components/common/PageLayout';

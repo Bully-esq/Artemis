@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useAppContext } from '../context/AppContext';
-import { useAuth } from '../context/AuthContext';
 
 // Import components
 import PageLayout from '../components/common/PageLayout';

@@ -9,14 +9,12 @@ import Loading from '../components/common/Loading';
 
 // Contexts and Hooks
 import { useAppContext } from '../context/AppContext';
-import { useAuth } from '../context/AuthContext';
 
 // Services
 import api from '../services/api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { addNotification } = useAppContext();
   const [period, setPeriod] = useState('month'); // 'week', 'month', 'year'
 
@@ -163,7 +161,7 @@ const Dashboard = () => {
   return (
     <PageLayout title="Dashboard">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome, {user?.name || 'Steve'}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to your Dashboard</h1>
         <p className="text-gray-600">Here's what's happening with your business</p>
       </div>
 

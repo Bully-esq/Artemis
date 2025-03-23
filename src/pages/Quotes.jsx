@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useAppContext } from '../context/AppContext';
-import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { formatDate } from '../utils/formatters';
 
