@@ -1,195 +1,12 @@
-/* Reset and base styles */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/* PageLayout.css - Complementary styles for PageLayout component */
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
+/* 
+   This file contains specific styles for the PageLayout component
+   that complement the base styles in App.css.
+   Most shared styles have been moved to App.css.
+*/
 
-.layout-container {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f3f4f6;
-  height: 100vh;
-  overflow: hidden;
-}
-
-/* Icon styles */
-.icon {
-  height: 24px;
-  width: 24px;
-}
-
-/* Mobile sidebar styles */
-.mobile-sidebar-overlay {
-  display: none;
-}
-
-@media (max-width: 767px) {
-  .mobile-sidebar-overlay {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 40;
-  }
-
-  .sidebar-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-  }
-
-  .mobile-sidebar {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 250px;
-    background-color: white;
-    z-index: 41;
-    overflow-y: auto;
-    width: 270px;
-    max-width: 80vw;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-}
-
-/* Sidebar header */
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 64px;
-  padding: 0 16px;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 1.5rem 1rem;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.sidebar-title {
-  padding: 0 16px;
-}
-
-.sidebar-title h1 {
-  font-size: 18px;
-  font-weight: bold;
-  color: #111827;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #334155;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-}
-
-/* Sidebar navigation */
-.sidebar-content {
-  padding-top: 20px;
-  flex: 1;
-  overflow-y: auto;
-  padding: 1rem 0;
-}
-
-.sidebar-nav {
-  padding: 0 8px 16px 8px;
-  display: flex;
-  flex-direction: column;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  padding: 8px;
-  margin-bottom: 4px;
-  border-radius: 6px;
-  font-weight: 500;
-  text-decoration: none;
-  color: #4b5563;
-  padding: 0.75rem 1rem;
-  color: #64748b;
-  text-decoration: none;
-  transition: background-color 0.2s, color 0.2s;
-}
-
-.nav-item:hover {
-  background-color: #f9fafb;
-  color: #111827;
-  background-color: #f1f5f9;
-  color: #334155;
-}
-
-.nav-item.active {
-  background-color: #f3f4f6;
-  color: #111827;
-  background-color: #e0f2fe;
-  color: #0284c7;
-  font-weight: 500;
-}
-
-.nav-icon {
-  margin-right: 16px;
-  color: #9ca3af;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  margin-right: 0.75rem;
-}
-
-.nav-icon.active {
-  color: #6b7280;
-}
-
-.nav-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Desktop sidebar */
-.desktop-sidebar {
-  width: 250px;
-  background-color: white;
-  border-right: 1px solid #e5e7eb;
-  width: 250px;
-  flex-shrink: 0;
-  background-color: #f8fafc;
-  border-right: 1px solid #e2e8f0;
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar-inner {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.sidebar-footer {
-  padding: 1rem;
-  border-top: 1px solid #e2e8f0;
-  margin-top: auto;
-}
-
+/* User profile in sidebar footer */
 .user-info {
   display: flex;
   align-items: center;
@@ -199,7 +16,7 @@ body {
   width: 2rem;
   height: 2rem;
   border-radius: 9999px;
-  background-color: #e2e8f0;
+  background-color: var(--bg-light);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -218,93 +35,159 @@ body {
   text-overflow: ellipsis;
 }
 
+.user-role {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+/* Specific icon styles */
+.icon {
+  height: 24px;
+  width: 24px;
+}
+
+/* Add spacing for icons in mobile view */
 @media (max-width: 767px) {
-  .desktop-sidebar {
-    display: none;
+  .menu-button .icon {
+    margin: 0 auto;
   }
 }
 
-/* Main content area */
+/* Enhanced styles for main wrapper */
 .main-wrapper {
   display: flex;
   flex: 1;
-}
-
-.content-area {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
 }
 
-.header {
-  display: flex;
-  height: 64px;
-  background-color: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.menu-button {
-  display: none;
-  background: none;
-  border: none;
-  padding: 0 16px;
-  cursor: pointer;
-  color: #6b7280;
-}
-
+/* Additional responsive adjustments */
 @media (max-width: 767px) {
-  .menu-button {
-    display: block;
-    border-right: 1px solid #e5e7eb;
+  .layout-container {
+    overflow-y: auto;
+  }
+  
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 }
 
-.header-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  flex: 1;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: 500;
-  color: #111827;
-}
-
-.action-buttons {
-  display: flex;
-  align-items: center;
-}
-
-.main-content {
-  padding: 24px;
-  background-color: #f3f4f6;
-  flex: 1;
-  flex: 1;
-  overflow-y: auto;
-  padding: 1rem;
-}
-
-/* Fix for mobile layout */
-@media (max-width: 767px) {
-  .layout-container {
-    flex-direction: column;
+/* Print styles */
+@media print {
+  .desktop-sidebar,
+  .mobile-sidebar-overlay {
+    display: none;
   }
   
   .content-area {
+    margin-left: 0;
     width: 100%;
+  }
+  
+  .header {
+    box-shadow: none;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .main-content {
+    padding: 0;
   }
 }
 
-/* Add media query to hide desktop sidebar on small screens */
-@media (max-width: 768px) {
-  .desktop-sidebar {
-    display: none;
+/* PageLayout.css - Complementary styles for PageLayout component */
+
+/* 
+   This file contains specific styles for the PageLayout component
+   that complement the base styles in App.css.
+   Most shared styles have been moved to App.css.
+*/
+
+/* User profile in sidebar footer */
+.user-info {
+    display: flex;
+    align-items: center;
   }
-}
+  
+  .user-avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    background-color: var(--bg-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+  }
+  
+  .user-details {
+    overflow: hidden;
+  }
+  
+  .user-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .user-role {
+    font-size: 0.75rem;
+    color: var(--text-light);
+  }
+  
+  /* Specific icon styles */
+  .icon {
+    height: 24px;
+    width: 24px;
+  }
+  
+  /* Add spacing for icons in mobile view */
+  @media (max-width: 767px) {
+    .menu-button .icon {
+      margin: 0 auto;
+    }
+  }
+  
+  /* Enhanced styles for main wrapper */
+  .main-wrapper {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+  
+  /* Additional responsive adjustments */
+  @media (max-width: 767px) {
+    .layout-container {
+      overflow-y: auto;
+    }
+    
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+  }
+  
+  /* Print styles */
+  @media print {
+    .desktop-sidebar,
+    .mobile-sidebar-overlay {
+      display: none;
+    }
+    
+    .content-area {
+      margin-left: 0;
+      width: 100%;
+    }
+    
+    .header {
+      box-shadow: none;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .main-content {
+      padding: 0;
+    }
+  }

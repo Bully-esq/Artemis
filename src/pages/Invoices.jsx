@@ -7,7 +7,6 @@ import { useAppContext } from '../context/AppContext';
 import PageLayout from '../components/common/PageLayout';
 import Button from '../components/common/Button';
 import Loading from '../components/common/Loading';
-import InvoiceList from '../components/invoices/InvoiceList';
 import Dialog from '../components/common/Dialog';
 import FormField from '../components/common/FormField';
 
@@ -18,13 +17,14 @@ import { formatDate } from '../utils/formatters';
 const Invoices = () => {
   const navigate = useNavigate();
   const { addNotification } = useAppContext();
-  const { isAuthenticated } = useAuth();
   
   // Local state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showQuoteSelector, setShowQuoteSelector] = useState(false);
   const [selectedQuoteId, setSelectedQuoteId] = useState(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState(null);
   
   // Fetch invoices
   const { 
@@ -33,7 +33,6 @@ const Invoices = () => {
     isError: invoicesError,
     refetch: refetchInvoices
   } = useQuery('invoices', api.invoices.getAll, {
-    enabled: isAuthenticated,
     onError: (error) => {
       addNotification(`Error loading invoices: ${error.message}`, 'error');
     }
@@ -86,81 +85,61 @@ const Invoices = () => {
     }
   };
 
-  // Action buttons for the page header
-  const actionButtons = (
-    <div className="flex space-x-4">
-      <Button 
-        variant="primary"
-        onClick={() => setShowQuoteSelector(true)}
-      >
-        Create Invoice
-      </Button>
-      <Button 
-        variant="secondary"
-        onClick={() => navigate('/quotes')}
-      >
-        Manage Quotes
-      </Button>
-    </div>
-  );
-
-  // Handle status filter change
-  const handleStatusFilterChange = (status) => {
-    setStatusFilter(status);
+  // Handle invoice deletion
+  const handleDeleteClick = (invoice) => {
+    setInvoiceToDelete(invoice);
+    setIsDeleteDialogOpen(true);
   };
 
-  return (
-    <PageLayout title="Invoices" actions={actionButtons}>
-      {/* Filter and search bar */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between space-y-3 md:space-y-0 md:space-x-4">
-          <div className="w-full md:w-1/3">
-            <FormField
-              type="text"
-              placeholder="Search invoices..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full"
-            />
-          </div>
-          
-          <div className="flex space-x-2">
-            <Button 
-              variant={statusFilter === 'all' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => handleStatusFilterChange('all')}
-            >
-              All
-            </Button>
-            <Button 
-              variant={statusFilter === 'pending' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => handleStatusFilterChange('pending')}
-            >
-              Pending
-            </Button>
-            <Button 
-              variant={statusFilter === 'overdue' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => handleStatusFilterChange('overdue')}
-            >
-              Overdue
-            </Button>
-            <Button 
-              variant={statusFilter === 'paid' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => handleStatusFilterChange('paid')}
-            >
-              Paid
-            </Button>
-          </div>
-        </div>
-      </div>
+  const confirmDelete = async () => {
+    if (!invoiceToDelete) return;
+    
+    try {
+      await api.invoices.delete(invoiceToDelete.id);
+      addNotification('Invoice deleted successfully', 'success');
+      refetchInvoices();
+    } catch (err) {
+      addNotification(`Error deleting invoice: ${err.message}`, 'error');
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setInvoiceToDelete(null);
+    }
+  };
 
-      {/* Invoices list */}
-      {isLoadingInvoices ? (
+  // Action buttons for the page header
+  const actionButtons = (
+    <Button 
+      variant="primary"
+      onClick={() => setShowQuoteSelector(true)}
+    >
+      <svg className="w-5 h-5 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      </svg>
+      New Invoice
+    </Button>
+  );
+
+  // Format currency function
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: 'GBP'
+    }).format(amount);
+  };
+
+  // Loading state
+  if (isLoadingInvoices) {
+    return (
+      <PageLayout title="Invoices" actions={actionButtons}>
         <Loading message="Loading invoices..." />
-      ) : invoicesError ? (
+      </PageLayout>
+    );
+  }
+  
+  // Error state
+  if (invoicesError) {
+    return (
+      <PageLayout title="Invoices" actions={actionButtons}>
         <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded shadow">
           <h3 className="text-red-800 font-medium">Error loading invoices</h3>
           <p className="text-red-700">Please try refreshing the page</p>
@@ -172,39 +151,228 @@ const Invoices = () => {
             Retry
           </Button>
         </div>
-      ) : filteredInvoices.length === 0 ? (
-        <div className="bg-white p-8 rounded-lg shadow text-center">
-          <h3 className="text-xl font-medium text-gray-900 mb-2">No invoices found</h3>
-          <p className="text-gray-500 mb-4">
-            {searchTerm || statusFilter !== 'all' 
-              ? 'Try changing your search or filter criteria'
-              : 'Create your first invoice to get started'}
-          </p>
-          <Button 
-            variant="primary"
-            onClick={() => setShowQuoteSelector(true)}
-          >
-            Create Your First Invoice
-          </Button>
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <InvoiceList 
-            invoices={filteredInvoices} 
-            onView={(id) => navigate(`/invoices/${id}`)} 
-            onDelete={async (id) => {
-              try {
-                await api.invoices.delete(id);
-                addNotification('Invoice deleted successfully', 'success');
-                refetchInvoices();
-              } catch (error) {
-                addNotification(`Error deleting invoice: ${error.message}`, 'error');
-              }
-            }}
-          />
-        </div>
-      )}
+      </PageLayout>
+    );
+  }
 
+  return (
+    <PageLayout title="Invoices" actions={actionButtons}>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-2">Invoice Management</h1>
+        <p className="text-gray-600">Create and manage invoices for your clients</p>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+        <div className="quick-actions">
+          <div onClick={() => setShowQuoteSelector(true)} className="quick-action-btn">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span>New Invoice</span>
+          </div>
+          
+          <div onClick={() => navigate('/quotes')} className="quick-action-btn">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Manage Quotes</span>
+          </div>
+          
+          <div onClick={() => navigate('/settings')} className="quick-action-btn">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span>Invoice Settings</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Dashboard Stats */}
+      <div className="dashboard-stats mb-6">
+        <div className="stat-card">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-gray-500 text-sm font-medium">Total Invoiced</p>
+              <p className="stat-number">
+                {formatCurrency(invoices?.reduce((sum, invoice) => sum + (parseFloat(invoice.amount) || 0), 0) || 0)}
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500 mt-4">{invoices?.length || 0} invoices total</p>
+        </div>
+
+        <div className="stat-card">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-gray-500 text-sm font-medium">Outstanding</p>
+              <p className="stat-number">
+                {formatCurrency(invoices?.filter(inv => inv.status !== 'paid')
+                  .reduce((sum, invoice) => sum + (parseFloat(invoice.amount) || 0), 0) || 0)}
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500 mt-4">
+            {invoices?.filter(inv => inv.status !== 'paid').length || 0} unpaid invoices
+          </p>
+        </div>
+
+        <div className="stat-card">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-gray-500 text-sm font-medium">Paid</p>
+              <p className="stat-number">
+                {formatCurrency(invoices?.filter(inv => inv.status === 'paid')
+                  .reduce((sum, invoice) => sum + (parseFloat(invoice.amount) || 0), 0) || 0)}
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500 mt-4">
+            {invoices?.filter(inv => inv.status === 'paid').length || 0} paid invoices
+          </p>
+        </div>
+      </div>
+
+      {/* Filter and search bar */}
+      <div className="card mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0 md:space-x-4">
+          <div className="w-full md:w-1/3">
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search invoices..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <div className="filter-buttons">
+            <button 
+              className={`btn ${statusFilter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setStatusFilter('all')}
+            >
+              All
+            </button>
+            <button 
+              className={`btn ${statusFilter === 'pending' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setStatusFilter('pending')}
+            >
+              Pending
+            </button>
+            <button 
+              className={`btn ${statusFilter === 'overdue' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setStatusFilter('overdue')}
+            >
+              Overdue
+            </button>
+            <button 
+              className={`btn ${statusFilter === 'paid' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setStatusFilter('paid')}
+            >
+              Paid
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Invoices list */}
+      <div className="card">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Invoices</h2>
+          <div>
+            <span className="text-sm text-gray-600">
+              {filteredInvoices.length} invoices found
+            </span>
+          </div>
+        </div>
+
+        {filteredInvoices.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-gray-500 mb-4">
+              {searchTerm || statusFilter !== 'all' 
+                ? 'No invoices found matching your criteria.' 
+                : 'No invoices found. Create your first invoice!'}
+            </p>
+            <Button
+              variant="primary"
+              onClick={() => setShowQuoteSelector(true)}
+            >
+              Create Invoice
+            </Button>
+          </div>
+        ) : (
+          <div className="recent-items">
+            {filteredInvoices.map((invoice) => (
+              <div 
+                key={invoice.id} 
+                className="recent-item"
+                onClick={() => navigate(`/invoices/${invoice.id}`)}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {invoice.clientName || 'Unnamed Client'}
+                      {invoice.clientCompany && (
+                        <span className="text-sm text-gray-500"> ({invoice.clientCompany})</span>
+                      )}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {invoice.invoiceNumber || `Invoice #${invoice.id.substring(0, 8)}`}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">
+                      {formatCurrency(invoice.amount)}
+                    </p>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <span className={`status-badge ${
+                        invoice.status === 'paid' 
+                          ? 'status-badge-active' 
+                          : new Date(invoice.dueDate) < new Date()
+                            ? 'status-badge-expired'
+                            : 'status-badge-expiring'
+                      }`}>
+                        {invoice.status === 'paid' 
+                          ? 'Paid' 
+                          : new Date(invoice.dueDate) < new Date()
+                            ? 'Overdue'
+                            : 'Pending'}
+                      </span>
+                      <button
+                        className="text-red-600 hover:text-red-800"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(invoice);
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      
       {/* Quote selector dialog */}
       {showQuoteSelector && (
         <Dialog 
@@ -247,14 +415,11 @@ const Invoices = () => {
                 Select a quote to create an invoice from:
               </p>
               
-              <div className="max-h-96 overflow-y-auto border rounded-md">
+              <div className="recent-items max-h-96 overflow-y-auto">
                 {quotes.map(quote => (
                   <div 
                     key={quote.id}
-                    className={`
-                      p-4 border-b cursor-pointer hover:bg-gray-50
-                      ${selectedQuoteId === quote.id ? 'bg-blue-50 border-blue-200' : ''}
-                    `}
+                    className={`recent-item cursor-pointer ${selectedQuoteId === quote.id ? 'bg-blue-50' : ''}`}
                     onClick={() => setSelectedQuoteId(quote.id)}
                   >
                     <div className="flex justify-between items-start">
@@ -288,6 +453,44 @@ const Invoices = () => {
           )}
         </Dialog>
       )}
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        title="Delete Invoice"
+        size="sm"
+      >
+        <div className="mt-2">
+          <p className="text-gray-600">
+            Are you sure you want to delete this invoice? This action cannot be undone.
+          </p>
+          {invoiceToDelete && (
+            <div className="mt-4 bg-gray-50 p-4 rounded">
+              <p><strong>Client:</strong> {invoiceToDelete.clientName || 'Unknown Client'}</p>
+              {invoiceToDelete.clientCompany && (
+                <p><strong>Company:</strong> {invoiceToDelete.clientCompany}</p>
+              )}
+              <p><strong>Invoice:</strong> {invoiceToDelete.invoiceNumber || `Invoice #${invoiceToDelete.id.substring(0, 8)}`}</p>
+              <p><strong>Amount:</strong> {formatCurrency(invoiceToDelete.amount)}</p>
+            </div>
+          )}
+        </div>
+        <div className="mt-6 flex justify-end gap-3">
+          <Button 
+            variant="secondary" 
+            onClick={() => setIsDeleteDialogOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="danger" 
+            onClick={confirmDelete}
+          >
+            Delete Invoice
+          </Button>
+        </div>
+      </Dialog>
     </PageLayout>
   );
 };

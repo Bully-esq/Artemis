@@ -7,9 +7,12 @@ import pdfGenerator from '../../services/pdfGenerator';
 import { calculateQuoteData } from '../../utils/calculations';
 
 // Components
+import PageLayout from '../common/PageLayout';
 import Button from '../common/Button';
 import Loading from '../common/Loading';
 import FormField from '../common/FormField';
+import Tabs from '../common/Tabs';
+import Dialog from '../common/Dialog';
 
 const QuoteBuilder = () => {
   const { id } = useParams();
@@ -18,14 +21,16 @@ const QuoteBuilder = () => {
   const { addNotification, settings } = useAppContext();
   
   // Local state
-  const [activeTab, setActiveTab] = useState('catalog');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('details');
+  const [itemSearchTerm, setItemSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedItems, setSelectedItems] = useState([]);
   const [hiddenCosts, setHiddenCosts] = useState([]);
   const [globalMarkup, setGlobalMarkup] = useState(20);
   const [distributionMethod, setDistributionMethod] = useState('even');
-  const [showForm, setShowForm] = useState(true);
+  const [showItemDialog, setShowItemDialog] = useState(false);
+  const [showHiddenCostDialog, setShowHiddenCostDialog] = useState(false);
+  const [newHiddenCost, setNewHiddenCost] = useState({ name: '', amount: 0 });
   
   // Quote details
   const [quoteDetails, setQuoteDetails] = useState({
@@ -92,31 +97,14 @@ const QuoteBuilder = () => {
   );
   
   // Calculate quote data (totals, etc.)
-  const calculateQuoteTotal = () => {
-    // Base calculation logic (simplified)
-    // In a real implementation, you'd have more detailed calculations
-    const baseTotal = selectedItems.reduce((sum, item) => sum + ((item.cost || 0) * (item.quantity || 1)), 0);
-    const hiddenCostsTotal = hiddenCosts.reduce((sum, cost) => sum + (parseFloat(cost.amount) || 0), 0);
-    const markupAmount = baseTotal * (globalMarkup / 100);
-    
-    return {
-      items: selectedItems.length,
-      baseTotal,
-      hiddenCosts: hiddenCostsTotal,
-      markup: markupAmount,
-      markupPercentage: `${globalMarkup}%`,
-      total: baseTotal + hiddenCostsTotal + markupAmount
-    };
-  };
-  
-  const quoteData = calculateQuoteTotal();
+  const quoteData = calculateQuoteData(selectedItems, hiddenCosts, globalMarkup, distributionMethod);
   
   // Filter catalog items based on search and category
   const filteredCatalogItems = catalogItems.filter(item => {
     // Search filter
-    const matchesSearch = !searchTerm || 
-      (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSearch = !itemSearchTerm || 
+      (item.name && item.name.toLowerCase().includes(itemSearchTerm.toLowerCase())) ||
+      (item.description && item.description.toLowerCase().includes(itemSearchTerm.toLowerCase()));
     
     // Category filter
     const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
@@ -149,6 +137,9 @@ const QuoteBuilder = () => {
         }
       ]);
     }
+    
+    // Close dialog if open
+    setShowItemDialog(false);
   };
   
   // Handle removing an item from the quote
@@ -192,6 +183,33 @@ const QuoteBuilder = () => {
       ...quoteDetails,
       exclusions: newExclusions
     });
+  };
+  
+  // Add hidden cost
+  const handleAddHiddenCost = () => {
+    if (!newHiddenCost.name.trim()) {
+      addNotification('Name is required for hidden cost', 'error');
+      return;
+    }
+    
+    setHiddenCosts([
+      ...hiddenCosts,
+      {
+        id: Date.now().toString(),
+        name: newHiddenCost.name,
+        amount: parseFloat(newHiddenCost.amount) || 0
+      }
+    ]);
+    
+    setNewHiddenCost({ name: '', amount: 0 });
+    setShowHiddenCostDialog(false);
+  };
+  
+  // Remove hidden cost
+  const handleRemoveHiddenCost = (index) => {
+    const newCosts = [...hiddenCosts];
+    newCosts.splice(index, 1);
+    setHiddenCosts(newCosts);
   };
   
   // Save quote
@@ -238,208 +256,275 @@ const QuoteBuilder = () => {
     return <Loading message="Loading quote builder..." />;
   }
   
+  // Format currency
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: 'GBP'
+    }).format(amount);
+  };
+  
+  // Get supplier name by ID
+  const getSupplierName = (supplierId) => {
+    const supplier = suppliers.find(s => s.id === supplierId);
+    return supplier ? supplier.name : 'Unknown Supplier';
+  };
+  
+  // Header action buttons
+  const headerActions = (
+    <div className="flex space-x-2">
+      <Button variant="primary" onClick={handleSaveQuote}>
+        Save Quote
+      </Button>
+      <Button variant="secondary" onClick={handleExportPDF}>
+        Export PDF
+      </Button>
+      <Button variant="secondary" onClick={handleEmailQuote}>
+        Email Quote
+      </Button>
+      <Button variant="secondary" onClick={() => navigate('/quotes')}>
+        Back to Quotes
+      </Button>
+    </div>
+  );
+  
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <div className="w-72 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium">Supplier Items</h2>
-          
-          {/* Sidebar tabs */}
-          <div className="flex mt-2 border-b border-gray-200">
-            <button
-              className={`py-2 px-4 ${activeTab === 'catalog' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
-              onClick={() => setActiveTab('catalog')}
-            >
-              Catalog
-            </button>
-            <button
-              className={`py-2 px-4 ${activeTab === 'selected' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
-              onClick={() => setActiveTab('selected')}
-            >
-              Selected Items
-            </button>
-            <button
-              className={`py-2 px-4 ${activeTab === 'hidden' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
-              onClick={() => setActiveTab('hidden')}
-            >
-              Hidden Costs
-            </button>
-          </div>
+    <PageLayout title={id ? 'Edit Quote' : 'Create Quote'} actions={headerActions}>
+      <div className="mb-6">
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <Tabs
+            tabs={[
+              { id: 'details', label: 'Quote Details' },
+              { id: 'items', label: 'Items & Costs' },
+              { id: 'preview', label: 'Preview' }
+            ]}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            variant="underline"
+          />
         </div>
-        
-        {/* Sidebar content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {activeTab === 'catalog' && (
-            <div className="space-y-4">
-              {/* Search box */}
-              <input
-                type="text"
-                className="w-full p-2 border border-gray-300 rounded-md"
-                placeholder="Search items..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+      </div>
+      
+      {/* Details Tab */}
+      {activeTab === 'details' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Client Information Card */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-xl font-bold mb-4">Client Information</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <FormField
+                label="Contact Name"
+                value={quoteDetails.client.name}
+                onChange={(e) => handleClientChange('name', e.target.value)}
               />
               
-              {/* Categories */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Categories:</label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    className={`px-2 py-1 text-xs rounded-md ${
-                      selectedCategory === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                    }`}
-                    onClick={() => setSelectedCategory('all')}
-                  >
-                    All
-                  </button>
-                  <button
-                    className={`px-2 py-1 text-xs rounded-md ${
-                      selectedCategory === 'timber' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                    }`}
-                    onClick={() => setSelectedCategory('timber')}
-                  >
-                    Timber
-                  </button>
-                  <button
-                    className={`px-2 py-1 text-xs rounded-md ${
-                      selectedCategory === 'hardware' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                    }`}
-                    onClick={() => setSelectedCategory('hardware')}
-                  >
-                    Hardware
-                  </button>
-                  <button
-                    className={`px-2 py-1 text-xs rounded-md ${
-                      selectedCategory === 'glass' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                    }`}
-                    onClick={() => setSelectedCategory('glass')}
-                  >
-                    Glass
-                  </button>
-                  <button
-                    className={`px-2 py-1 text-xs rounded-md ${
-                      selectedCategory === 'labour' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                    }`}
-                    onClick={() => setSelectedCategory('labour')}
-                  >
-                    Labour
-                  </button>
-                  <button
-                    className={`px-2 py-1 text-xs rounded-md ${
-                      selectedCategory === 'other' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                    }`}
-                    onClick={() => setSelectedCategory('other')}
-                  >
-                    Other
-                  </button>
-                </div>
-              </div>
+              <FormField
+                label="Company Name"
+                value={quoteDetails.client.company}
+                onChange={(e) => handleClientChange('company', e.target.value)}
+              />
               
-              {/* Catalog items */}
-              <div className="mt-4">
-                <div className="text-sm text-gray-500 mb-2">
-                  {filteredCatalogItems.length} items found
-                </div>
-                <div className="space-y-2">
-                  {filteredCatalogItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-3 border border-gray-200 rounded-md bg-white cursor-pointer hover:border-blue-500"
-                      onClick={() => handleAddItem(item)}
-                    >
-                      <div className="flex justify-between">
-                        <div className="font-medium">{item.name}</div>
-                        <div>£{(item.cost || 0).toFixed(2)}</div>
-                      </div>
-                      {item.description && (
-                        <div className="text-sm text-gray-500 mt-1">{item.description}</div>
-                      )}
-                      <div className="mt-1 flex items-center text-xs">
-                        <span
-                          className={`px-1.5 py-0.5 rounded-full ${
-                            item.category === 'timber' ? 'bg-amber-100 text-amber-800' :
-                            item.category === 'hardware' ? 'bg-blue-100 text-blue-800' :
-                            item.category === 'glass' ? 'bg-green-100 text-green-800' :
-                            item.category === 'labour' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          {item.category}
-                        </span>
-                        {suppliers.find(s => s.id === item.supplier)?.name && (
-                          <span className="ml-2 text-gray-500">
-                            {suppliers.find(s => s.id === item.supplier)?.name}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <FormField
+                label="Email"
+                type="email"
+                value={quoteDetails.client.email}
+                onChange={(e) => handleClientChange('email', e.target.value)}
+              />
+              
+              <FormField
+                label="Phone"
+                value={quoteDetails.client.phone}
+                onChange={(e) => handleClientChange('phone', e.target.value)}
+              />
             </div>
-          )}
+            
+            <FormField
+              label="Address"
+              type="textarea"
+              value={quoteDetails.client.address}
+              onChange={(e) => handleClientChange('address', e.target.value)}
+              rows={3}
+            />
+          </div>
           
-          {activeTab === 'selected' && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Global Markup: {globalMarkup}%
-                </label>
+          {/* Quote Settings Card */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-xl font-bold mb-4">Quote Settings</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <FormField
+                label="Quote Date"
+                type="date"
+                value={quoteDetails.date}
+                onChange={(e) => handleQuoteChange('date', e.target.value)}
+              />
+              
+              <FormField
+                label="Valid Until"
+                type="date"
+                value={quoteDetails.validUntil}
+                onChange={(e) => handleQuoteChange('validUntil', e.target.value)}
+              />
+            </div>
+            
+            <FormField
+              label="Payment Terms"
+              type="select"
+              value={quoteDetails.paymentTerms}
+              onChange={(e) => handleQuoteChange('paymentTerms', e.target.value)}
+            >
+              <option value="1">50% deposit, 50% on completion</option>
+              <option value="2">50% deposit, 25% on joinery completion, 25% final</option>
+              <option value="4">Full payment before delivery</option>
+              <option value="3">Custom terms</option>
+            </FormField>
+            
+            {quoteDetails.paymentTerms === '3' && (
+              <FormField
+                label="Custom Terms"
+                type="textarea"
+                value={quoteDetails.customTerms}
+                onChange={(e) => handleQuoteChange('customTerms', e.target.value)}
+                rows={2}
+              />
+            )}
+            
+            <div className="mt-4">
+              <label className="flex items-center">
                 <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={globalMarkup}
-                  onChange={(e) => setGlobalMarkup(parseInt(e.target.value))}
-                  className="w-full"
+                  type="checkbox"
+                  checked={quoteDetails.includeDrawingOption}
+                  onChange={(e) => handleQuoteChange('includeDrawingOption', e.target.checked)}
+                  className="mr-2 h-4 w-4 text-blue-600 rounded"
+                />
+                <span className="text-sm">Include drawing option (£150, deducted from project total if order proceeds)</span>
+              </label>
+            </div>
+          </div>
+          
+          {/* Additional Details Card */}
+          <div className="bg-white rounded-lg shadow-sm p-6 lg:col-span-2">
+            <h2 className="text-xl font-bold mb-4">Additional Details</h2>
+            
+            <FormField
+              label="Notes"
+              type="textarea"
+              value={quoteDetails.notes}
+              onChange={(e) => handleQuoteChange('notes', e.target.value)}
+              rows={3}
+            />
+            
+            <h3 className="font-semibold text-lg mt-4 mb-2">Exclusions</h3>
+            {quoteDetails.exclusions.map((exclusion, index) => (
+              <div key={index} className="mb-2">
+                <FormField
+                  value={exclusion}
+                  onChange={(e) => handleExclusionsChange(index, e.target.value)}
                 />
               </div>
-              
-              {selectedItems.length === 0 ? (
-                <div className="p-4 bg-gray-50 rounded-md text-gray-500 text-center">
-                  No items selected yet
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {selectedItems.map((item, index) => (
+            ))}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setQuoteDetails({
+                ...quoteDetails,
+                exclusions: [...quoteDetails.exclusions, '']
+              })}
+              className="mt-2"
+            >
+              Add Exclusion
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* Items Tab */}
+      {activeTab === 'items' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Selected Items Card */}
+          <div className="bg-white rounded-lg shadow-sm p-6 lg:col-span-2">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Selected Items</h2>
+              <Button
+                variant="primary"
+                onClick={() => setShowItemDialog(true)}
+              >
+                Add Item
+              </Button>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Global Markup: {globalMarkup}%</label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={globalMarkup}
+                onChange={(e) => setGlobalMarkup(parseInt(e.target.value))}
+                className="w-full"
+              />
+            </div>
+            
+            {selectedItems.length === 0 ? (
+              <div className="border border-gray-200 rounded-md p-6 text-center text-gray-500">
+                No items selected yet. Click "Add Item" to add an item to this quote.
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                {selectedItems.map((item, index) => {
+                  const itemTotal = quoteData.itemTotals.find(i => i.id === item.id) || {
+                    finalTotal: (item.cost || 0) * (item.quantity || 1)
+                  };
+                  
+                  return (
                     <div
-                      key={item.id}
-                      className={`p-3 rounded-md border ${item.hideInQuote ? 'border-dashed border-gray-300 bg-gray-50' : 'border-gray-200 bg-white'}`}
+                      key={index}
+                      className={`p-4 rounded-md border ${item.hideInQuote ? 'border-dashed border-gray-300 bg-gray-50' : 'border-gray-200'}`}
                     >
                       <div className="flex justify-between items-start">
-                        <h4 className="font-medium">{item.name}</h4>
+                        <div>
+                          <h3 className="font-medium">{item.name}</h3>
+                          <p className="text-sm text-gray-500">{getSupplierName(item.supplier)}</p>
+                        </div>
                         <button
                           className="text-red-500 hover:text-red-700"
                           onClick={() => handleRemoveItem(index)}
                         >
-                          <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </button>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div className="grid grid-cols-3 gap-3 mt-3">
                         <div>
-                          <label className="block text-xs text-gray-500">Quantity</label>
+                          <label className="block text-xs text-gray-500 mb-1">Quantity</label>
                           <input
                             type="number"
                             min="0.1"
                             step="0.1"
-                            className="w-full p-1 border border-gray-300 rounded text-sm"
                             value={item.quantity}
                             onChange={(e) => handleUpdateItem(index, { ...item, quantity: parseFloat(e.target.value) || 0.1 })}
+                            className="w-full p-2 border border-gray-300 rounded-md text-sm"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-500">Markup %</label>
+                          <label className="block text-xs text-gray-500 mb-1">Markup %</label>
                           <input
                             type="number"
                             min="0"
-                            className="w-full p-1 border border-gray-300 rounded text-sm"
+                            max="100"
                             value={item.markup}
                             onChange={(e) => handleUpdateItem(index, { ...item, markup: parseInt(e.target.value) || 0 })}
+                            className="w-full p-2 border border-gray-300 rounded-md text-sm"
                           />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Total</label>
+                          <div className="p-2 bg-gray-100 border border-gray-300 rounded-md text-sm font-medium">
+                            {formatCurrency(itemTotal.finalTotal)}
+                          </div>
                         </div>
                       </div>
                       
@@ -455,18 +540,28 @@ const QuoteBuilder = () => {
                         </label>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
           
-          {activeTab === 'hidden' && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Distribution Method
-                </label>
+          {/* Hidden Costs & Summary Card */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Hidden Costs</h2>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowHiddenCostDialog(true)}
+                >
+                  Add Cost
+                </Button>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Distribution Method</label>
                 <select
                   className="w-full p-2 border border-gray-300 rounded-md"
                   value={distributionMethod}
@@ -482,503 +577,351 @@ const QuoteBuilder = () => {
                 </p>
               </div>
               
-              <button
-                className="w-full py-2 px-4 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                onClick={() => {
-                  setHiddenCosts([
-                    ...hiddenCosts,
-                    { id: Date.now().toString(), name: '', amount: 0 }
-                  ]);
-                }}
-              >
-                Add Hidden Cost
-              </button>
-              
               {hiddenCosts.length === 0 ? (
-                <div className="p-4 bg-gray-50 rounded-md text-gray-500 text-center">
-                  No hidden costs added yet
+                <div className="border border-gray-200 rounded-md p-4 text-center text-gray-500 text-sm">
+                  No hidden costs added
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[200px] overflow-y-auto">
                   {hiddenCosts.map((cost, index) => (
-                    <div
-                      key={cost.id}
-                      className="p-3 rounded-md border border-gray-200 bg-white"
-                    >
-                      <div className="flex justify-between items-start">
-                        <input
-                          type="text"
-                          className="border-none bg-transparent p-0 font-medium w-3/4"
-                          value={cost.name}
-                          onChange={(e) => {
-                            const newCosts = [...hiddenCosts];
-                            newCosts[index].name = e.target.value;
-                            setHiddenCosts(newCosts);
-                          }}
-                          placeholder="Cost name"
-                        />
+                    <div key={index} className="flex justify-between items-center p-3 border border-gray-200 rounded-md">
+                      <span className="font-medium">{cost.name}</span>
+                      <div className="flex items-center">
+                        <span className="mr-3">{formatCurrency(cost.amount)}</span>
                         <button
                           className="text-red-500 hover:text-red-700"
-                          onClick={() => {
-                            const newCosts = [...hiddenCosts];
-                            newCosts.splice(index, 1);
-                            setHiddenCosts(newCosts);
-                          }}
+                          onClick={() => handleRemoveHiddenCost(index)}
                         >
-                          <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </button>
-                      </div>
-                      
-                      <div className="mt-2">
-                        <label className="block text-xs text-gray-500">Amount</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className="w-full p-1 border border-gray-300 rounded text-sm"
-                          value={cost.amount}
-                          onChange={(e) => {
-                            const newCosts = [...hiddenCosts];
-                            newCosts[index].amount = parseFloat(e.target.value) || 0;
-                            setHiddenCosts(newCosts);
-                          }}
-                        />
                       </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          )}
-        </div>
-        
-        {/* Summary */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50">
-          <h3 className="font-medium mb-2">Summary</h3>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span>Items:</span>
-              <span>{quoteData.items}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Base Cost:</span>
-              <span>£{quoteData.baseTotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Hidden Costs:</span>
-              <span>£{quoteData.hiddenCosts.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Markup:</span>
-              <span>£{quoteData.markup.toFixed(2)} ({quoteData.markupPercentage})</span>
-            </div>
-            <div className="flex justify-between font-medium">
-              <span>Total:</span>
-              <span>£{quoteData.total.toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Main content */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="bg-white p-4 shadow flex justify-between items-center">
-          <h1 className="text-xl font-bold">Quote Builder</h1>
-          
-          <div className="flex gap-2">
-            <button
-              className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center"
-              onClick={handleSaveQuote}
-            >
-              <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-              </svg>
-              Save Quote
-            </button>
-            <button
-              className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center"
-              onClick={handleExportPDF}
-            >
-              <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Export PDF
-            </button>
-            <button
-              className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center"
-              onClick={handleEmailQuote}
-            >
-              <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              Email Quote
-            </button>
-            <button
-              className="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center"
-              onClick={() => navigate('/quotes')}
-            >
-              <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back to Quotes
-            </button>
-          </div>
-        </div>
-        
-        {/* Main content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="max-w-5xl mx-auto">
-            {/* Quote details form */}
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-medium">Quote Details</h2>
-                <div className="flex items-center">
-                  <input 
-                    type="checkbox"
-                    id="show-form"
-                    checked={showForm}
-                    onChange={() => setShowForm(!showForm)}
-                    className="mr-2 h-4 w-4 text-blue-600 rounded border-gray-300"
-                  />
-                  <label htmlFor="show-form" className="text-sm">Show Form</label>
+            
+            {/* Quote Summary */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-bold mb-4">Quote Summary</h2>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Base Cost:</span>
+                  <span>{formatCurrency(quoteData.visibleBaseCost)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Hidden Costs:</span>
+                  <span>{formatCurrency(quoteData.totalHiddenCost)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Markup ({globalMarkup}%):</span>
+                  <span>{formatCurrency(quoteData.totalMarkup)}</span>
+                </div>
+                <div className="flex justify-between font-bold pt-2 border-t border-gray-200 mt-2">
+                  <span>Total:</span>
+                  <span>{formatCurrency(quoteData.grandTotal)}</span>
                 </div>
               </div>
               
-              {showForm && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Visible Items:</span>
+                  <span>{quoteData.visibleItemsCount}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Hidden Items:</span>
+                  <span>{quoteData.hiddenItems.length}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Profit Margin:</span>
+                  <span>{quoteData.profitPercentage.toFixed(1)}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Preview Tab */}
+      {activeTab === 'preview' && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="border border-gray-200 rounded-lg p-6">
+            {/* Company header */}
+            <div className="flex justify-between mb-8">
+              <div>
+                {settings.company.logo && (
+                  <img src={settings.company.logo} alt="Company Logo" className="h-16 mb-2" />
+                )}
+                <h1 className="text-2xl font-bold">QUOTATION</h1>
+                <p className="text-gray-600">Reference: Q-{new Date().getFullYear()}-{Math.floor(Math.random() * 1000).toString().padStart(3, '0')}</p>
+              </div>
+              
+              <div className="text-right">
+                <p className="font-semibold">{settings.company.name}</p>
+                <div className="whitespace-pre-line">{settings.company.address}</div>
+                <p>{settings.company.email}</p>
+                <p>{settings.company.phone}</p>
+                <p>{settings.company.website}</p>
+              </div>
+            </div>
+            
+            {/* Client section */}
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold mb-2">Client:</h2>
+              <p><span className="font-medium">Name:</span> {quoteDetails.client.name || '[Contact Name]'}</p>
+              {quoteDetails.client.company && (
+                <p><span className="font-medium">Company:</span> {quoteDetails.client.company}</p>
+              )}
+              <p><span className="font-medium">Email:</span> {quoteDetails.client.email || '[Email]'}</p>
+              <p><span className="font-medium">Phone:</span> {quoteDetails.client.phone || '[Phone]'}</p>
+              {quoteDetails.client.address && (
                 <>
-                  {/* Select Contact */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Select Contact
-                    </label>
-                    <div className="flex">
-                      <select 
-                        className="w-full rounded-l-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                        defaultValue=""
-                      >
-                        <option value="" disabled>-- Select existing contact --</option>
-                        {/* Contact options would go here */}
-                      </select>
-                      <button
-                        className="px-4 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600"
-                      >
-                        New Contact
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* Client details */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <FormField
-                      label="Contact Name"
-                      value={quoteDetails.client.name}
-                      onChange={(e) => handleClientChange('name', e.target.value)}
-                    />
-                    
-                    <FormField
-                      label="Company Name"
-                      value={quoteDetails.client.company}
-                      onChange={(e) => handleClientChange('company', e.target.value)}
-                    />
-                    
-                    <FormField
-                      label="Email"
-                      type="email"
-                      value={quoteDetails.client.email}
-                      onChange={(e) => handleClientChange('email', e.target.value)}
-                    />
-                    
-                    <FormField
-                      label="Phone"
-                      value={quoteDetails.client.phone}
-                      onChange={(e) => handleClientChange('phone', e.target.value)}
-                    />
-                    
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Address
-                      </label>
-                      <textarea
-                        className="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
-                        rows="3"
-                        value={quoteDetails.client.address}
-                        onChange={(e) => handleClientChange('address', e.target.value)}
-                      ></textarea>
-                    </div>
-                  </div>
-                  
-                  {/* Quote dates */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Quote Date
-                      </label>
-                      <input
-                        type="date"
-                        className="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
-                        value={quoteDetails.date}
-                        onChange={(e) => handleQuoteChange('date', e.target.value)}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Valid Until
-                      </label>
-                      <input
-                        type="date"
-                        className="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
-                        value={quoteDetails.validUntil}
-                        onChange={(e) => handleQuoteChange('validUntil', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Payment terms */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Payment Terms
-                    </label>
-                    <select
-                      className="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
-                      value={quoteDetails.paymentTerms}
-                      onChange={(e) => handleQuoteChange('paymentTerms', e.target.value)}
-                    >
-                      <option value="1">50% deposit required, remainder due on completion.</option>
-                      <option value="2">50% deposit required, 25% on joinery completion, final 25% on completion.</option>
-                      <option value="4">Full payment before delivery.</option>
-                      <option value="3">Custom terms</option>
-                    </select>
-                  </div>
-                  
-                  {/* Custom terms (if selected) */}
-                  {quoteDetails.paymentTerms === '3' && (
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Custom Terms
-                      </label>
-                      <textarea
-                        className="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
-                        rows="2"
-                        value={quoteDetails.customTerms}
-                        onChange={(e) => handleQuoteChange('customTerms', e.target.value)}
-                      ></textarea>
-                    </div>
-                  )}
-                  
-                  {/* Exclusions */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Exclusions
-                    </label>
-                    {quoteDetails.exclusions.map((exclusion, index) => (
-                      <div key={index} className="flex mb-2 items-center">
-                        <input
-                          type="checkbox"
-                          checked={true}
-                          className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded"
-                        />
-                        <input
-                          type="text"
-                          className="flex-1 p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
-                          value={exclusion}
-                          onChange={(e) => handleExclusionsChange(index, e.target.value)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Additional notes */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Additional Notes
-                    </label>
-                    <textarea
-                      className="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
-                      rows="3"
-                      value={quoteDetails.notes}
-                      onChange={(e) => handleQuoteChange('notes', e.target.value)}
-                    ></textarea>
-                  </div>
-                  
-                  {/* Drawing option */}
-                  <div className="flex items-center mb-4">
-                    <input
-                      type="checkbox"
-                      id="drawing-option"
-                      checked={quoteDetails.includeDrawingOption}
-                      onChange={(e) => handleQuoteChange('includeDrawingOption', e.target.checked)}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                    />
-                    <label htmlFor="drawing-option" className="ml-2 text-sm text-gray-700">
-                      Include drawing option (£150, deducted from project total if order proceeds)
-                    </label>
-                  </div>
+                  <p className="font-medium">Address:</p>
+                  <p className="ml-4 whitespace-pre-line">{quoteDetails.client.address}</p>
                 </>
               )}
             </div>
             
-            {/* Quote Preview */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-medium mb-4">Quote Preview</h2>
-              
-              <div className="border border-gray-200 rounded-lg p-6">
-                {/* Company header */}
-                <div className="flex justify-between mb-8">
-                  <div>
-                    <img src="/logo.svg" alt="Axton's Staircases" className="h-16 mb-2" />
-                    <h1 className="text-2xl font-bold">QUOTATION</h1>
-                    <p className="text-gray-600">Reference: Q-2025-{Math.floor(Math.random() * 1000).toString().padStart(3, '0')}</p>
-                  </div>
-                  
-                  <div className="text-right">
-                    <p className="font-semibold">Axton's Staircases</p>
-                    <p>29 Park Avenue,</p>
-                    <p>Northfleet</p>
-                    <p>Kent,</p>
-                    <p>DA11 8DW</p>
-                    <p>steve@axtons-staircases.co.uk</p>
-                    <p>07889476954</p>
-                    <p>axtons-staircases.co.uk</p>
-                  </div>
-                </div>
-                
-                {/* Client section */}
-                <div className="mb-6">
-                  <h2 className="text-lg font-semibold mb-2">Client:</h2>
-                  <p><span className="font-medium">Name:</span> {quoteDetails.client.name || '[Contact Name]'}</p>
-                  {quoteDetails.client.company && (
-                    <p><span className="font-medium">Company:</span> {quoteDetails.client.company}</p>
-                  )}
-                  <p><span className="font-medium">Email:</span> {quoteDetails.client.email || '[Email]'}</p>
-                  <p><span className="font-medium">Phone:</span> {quoteDetails.client.phone || '[Phone]'}</p>
-                  {quoteDetails.client.address && (
-                    <>
-                      <p className="font-medium">Address:</p>
-                      <p className="ml-4 whitespace-pre-line">{quoteDetails.client.address}</p>
-                    </>
-                  )}
-                </div>
-                
-                {/* Date section */}
-                <div className="mb-6">
-                  <p><span className="font-medium">Date:</span> {quoteDetails.date ? new Date(quoteDetails.date).toLocaleDateString('en-GB') : 'N/A'}</p>
-                  <p><span className="font-medium">Valid Until:</span> {quoteDetails.validUntil ? new Date(quoteDetails.validUntil).toLocaleDateString('en-GB') : 'N/A'}</p>
-                </div>
-                
-                {/* Items table */}
-                <table className="w-full border-collapse mb-6">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="border border-gray-300 px-4 py-2 text-left">Item Description</th>
-                      <th className="border border-gray-300 px-4 py-2 text-right">Qty</th>
-                      <th className="border border-gray-300 px-4 py-2 text-right">Unit Price</th>
-                      <th className="border border-gray-300 px-4 py-2 text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedItems.filter(item => !item.hideInQuote).length === 0 ? (
-                      <tr>
-                        <td colSpan="4" className="border border-gray-300 px-4 py-2 text-center text-gray-500">
-                          No items added to quote yet
-                        </td>
-                      </tr>
-                    ) : (
-                      selectedItems
-                        .filter(item => !item.hideInQuote)
-                        .map((item, index) => {
-                          const quantity = item.quantity || 1;
-                          const cost = item.cost || 0;
-                          const markupPercent = item.markup || globalMarkup;
-                          const baseCost = cost * quantity;
-                          const markupAmount = baseCost * (markupPercent / 100);
-                          const total = baseCost + markupAmount;
-                          const unitPrice = quantity > 0 ? total / quantity : 0;
-                          
-                          return (
-                            <tr key={index} className="border-b border-gray-200">
-                              <td className="border border-gray-300 px-4 py-2">
-                                {item.description || item.name}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2 text-right">
-                                {quantity}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2 text-right">
-                                £{unitPrice.toFixed(2)}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2 text-right">
-                                £{total.toFixed(2)}
-                              </td>
-                            </tr>
-                          );
-                        })
-                    )}
-                    
-                    {/* Total row */}
-                    <tr className="bg-gray-100 font-semibold">
-                      <td colSpan="3" className="border border-gray-300 px-4 py-2 text-right">
-                        Total
+            {/* Date section */}
+            <div className="mb-6">
+              <p><span className="font-medium">Date:</span> {quoteDetails.date ? new Date(quoteDetails.date).toLocaleDateString('en-GB') : 'N/A'}</p>
+              <p><span className="font-medium">Valid Until:</span> {quoteDetails.validUntil ? new Date(quoteDetails.validUntil).toLocaleDateString('en-GB') : 'N/A'}</p>
+            </div>
+            
+            {/* Items table */}
+            <table className="w-full border-collapse mb-6">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="border border-gray-300 px-4 py-2 text-left">Item Description</th>
+                  <th className="border border-gray-300 px-4 py-2 text-right">Qty</th>
+                  <th className="border border-gray-300 px-4 py-2 text-right">Unit Price</th>
+                  <th className="border border-gray-300 px-4 py-2 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {quoteData.itemTotals.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="border border-gray-300 px-4 py-2 text-center text-gray-500">
+                      No items added to quote yet
+                    </td>
+                  </tr>
+                ) : (
+                  quoteData.itemTotals.map((item, index) => (
+                    <tr key={index} className="border-b border-gray-200">
+                      <td className="border border-gray-300 px-4 py-2">
+                        {item.description || item.name}
                       </td>
                       <td className="border border-gray-300 px-4 py-2 text-right">
-                        £{quoteData.total.toFixed(2)}
+                        {item.quantity}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-right">
+                        {formatCurrency(item.unitPrice)}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-right">
+                        {formatCurrency(item.finalTotal)}
                       </td>
                     </tr>
-                  </tbody>
-                </table>
+                  ))
+                )}
                 
-                {/* Terms section */}
-                <div className="mt-8">
-                  <h2 className="text-lg font-semibold mb-2">Terms and Conditions:</h2>
-                  
-                  <h3 className="font-semibold text-gray-800 mt-4">Payment Terms:</h3>
-                  <p>
-                    {quoteDetails.paymentTerms === '1'
-                      ? '50% deposit required, remainder due on completion.'
-                      : quoteDetails.paymentTerms === '2'
-                      ? '50% deposit required, 25% on completion of joinery, final 25% on completion.'
-                      : quoteDetails.paymentTerms === '4'
-                      ? 'Full amount to be paid before delivery.'
-                      : quoteDetails.customTerms || 'Custom payment terms'}
-                  </p>
-                  <p>This quote is valid for the period specified above.</p>
-                  
-                  {/* Exclusions */}
-                  {quoteDetails.exclusions.length > 0 && (
-                    <>
-                      <h3 className="font-semibold text-gray-800 mt-4">Exclusions:</h3>
-                      <ul className="list-disc pl-5">
-                        {quoteDetails.exclusions.map((exclusion, index) => (
-                          <li key={index}>{exclusion}</li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                  
-                  {/* Drawing option */}
-                  {quoteDetails.includeDrawingOption && (
-                    <>
-                      <h3 className="font-semibold text-gray-800 mt-4">Drawings:</h3>
-                      <p>Drawings are available before accepting the quote at a cost of £150, which will be deducted from the project total if the order proceeds.</p>
-                    </>
-                  )}
-                  
-                  {/* Notes */}
-                  {quoteDetails.notes && (
-                    <>
-                      <h3 className="font-semibold text-gray-800 mt-4">Additional Notes:</h3>
-                      <p className="whitespace-pre-line">{quoteDetails.notes}</p>
-                    </>
-                  )}
-                </div>
+                {/* Total row */}
+                <tr className="bg-gray-100 font-semibold">
+                  <td colSpan="3" className="border border-gray-300 px-4 py-2 text-right">
+                    Total
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2 text-right">
+                    {formatCurrency(quoteData.grandTotal)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            
+            {/* Terms section */}
+            <div className="mt-8">
+              <h2 className="text-lg font-semibold mb-2">Terms and Conditions:</h2>
+              
+              <h3 className="font-semibold text-gray-800 mt-4">Payment Terms:</h3>
+              <p>
+                {quoteDetails.paymentTerms === '1'
+                  ? '50% deposit required, remainder due on completion.'
+                  : quoteDetails.paymentTerms === '2'
+                  ? '50% deposit required, 25% on completion of joinery, final 25% on completion.'
+                  : quoteDetails.paymentTerms === '4'
+                  ? 'Full amount to be paid before delivery.'
+                  : quoteDetails.customTerms || 'Custom payment terms'}
+              </p>
+              <p>This quote is valid for the period specified above.</p>
+              
+              {/* Exclusions */}
+              {quoteDetails.exclusions.length > 0 && (
+                <>
+                  <h3 className="font-semibold text-gray-800 mt-4">Exclusions:</h3>
+                  <ul className="list-disc pl-5">
+                    {quoteDetails.exclusions.map((exclusion, index) => (
+                      <li key={index}>{exclusion}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              
+              {/* Drawing option */}
+              {quoteDetails.includeDrawingOption && (
+                <>
+                  <h3 className="font-semibold text-gray-800 mt-4">Drawings:</h3>
+                  <p>Drawings are available before accepting the quote at a cost of £150, which will be deducted from the project total if the order proceeds.</p>
+                </>
+              )}
+              
+              {/* Notes */}
+              {quoteDetails.notes && (
+                <>
+                  <h3 className="font-semibold text-gray-800 mt-4">Additional Notes:</h3>
+                  <p className="whitespace-pre-line">{quoteDetails.notes}</p>
+                </>
+              )}
+              
+              {/* Add company footer */}
+              <div className="mt-8 pt-4 border-t border-gray-200 text-sm text-gray-600">
+                <p className="mb-1">{settings.company.name} | {settings.company.address}</p>
+                <p>{settings.company.phone} | {settings.company.email} | {settings.company.website}</p>
+                {settings.company.registration && (
+                  <p className="mt-1">Company Registration: {settings.company.registration}</p>
+                )}
+                {settings.company.vat && (
+                  <p>VAT Registration: {settings.company.vat}</p>
+                )}
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+      
+      {/* Add Item Dialog */}
+      <Dialog
+        isOpen={showItemDialog}
+        onClose={() => setShowItemDialog(false)}
+        title="Add Item to Quote"
+      >
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Search
+          </label>
+          <input
+            type="text"
+            value={itemSearchTerm}
+            onChange={(e) => setItemSearchTerm(e.target.value)}
+            placeholder="Search by name or description..."
+            className="w-full p-2 border border-gray-300 rounded-md"
+          />
+        </div>
+        
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Category
+          </label>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md"
+          >
+            <option value="all">All Categories</option>
+            {/* Create unique list of categories */}
+            {Array.from(new Set(catalogItems.map(item => item.category)))
+              .filter(Boolean)
+              .sort()
+              .map(category => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+          </select>
+        </div>
+        
+        <div className="max-h-96 overflow-y-auto mt-4">
+          {filteredCatalogItems.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              No items match your search criteria
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {filteredCatalogItems.map(item => (
+                <div
+                  key={item.id}
+                  className="py-3 hover:bg-gray-50 cursor-pointer"
+                  onClick={() => handleAddItem(item)}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-medium">{item.name}</h3>
+                      <p className="text-sm text-gray-500">{getSupplierName(item.supplier)}</p>
+                      {item.description && (
+                        <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{formatCurrency(item.cost)}</p>
+                      {item.category && (
+                        <p className="text-xs text-gray-500">{item.category}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Dialog>
+      
+      {/* Hidden Cost Dialog */}
+      <Dialog
+        isOpen={showHiddenCostDialog}
+        onClose={() => setShowHiddenCostDialog(false)}
+        title="Add Hidden Cost"
+      >
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Name
+          </label>
+          <input
+            type="text"
+            value={newHiddenCost.name}
+            onChange={(e) => setNewHiddenCost({ ...newHiddenCost, name: e.target.value })}
+            placeholder="e.g., Delivery, Installation, etc."
+            className="w-full p-2 border border-gray-300 rounded-md"
+          />
+        </div>
+        
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Amount (£)
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={newHiddenCost.amount}
+            onChange={(e) => setNewHiddenCost({ ...newHiddenCost, amount: e.target.value })}
+            className="w-full p-2 border border-gray-300 rounded-md"
+          />
+        </div>
+        
+        <div className="flex justify-end space-x-2">
+          <Button
+            variant="secondary"
+            onClick={() => setShowHiddenCostDialog(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleAddHiddenCost}
+          >
+            Add Cost
+          </Button>
+        </div>
+      </Dialog>
+    </PageLayout>
   );
 };
 

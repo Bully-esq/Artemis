@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { useQuery } from 'react-query';
 import { useAppContext } from '../context/AppContext';
 import api from '../services/api';
 import { formatDate } from '../utils/formatters';
@@ -13,10 +13,7 @@ import Dialog from '../components/common/Dialog';
 
 const Quotes = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { addNotification } = useAppContext();
-  
-  // Local state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -84,7 +81,7 @@ const Quotes = () => {
       });
   }, [quotes, searchTerm, filterStatus]);
 
-  // Handle quote deletion
+  // Handle delete confirmation
   const handleDeleteClick = (quote) => {
     setQuoteToDelete(quote);
     setIsDeleteDialogOpen(true);
@@ -124,9 +121,9 @@ const Quotes = () => {
   // Status badge component
   const StatusBadge = ({ status }) => {
     const badgeClasses = {
-      active: 'bg-green-100 text-green-800',
-      expiring: 'bg-yellow-100 text-yellow-800',
-      expired: 'bg-red-100 text-red-800'
+      active: 'status-badge status-badge-active',
+      expiring: 'status-badge status-badge-expiring',
+      expired: 'status-badge status-badge-expired'
     };
     
     const statusLabels = {
@@ -136,7 +133,7 @@ const Quotes = () => {
     };
     
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeClasses[status] || 'bg-gray-100'}`}>
+      <span className={badgeClasses[status] || 'status-badge'}>
         {statusLabels[status] || status}
       </span>
     );
@@ -187,49 +184,91 @@ const Quotes = () => {
 
   return (
     <PageLayout title="Quotes" actions={pageActions}>
-      {/* Import global table styles */}
-      <style jsx>{`
-        @import url('./global-table-styles.css');
-      `}</style>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-2">Quote Management</h1>
+        <p className="text-gray-600">Create and manage quotes for your clients</p>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+        <div className="quick-actions">
+          <div onClick={handleCreateQuote} className="quick-action-btn">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span>New Quote</span>
+          </div>
+          
+          <div onClick={() => navigate('/invoices')} className="quick-action-btn">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <span>Create Invoice</span>
+          </div>
+          
+          <div onClick={() => navigate('/contacts')} className="quick-action-btn">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span>Manage Contacts</span>
+          </div>
+        </div>
+      </div>
 
       {/* Filters and search */}
-      <div className="bg-white shadow rounded-lg p-6 mb-6">
-        <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
-          <div className="flex-1">
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
-              Search Quotes
-            </label>
+      <div className="card mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="w-full md:w-1/3">
             <input
               type="text"
-              id="search"
-              placeholder="Search by client or quote name..."
-              className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full border-gray-300 rounded-md"
+              className="search-input"
+              placeholder="Search quotes by client or name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           
-          <div className="flex-shrink-0 w-full md:w-48">
-            <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              id="status-filter"
-              className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full border-gray-300 rounded-md"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+          <div className="filter-buttons">
+            <button
+              className={`btn ${filterStatus === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setFilterStatus('all')}
             >
-              <option value="all">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="expiring">Expiring Soon</option>
-              <option value="expired">Expired</option>
-            </select>
+              All
+            </button>
+            <button
+              className={`btn ${filterStatus === 'active' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setFilterStatus('active')}
+            >
+              Active
+            </button>
+            <button
+              className={`btn ${filterStatus === 'expiring' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setFilterStatus('expiring')}
+            >
+              Expiring Soon
+            </button>
+            <button
+              className={`btn ${filterStatus === 'expired' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setFilterStatus('expired')}
+            >
+              Expired
+            </button>
           </div>
         </div>
       </div>
       
       {/* Quotes list */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="card">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Quotes</h2>
+          <div>
+            <span className="text-sm text-gray-600">
+              {filteredQuotes.length} quotes found
+            </span>
+          </div>
+        </div>
+
         {filteredQuotes.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
             {searchTerm || filterStatus !== 'all' ? (
@@ -244,96 +283,59 @@ const Quotes = () => {
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Client
-                  </th>
-                  <th scope="col" className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Quote
-                  </th>
-                  <th scope="col" className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th scope="col" className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Valid Until
-                  </th>
-                  <th scope="col" className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredQuotes.map((quote) => {
-                  const status = getQuoteStatus(quote);
-                  return (
-                    <tr key={quote.id}>
-                      <td>
-                        <div className="client-info" title={quote.clientName || 'Unknown Client'}>
-                          <div className="font-medium text-gray-900">
-                            {quote.clientName || 'Unknown Client'}
-                          </div>
-                          {quote.clientCompany && (
-                            <div className="text-sm text-gray-500">
-                              {quote.clientCompany}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="text-gray-900">
-                          {quote.name || `Quote #${quote.id.substr(0, 8)}`}
-                        </div>
-                      </td>
-                      <td className="date-cell">
-                        <div className="text-gray-500">
-                          {quote.date ? formatDate(quote.date) : 'N/A'}
-                        </div>
-                      </td>
-                      <td className="date-cell">
-                        <div className="text-gray-500">
-                          {quote.validUntil ? formatDate(quote.validUntil) : 'N/A'}
-                        </div>
-                      </td>
-                      <td>
+          <div className="recent-items">
+            {filteredQuotes.map((quote) => {
+              const status = getQuoteStatus(quote);
+              return (
+                <div 
+                  key={quote.id} 
+                  className="recent-item"
+                  onClick={() => handleEditQuote(quote.id)}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {quote.clientName || 'Unknown Client'}
+                        {quote.clientCompany && (
+                          <span className="text-sm text-gray-500"> ({quote.clientCompany})</span>
+                        )}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {quote.name || `Quote #${quote.id.substr(0, 8)}`}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">
+                        {quote.date ? formatDate(quote.date) : 'No date'}
+                      </p>
+                      <div className="flex items-center space-x-2 mt-1">
                         <StatusBadge status={status} />
-                      </td>
-                      <td className="text-right">
-                        <div className="action-buttons">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditQuote(quote.id)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleCreateInvoice(quote.id)}
+                        <div className="flex space-x-1">
+                          <button
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCreateInvoice(quote.id);
+                            }}
                           >
                             Invoice
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          </button>
+                          <button
                             className="text-red-600 hover:text-red-800"
-                            onClick={() => handleDeleteClick(quote)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(quote);
+                            }}
                           >
                             Delete
-                          </Button>
+                          </button>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -374,20 +376,6 @@ const Quotes = () => {
           </Button>
         </div>
       </Dialog>
-
-      <style jsx>{`
-        .client-info {
-          max-width: 200px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        
-        .action-buttons {
-          display: flex;
-          gap: 8px;
-          justify-content: flex-end;
-        }
-      `}</style>
     </PageLayout>
   );
 };
