@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMutation } from 'react-query';
+import '../App.css';
 import PageLayout from '../components/common/PageLayout';
 import Tabs from '../components/common/Tabs';
 import FormField from '../components/common/FormField';
@@ -16,7 +17,7 @@ const Settings = () => {
   const [logoPreview, setLogoPreview] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Prepare mutation for saving settings
+  // Prepare mutation for saving settings 
   const saveSettingsMutation = useMutation(
     (newSettings) => api.settings.save(newSettings),
     {
@@ -83,8 +84,13 @@ const Settings = () => {
 
   return (
     <PageLayout title="Settings">
-      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="p-6">
+      <div className="settings-header">
+        <h1 className="page-title">Settings</h1>
+        <p className="page-description">Configure your business settings</p>
+      </div>
+
+      <div className="card settings-card">
+        <div className="card-content">
           <Tabs
             tabs={[
               { id: 'company', label: 'Company Details' },
@@ -95,17 +101,16 @@ const Settings = () => {
             activeTab={activeTab}
             onChange={setActiveTab}
             variant="underline"
-            className="mb-6"
+            className="settings-tabs"
+            style={{ gap: '2rem', display: 'flex' }} // Add inline style for spacing
           />
 
           {/* Company Details */}
           {activeTab === 'company' && (
-            <div className="space-y-6">
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Company Logo
-                </label>
-                <div className="flex items-start space-x-4">
+            <div className="settings-section">
+              <div className="logo-upload-container">
+                <label className="field-label">Company Logo</label>
+                <div className="logo-upload-area">
                   <div>
                     <Button
                       variant="secondary"
@@ -117,22 +122,20 @@ const Settings = () => {
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
-                      className="hidden"
+                      className="hidden-input"
                       onChange={handleLogoUpload}
                     />
-                    <p className="mt-1 text-sm text-gray-500">
-                      Recommended size: 300x100px
-                    </p>
+                    <p className="helper-text">Recommended size: 300x100px</p>
                   </div>
                   {logoPreview && (
-                    <div className="relative border border-gray-200 rounded-md p-2 bg-gray-50">
+                    <div className="logo-preview">
                       <img
                         src={logoPreview}
                         alt="Company logo"
-                        className="max-h-20 max-w-xs object-contain"
+                        className="logo-image"
                       />
                       <button
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                        className="delete-button"
                         onClick={() => {
                           setLogoPreview(null);
                           handleChange('company', 'logo', null);
@@ -140,7 +143,7 @@ const Settings = () => {
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
+                          className="delete-icon"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -172,7 +175,7 @@ const Settings = () => {
                 onChange={(e) => handleChange('company', 'contactName', e.target.value)}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="form-row">
                 <FormField
                   label="Email"
                   name="email"
@@ -208,7 +211,7 @@ const Settings = () => {
 
           {/* Quote Settings */}
           {activeTab === 'quote' && (
-            <div className="space-y-6">
+            <div className="settings-section">
               <FormField
                 label="Default Markup (%)"
                 name="default-markup"
@@ -259,7 +262,7 @@ const Settings = () => {
 
           {/* Invoice Settings */}
           {activeTab === 'invoice' && (
-            <div className="space-y-6">
+            <div className="settings-section">
               <FormField
                 label="Invoice Number Prefix"
                 name="invoice-prefix"
@@ -306,10 +309,10 @@ const Settings = () => {
 
           {/* CIS Settings */}
           {activeTab === 'cis' && (
-            <div className="space-y-6">
-              <div className="p-4 bg-yellow-50 rounded-md mb-6">
-                <h3 className="text-yellow-800 font-medium mb-2">Construction Industry Scheme</h3>
-                <p className="text-yellow-700 text-sm">
+            <div className="settings-section">
+              <div className="notification-box warning">
+                <h3 className="notification-title">Construction Industry Scheme</h3>
+                <p className="notification-text">
                   These settings are used for CIS tax deductions on invoices. 
                   Make sure these details are correct to comply with HMRC regulations.
                 </p>
@@ -339,7 +342,7 @@ const Settings = () => {
             </div>
           )}
 
-          <div className="mt-8 flex justify-end">
+          <div className="action-buttons">
             <Button
               variant="green"
               onClick={handleSaveSettings}

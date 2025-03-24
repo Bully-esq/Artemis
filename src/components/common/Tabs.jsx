@@ -14,30 +14,28 @@ const Tabs = ({
   activeTab,
   onChange,
   variant = 'default',
-  className = ''
+  className = '',
+  style = {}
 }) => {
-  // Base tab classes
-  const baseTabClasses = 'px-4 py-2 text-sm font-medium cursor-pointer transition-colors';
-  
-  // Variant-specific classes
+  // Variant-specific classes using traditional CSS
   const tabVariants = {
     default: {
-      container: 'flex',
-      tab: `${baseTabClasses} rounded-t-lg border-b-2`,
-      active: 'bg-white text-blue-600 border-blue-600',
-      inactive: 'text-gray-500 hover:text-gray-700 border-transparent hover:border-gray-300'
+      container: 'tabs',
+      tab: 'tab',
+      active: 'active',
+      inactive: ''
     },
     pills: {
-      container: 'flex space-x-1',
-      tab: `${baseTabClasses} rounded-md`,
-      active: 'bg-blue-600 text-white',
-      inactive: 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+      container: 'tabs tabs-pills',
+      tab: 'tab',
+      active: 'active',
+      inactive: ''
     },
     underline: {
-      container: 'flex border-b border-gray-200',
-      tab: `${baseTabClasses} border-b-2`,
-      active: 'text-blue-600 border-blue-600',
-      inactive: 'text-gray-500 hover:text-gray-700 border-transparent hover:border-gray-300'
+      container: 'tabs tabs-underline',
+      tab: 'tab',
+      active: 'active',
+      inactive: ''
     }
   };
   
@@ -45,7 +43,7 @@ const Tabs = ({
   const variant_classes = tabVariants[variant] || tabVariants.default;
   
   return (
-    <div className={`${variant_classes.container} ${className}`}>
+    <div className={`${variant_classes.container} ${className}`} style={style}>
       {tabs.map((tab) => (
         <div
           key={tab.id}
@@ -75,7 +73,7 @@ export const TabPanel = ({
   if (id !== activeTab) return null;
   
   return (
-    <div className={`py-4 ${className}`}>
+    <div className={`tab-content ${className}`}>
       {children}
     </div>
   );

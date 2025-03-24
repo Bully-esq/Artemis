@@ -362,6 +362,10 @@ p {
   margin-bottom: 1.5rem;
 }
 
+.action-card .card-body {
+  padding: 1rem;
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
@@ -918,6 +922,9 @@ p {
 .tabs {
   display: flex;
   border-bottom: 1px solid var(--border);
+  padding: 0 0.5rem;
+  display: flex;
+  gap: 1rem; /* Add explicit gap between tabs */
 }
 
 .tab {
@@ -2037,4 +2044,924 @@ p {
   .form-row {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+.settings-header {
+  margin-bottom: 1.5rem;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.page-description {
+  color: #6b7280;
+}
+
+.settings-card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.card-content {
+  padding: 1.5rem;
+}
+
+.settings-tabs {
+  margin-bottom: 2.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.logo-upload-container {
+  margin-bottom: 1.5rem;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.logo-upload-area {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.helper-text {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.hidden-input {
+  display: none;
+}
+
+.logo-preview {
+  position: relative;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  background-color: #f9fafb;
+}
+
+.logo-image {
+  max-height: 5rem;
+  max-width: 20rem;
+  object-fit: contain;
+}
+
+.delete-button {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  background-color: #ef4444;
+  color: white;
+  border-radius: 9999px;
+  padding: 0.25rem;
+}
+
+.delete-icon {
+  height: 1rem;
+  width: 1rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.notification-box {
+  padding: 1rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1.5rem;
+}
+
+.notification-box.warning {
+  background-color: #fef3c7;
+}
+
+.notification-title {
+  color: #92400e;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.notification-text {
+  color: #b45309;
+  font-size: 0.875rem;
+}
+
+.action-buttons {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Add these styles to your App.css file */
+
+/* Improve general spacing in settings */
+.settings-header {
+  margin-bottom: 2.5rem;
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+}
+
+.page-description {
+  color: #6b7280;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+/* Add more space between sections */
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem; /* Increase spacing between form fields */
+  padding: 1rem 0.5rem;
+}
+
+/* Add spacing for form elements */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Notification box improvements */
+.notification-box {
+  padding: 1.5rem;
+  border-radius: 0.375rem;
+  margin-bottom: 2rem;
+}
+
+.notification-title {
+  color: #92400e;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.notification-text {
+  color: #b45309;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* Better tab spacing */
+.settings-tabs {
+  margin-bottom: 2.5rem;
+}
+
+/* Button spacing */
+.action-buttons {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Logo upload area improvements */
+.logo-upload-container {
+  margin-bottom: 2rem;
+}
+
+.logo-upload-area {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Improve field labels and help text */
+.field-label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.75rem;
+}
+
+.helper-text {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+/* Ensure forms have good line height */
+input, textarea, select {
+  line-height: 1.5;
+}
+
+/* Settings page specific styling with higher specificity */
+.settings-section > * {
+  margin-bottom: 1.5rem;
+}
+
+.settings-section > .form-field {
+  margin-bottom: 2rem;
+}
+
+.settings-section label {
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.settings-section input,
+.settings-section select,
+.settings-section textarea {
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  width: 100%;
+  line-height: 1.5;
+}
+
+.settings-section .helper-text {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.settings-card {
+  margin-bottom: 2rem;
+}
+
+.settings-tabs {
+  margin-bottom: 2rem;
+}
+
+/* More specific selectors to increase spacing */
+.settings-section > .notification-box {
+  margin-bottom: 2.5rem;
+}
+
+/* Logo upload specific spacing */
+.logo-upload-container {
+  margin-bottom: 2.5rem;
+}
+
+/* Form rows more specific */
+.settings-section .form-row {
+  margin-bottom: 1.5rem;
+}
+
+/* Additional spacing for tab headers */
+.settings-tabs .tab {
+  padding: 0.75rem 1.5rem;
+  margin-right: 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* Add some bottom margin to separate tabs from content */
+.settings-tabs {
+  margin-bottom: 2.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+/* Improve the active tab styling */
+.settings-tabs .tab.active {
+  color: var(--primary);
+  border-bottom: 2px solid var(--primary);
+  font-weight: 600;
+}
+
+/* Add padding to tabs container */
+.tabs {
+  padding: 0 0.5rem;
+  display: flex;
+  gap: 1rem; /* Add explicit gap between tabs */
+}
+
+/* Improved tab spacing for Settings page */
+.settings-tabs.tabs {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 2.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-tabs .tab {
+  padding: 0.75rem 0;
+  margin-right: 2.5rem; /* Increased horizontal spacing between tabs */
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-light);
+  position: relative;
+  cursor: pointer;
+}
+
+.settings-tabs .tab:last-child {
+  margin-right: 0;
+}
+
+.settings-tabs .tab.active {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.settings-tabs .tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--primary);
+}
+
+/* Ensure proper spacing below the tabs */
+.settings-tabs + .settings-section {
+  margin-top: 2rem;
+}
+
+/* Tab spacing */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+
+.tab {
+  padding: 0.75rem 1.25rem;
+  margin-right: 1.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  color: var(--text-light);
+}
+
+.tab:last-child {
+  margin-right: 0;
+}
+
+.tab.active {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Underline style tabs */
+.tabs-underline {
+  border-bottom: 1px solid var(--border);
+}
+
+.tabs-underline .tab {
+  border-bottom: 2px solid transparent;
+}
+
+.tabs-underline .tab.active {
+  border-bottom-color: var(--primary);
+}
+
+/* Pill style tabs */
+.tabs-pills .tab {
+  border-radius: 0.375rem;
+}
+
+.tabs-pills .tab.active {
+  background-color: var(--primary);
+  color: white;
+}
+
+/* Settings specific tab spacing */
+.settings-tabs .tab {
+  margin-right: 2.5rem;
+  font-size: 1rem;
+}
+
+/* Invoice builder layout */
+.invoice-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.invoice-form-panel {
+  width: 100%;
+}
+
+.invoice-preview-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.invoice-preview-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24rem;
+  color: var(--text-light);
+  background-color: var(--bg-light);
+  border-radius: var(--border-radius);
+  padding: 2rem;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.action-buttons .btn {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.btn-icon {
+  margin-right: 0.5rem;
+  display: inline-block;
+}
+
+.form-actions {
+  margin-top: 1.5rem;
+}
+
+/* Responsive layout */
+@media (min-width: 1024px) {
+  .invoice-layout {
+    flex-direction: row;
+  }
+  
+  .invoice-form-panel {
+    width: 40%;
+  }
+  
+  .invoice-preview-panel {
+    width: 60%;
+  }
+}
+
+/* Quote Builder specific styles */
+.quote-details-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .quote-details-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.card-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.empty-message {
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text-light);
+}
+
+.empty-message.small {
+  padding: 1rem;
+  font-size: 0.875rem;
+}
+
+.quote-items-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .quote-items-grid {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+.items-container {
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.item-card {
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.item-card-hidden {
+  border-style: dashed;
+  background-color: var(--bg-light);
+}
+
+.item-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.item-name {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.item-supplier {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+.delete-button {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  color: var(--danger-hover);
+}
+
+.delete-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.item-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-bottom: 0.25rem;
+}
+
+.total-display {
+  padding: 0.5rem;
+  background-color: var(--bg-light);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.form-checkbox {
+  margin-right: 0.5rem;
+  height: 1rem;
+  width: 1rem;
+  color: var(--primary);
+  border-radius: 0.25rem;
+}
+
+.checkbox-text {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+.hidden-costs-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.hidden-cost-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  margin-bottom: 0.5rem;
+}
+
+.cost-name {
+  font-weight: 500;
+}
+
+.cost-actions {
+  display: flex;
+  align-items: center;
+}
+
+.cost-amount {
+  margin-right: 0.75rem;
+}
+
+.delete-button-small {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+}
+
+.delete-icon-small {
+  width: 1rem;
+  height: 1rem;
+}
+
+.summary-items {
+  margin-bottom: 1rem;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+}
+
+.summary-total {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.summary-stats {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+}
+
+.summary-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+}
+
+.stat-label {
+  color: var(--text-light);
+}
+
+/* Quote preview styles */
+.quote-preview {
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  background-color: white;
+  padding: 2rem;
+}
+
+.quote-preview-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.quote-logo {
+  height: 4rem;
+  margin-bottom: 1rem;
+}
+
+.quote-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.quote-reference {
+  color: var(--text-light);
+}
+
+.company-details {
+  text-align: right;
+  font-size: 0.875rem;
+}
+
+.company-name {
+  font-weight: 600;
+}
+
+.company-address {
+  white-space: pre-line;
+}
+
+.company-contact {
+  margin-top: 0.25rem;
+}
+
+.client-section, .date-section {
+  margin-bottom: 1.5rem;
+}
+
+.section-header {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.detail-label {
+  font-weight: 500;
+  margin-right: 0.5rem;
+}
+
+.detail-address {
+  white-space: pre-line;
+  margin-left: 1rem;
+}
+
+.quote-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+.quote-table th, .quote-table td {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.quote-table th {
+  background-color: var(--bg-light);
+  font-weight: 600;
+}
+
+.quote-table tr:nth-child(even) {
+  background-color: var(--bg-light);
+}
+
+.text-right {
+  text-align: right;
+}
+
+.quote-table-total {
+  font-weight: 600;
+  background-color: var(--primary-light) !important;
+}
+
+.empty-table-message {
+  text-align: center;
+  color: var(--text-light);
+  padding: 1.5rem;
+}
+
+.terms-section {
+  margin-top: 2rem;
+}
+
+.terms-heading {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.terms-subheading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  margin-top: 1rem;
+}
+
+.terms-list {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.terms-notes {
+  white-space: pre-line;
+}
+
+.quote-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+/* Catalog dialog styles */
+.catalog-items-list {
+  max-height: 24rem;
+  overflow-y: auto;
+  margin-top: 1rem;
+}
+
+.catalog-items {
+  border-top: 1px solid var(--border);
+}
+
+.catalog-item {
+  padding: 0.75rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background-color 0.2s;
+}
+
+.catalog-item:hover {
+  background-color: var(--bg-light);
+}
+
+.catalog-item-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.catalog-item-name {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.catalog-item-supplier {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+.catalog-item-description {
+  font-size: 0.875rem;
+  color: var(--text);
+  margin-top: 0.25rem;
+}
+
+.catalog-item-price {
+  text-align: right;
+}
+
+.price-value {
+  font-weight: 500;
+}
+
+.category-label {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  gap: 0.5rem;
+}
+
+.form-range {
+  width: 100%;
 }

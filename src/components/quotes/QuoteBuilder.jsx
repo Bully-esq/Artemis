@@ -272,7 +272,7 @@ const QuoteBuilder = () => {
   
   // Header action buttons
   const headerActions = (
-    <div className="flex space-x-2">
+    <div className="action-buttons">
       <Button variant="primary" onClick={handleSaveQuote}>
         Save Quote
       </Button>
@@ -290,354 +290,369 @@ const QuoteBuilder = () => {
   
   return (
     <PageLayout title={id ? 'Edit Quote' : 'Create Quote'} actions={headerActions}>
-      <div className="mb-6">
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <Tabs
-            tabs={[
-              { id: 'details', label: 'Quote Details' },
-              { id: 'items', label: 'Items & Costs' },
-              { id: 'preview', label: 'Preview' }
-            ]}
-            activeTab={activeTab}
-            onChange={setActiveTab}
-            variant="underline"
-          />
+      <div className="tabs-container">
+        <div className="card">
+          <div className="card-body">
+            <Tabs
+              tabs={[
+                { id: 'details', label: 'Quote Details' },
+                { id: 'items', label: 'Items & Costs' },
+                { id: 'preview', label: 'Preview' }
+              ]}
+              activeTab={activeTab}
+              onChange={setActiveTab}
+              variant="underline"
+            />
+          </div>
         </div>
       </div>
       
       {/* Details Tab */}
       {activeTab === 'details' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="quote-details-grid">
           {/* Client Information Card */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-bold mb-4">Client Information</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <FormField
-                label="Contact Name"
-                value={quoteDetails.client.name}
-                onChange={(e) => handleClientChange('name', e.target.value)}
-              />
+          <div className="card">
+            <div className="card-body">
+              <h2 className="card-title">Client Information</h2>
+              
+              <div className="form-row">
+                <FormField
+                  label="Contact Name"
+                  value={quoteDetails.client.name}
+                  onChange={(e) => handleClientChange('name', e.target.value)}
+                />
+                
+                <FormField
+                  label="Company Name"
+                  value={quoteDetails.client.company}
+                  onChange={(e) => handleClientChange('company', e.target.value)}
+                />
+                
+                <FormField
+                  label="Email"
+                  type="email"
+                  value={quoteDetails.client.email}
+                  onChange={(e) => handleClientChange('email', e.target.value)}
+                />
+                
+                <FormField
+                  label="Phone"
+                  value={quoteDetails.client.phone}
+                  onChange={(e) => handleClientChange('phone', e.target.value)}
+                />
+              </div>
               
               <FormField
-                label="Company Name"
-                value={quoteDetails.client.company}
-                onChange={(e) => handleClientChange('company', e.target.value)}
-              />
-              
-              <FormField
-                label="Email"
-                type="email"
-                value={quoteDetails.client.email}
-                onChange={(e) => handleClientChange('email', e.target.value)}
-              />
-              
-              <FormField
-                label="Phone"
-                value={quoteDetails.client.phone}
-                onChange={(e) => handleClientChange('phone', e.target.value)}
+                label="Address"
+                type="textarea"
+                value={quoteDetails.client.address}
+                onChange={(e) => handleClientChange('address', e.target.value)}
+                rows={3}
               />
             </div>
-            
-            <FormField
-              label="Address"
-              type="textarea"
-              value={quoteDetails.client.address}
-              onChange={(e) => handleClientChange('address', e.target.value)}
-              rows={3}
-            />
           </div>
           
           {/* Quote Settings Card */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-bold mb-4">Quote Settings</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <FormField
-                label="Quote Date"
-                type="date"
-                value={quoteDetails.date}
-                onChange={(e) => handleQuoteChange('date', e.target.value)}
-              />
+          <div className="card">
+            <div className="card-body">
+              <h2 className="card-title">Quote Settings</h2>
+              
+              <div className="form-row">
+                <FormField
+                  label="Quote Date"
+                  type="date"
+                  value={quoteDetails.date}
+                  onChange={(e) => handleQuoteChange('date', e.target.value)}
+                />
+                
+                <FormField
+                  label="Valid Until"
+                  type="date"
+                  value={quoteDetails.validUntil}
+                  onChange={(e) => handleQuoteChange('validUntil', e.target.value)}
+                />
+              </div>
               
               <FormField
-                label="Valid Until"
-                type="date"
-                value={quoteDetails.validUntil}
-                onChange={(e) => handleQuoteChange('validUntil', e.target.value)}
-              />
-            </div>
-            
-            <FormField
-              label="Payment Terms"
-              type="select"
-              value={quoteDetails.paymentTerms}
-              onChange={(e) => handleQuoteChange('paymentTerms', e.target.value)}
-            >
-              <option value="1">50% deposit, 50% on completion</option>
-              <option value="2">50% deposit, 25% on joinery completion, 25% final</option>
-              <option value="4">Full payment before delivery</option>
-              <option value="3">Custom terms</option>
-            </FormField>
-            
-            {quoteDetails.paymentTerms === '3' && (
-              <FormField
-                label="Custom Terms"
-                type="textarea"
-                value={quoteDetails.customTerms}
-                onChange={(e) => handleQuoteChange('customTerms', e.target.value)}
-                rows={2}
-              />
-            )}
-            
-            <div className="mt-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={quoteDetails.includeDrawingOption}
-                  onChange={(e) => handleQuoteChange('includeDrawingOption', e.target.checked)}
-                  className="mr-2 h-4 w-4 text-blue-600 rounded"
+                label="Payment Terms"
+                type="select"
+                value={quoteDetails.paymentTerms}
+                onChange={(e) => handleQuoteChange('paymentTerms', e.target.value)}
+              >
+                <option value="1">50% deposit, 50% on completion</option>
+                <option value="2">50% deposit, 25% on joinery completion, 25% final</option>
+                <option value="4">Full payment before delivery</option>
+                <option value="3">Custom terms</option>
+              </FormField>
+              
+              {quoteDetails.paymentTerms === '3' && (
+                <FormField
+                  label="Custom Terms"
+                  type="textarea"
+                  value={quoteDetails.customTerms}
+                  onChange={(e) => handleQuoteChange('customTerms', e.target.value)}
+                  rows={2}
                 />
-                <span className="text-sm">Include drawing option (£150, deducted from project total if order proceeds)</span>
-              </label>
+              )}
+              
+              <div className="form-field">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={quoteDetails.includeDrawingOption}
+                    onChange={(e) => handleQuoteChange('includeDrawingOption', e.target.checked)}
+                    className="form-checkbox"
+                  />
+                  <span className="checkbox-text">Include drawing option (£150, deducted from project total if order proceeds)</span>
+                </label>
+              </div>
             </div>
           </div>
           
           {/* Additional Details Card */}
-          <div className="bg-white rounded-lg shadow-sm p-6 lg:col-span-2">
-            <h2 className="text-xl font-bold mb-4">Additional Details</h2>
-            
-            <FormField
-              label="Notes"
-              type="textarea"
-              value={quoteDetails.notes}
-              onChange={(e) => handleQuoteChange('notes', e.target.value)}
-              rows={3}
-            />
-            
-            <h3 className="font-semibold text-lg mt-4 mb-2">Exclusions</h3>
-            {quoteDetails.exclusions.map((exclusion, index) => (
-              <div key={index} className="mb-2">
-                <FormField
-                  value={exclusion}
-                  onChange={(e) => handleExclusionsChange(index, e.target.value)}
-                />
-              </div>
-            ))}
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setQuoteDetails({
-                ...quoteDetails,
-                exclusions: [...quoteDetails.exclusions, '']
-              })}
-              className="mt-2"
-            >
-              Add Exclusion
-            </Button>
+          <div className="card full-width">
+            <div className="card-body">
+              <h2 className="card-title">Additional Details</h2>
+              
+              <FormField
+                label="Notes"
+                type="textarea"
+                value={quoteDetails.notes}
+                onChange={(e) => handleQuoteChange('notes', e.target.value)}
+                rows={3}
+              />
+              
+              <h3 className="section-title">Exclusions</h3>
+              {quoteDetails.exclusions.map((exclusion, index) => (
+                <div key={index} className="form-field">
+                  <FormField
+                    value={exclusion}
+                    onChange={(e) => handleExclusionsChange(index, e.target.value)}
+                  />
+                </div>
+              ))}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setQuoteDetails({
+                  ...quoteDetails,
+                  exclusions: [...quoteDetails.exclusions, '']
+                })}
+              >
+                Add Exclusion
+              </Button>
+            </div>
           </div>
         </div>
       )}
       
       {/* Items Tab */}
       {activeTab === 'items' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="quote-items-grid">
           {/* Selected Items Card */}
-          <div className="bg-white rounded-lg shadow-sm p-6 lg:col-span-2">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Selected Items</h2>
-              <Button
-                variant="primary"
-                onClick={() => setShowItemDialog(true)}
-              >
-                Add Item
-              </Button>
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Global Markup: {globalMarkup}%</label>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={globalMarkup}
-                onChange={(e) => setGlobalMarkup(parseInt(e.target.value))}
-                className="w-full"
-              />
-            </div>
-            
-            {selectedItems.length === 0 ? (
-              <div className="border border-gray-200 rounded-md p-6 text-center text-gray-500">
-                No items selected yet. Click "Add Item" to add an item to this quote.
-              </div>
-            ) : (
-              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                {selectedItems.map((item, index) => {
-                  const itemTotal = quoteData.itemTotals.find(i => i.id === item.id) || {
-                    finalTotal: (item.cost || 0) * (item.quantity || 1)
-                  };
-                  
-                  return (
-                    <div
-                      key={index}
-                      className={`p-4 rounded-md border ${item.hideInQuote ? 'border-dashed border-gray-300 bg-gray-50' : 'border-gray-200'}`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-medium">{item.name}</h3>
-                          <p className="text-sm text-gray-500">{getSupplierName(item.supplier)}</p>
-                        </div>
-                        <button
-                          className="text-red-500 hover:text-red-700"
-                          onClick={() => handleRemoveItem(index)}
-                        >
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                      
-                      <div className="grid grid-cols-3 gap-3 mt-3">
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Quantity</label>
-                          <input
-                            type="number"
-                            min="0.1"
-                            step="0.1"
-                            value={item.quantity}
-                            onChange={(e) => handleUpdateItem(index, { ...item, quantity: parseFloat(e.target.value) || 0.1 })}
-                            className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Markup %</label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={item.markup}
-                            onChange={(e) => handleUpdateItem(index, { ...item, markup: parseInt(e.target.value) || 0 })}
-                            className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Total</label>
-                          <div className="p-2 bg-gray-100 border border-gray-300 rounded-md text-sm font-medium">
-                            {formatCurrency(itemTotal.finalTotal)}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center mt-2">
-                        <input
-                          type="checkbox"
-                          checked={item.hideInQuote}
-                          onChange={(e) => handleUpdateItem(index, { ...item, hideInQuote: e.target.checked })}
-                          className="h-4 w-4 text-blue-600 rounded border-gray-300"
-                        />
-                        <label className="ml-2 text-xs text-gray-500">
-                          Hide in quote
-                        </label>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          
-          {/* Hidden Costs & Summary Card */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Hidden Costs</h2>
+          <div className="card items-card">
+            <div className="card-body">
+              <div className="card-header-flex">
+                <h2 className="card-title">Selected Items</h2>
                 <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setShowHiddenCostDialog(true)}
+                  variant="primary"
+                  onClick={() => setShowItemDialog(true)}
                 >
-                  Add Cost
+                  Add Item
                 </Button>
               </div>
               
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Distribution Method</label>
-                <select
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                  value={distributionMethod}
-                  onChange={(e) => setDistributionMethod(e.target.value)}
-                >
-                  <option value="even">Distribute Evenly</option>
-                  <option value="proportional">Distribute Proportionally</option>
-                </select>
-                <p className="mt-1 text-xs text-gray-500">
-                  {distributionMethod === 'even'
-                    ? 'Costs will be divided equally among all visible items.'
-                    : 'Costs will be distributed in proportion to each item\'s base cost.'}
-                </p>
+              <div className="form-field">
+                <label className="form-label">Global Markup: {globalMarkup}%</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={globalMarkup}
+                  onChange={(e) => setGlobalMarkup(parseInt(e.target.value))}
+                  className="form-range"
+                />
               </div>
               
-              {hiddenCosts.length === 0 ? (
-                <div className="border border-gray-200 rounded-md p-4 text-center text-gray-500 text-sm">
-                  No hidden costs added
+              {selectedItems.length === 0 ? (
+                <div className="empty-message">
+                  No items selected yet. Click "Add Item" to add an item to this quote.
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                  {hiddenCosts.map((cost, index) => (
-                    <div key={index} className="flex justify-between items-center p-3 border border-gray-200 rounded-md">
-                      <span className="font-medium">{cost.name}</span>
-                      <div className="flex items-center">
-                        <span className="mr-3">{formatCurrency(cost.amount)}</span>
-                        <button
-                          className="text-red-500 hover:text-red-700"
-                          onClick={() => handleRemoveHiddenCost(index)}
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
+                <div className="items-container">
+                  {selectedItems.map((item, index) => {
+                    const itemTotal = quoteData.itemTotals.find(i => i.id === item.id) || {
+                      finalTotal: (item.cost || 0) * (item.quantity || 1)
+                    };
+                    
+                    return (
+                      <div
+                        key={index}
+                        className={`item-card ${item.hideInQuote ? 'item-card-hidden' : ''}`}
+                      >
+                        <div className="item-card-header">
+                          <div>
+                            <h3 className="item-name">{item.name}</h3>
+                            <p className="item-supplier">{getSupplierName(item.supplier)}</p>
+                          </div>
+                          <button
+                            className="delete-button"
+                            onClick={() => handleRemoveItem(index)}
+                          >
+                            <svg className="delete-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        
+                        <div className="item-fields-grid">
+                          <div className="form-field">
+                            <label className="field-label">Quantity</label>
+                            <input
+                              type="number"
+                              min="0.1"
+                              step="0.1"
+                              value={item.quantity}
+                              onChange={(e) => handleUpdateItem(index, { ...item, quantity: parseFloat(e.target.value) || 0.1 })}
+                              className="form-input"
+                            />
+                          </div>
+                          <div className="form-field">
+                            <label className="field-label">Markup %</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={item.markup}
+                              onChange={(e) => handleUpdateItem(index, { ...item, markup: parseInt(e.target.value) || 0 })}
+                              className="form-input"
+                            />
+                          </div>
+                          <div className="form-field">
+                            <label className="field-label">Total</label>
+                            <div className="total-display">
+                              {formatCurrency(itemTotal.finalTotal)}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="form-field">
+                          <label className="checkbox-label">
+                            <input
+                              type="checkbox"
+                              checked={item.hideInQuote}
+                              onChange={(e) => handleUpdateItem(index, { ...item, hideInQuote: e.target.checked })}
+                              className="form-checkbox"
+                            />
+                            <span className="checkbox-text">
+                              Hide in quote
+                            </span>
+                          </label>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
+          </div>
+          
+          {/* Hidden Costs & Summary Card */}
+          <div className="quote-sidebar">
+            <div className="card">
+              <div className="card-body">
+                <div className="card-header-flex">
+                  <h2 className="card-title">Hidden Costs</h2>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShowHiddenCostDialog(true)}
+                  >
+                    Add Cost
+                  </Button>
+                </div>
+                
+                <div className="form-field">
+                  <label className="form-label">Distribution Method</label>
+                  <select
+                    className="form-select"
+                    value={distributionMethod}
+                    onChange={(e) => setDistributionMethod(e.target.value)}
+                  >
+                    <option value="even">Distribute Evenly</option>
+                    <option value="proportional">Distribute Proportionally</option>
+                  </select>
+                  <p className="helper-text">
+                    {distributionMethod === 'even'
+                      ? 'Costs will be divided equally among all visible items.'
+                      : 'Costs will be distributed in proportion to each item\'s base cost.'}
+                  </p>
+                </div>
+                
+                {hiddenCosts.length === 0 ? (
+                  <div className="empty-message small">
+                    No hidden costs added
+                  </div>
+                ) : (
+                  <div className="hidden-costs-list">
+                    {hiddenCosts.map((cost, index) => (
+                      <div key={index} className="hidden-cost-item">
+                        <span className="cost-name">{cost.name}</span>
+                        <div className="cost-actions">
+                          <span className="cost-amount">{formatCurrency(cost.amount)}</span>
+                          <button
+                            className="delete-button-small"
+                            onClick={() => handleRemoveHiddenCost(index)}
+                          >
+                            <svg className="delete-icon-small" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
             
             {/* Quote Summary */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold mb-4">Quote Summary</h2>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Base Cost:</span>
-                  <span>{formatCurrency(quoteData.visibleBaseCost)}</span>
+            <div className="card">
+              <div className="card-body">
+                <h2 className="card-title">Quote Summary</h2>
+                
+                <div className="summary-items">
+                  <div className="summary-item">
+                    <span className="summary-label">Base Cost:</span>
+                    <span className="summary-value">{formatCurrency(quoteData.visibleBaseCost)}</span>
+                  </div>
+                  <div className="summary-item">
+                    <span className="summary-label">Hidden Costs:</span>
+                    <span className="summary-value">{formatCurrency(quoteData.totalHiddenCost)}</span>
+                  </div>
+                  <div className="summary-item">
+                    <span className="summary-label">Markup ({globalMarkup}%):</span>
+                    <span className="summary-value">{formatCurrency(quoteData.totalMarkup)}</span>
+                  </div>
+                  <div className="summary-total">
+                    <span className="summary-label">Total:</span>
+                    <span className="summary-value">{formatCurrency(quoteData.grandTotal)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Hidden Costs:</span>
-                  <span>{formatCurrency(quoteData.totalHiddenCost)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Markup ({globalMarkup}%):</span>
-                  <span>{formatCurrency(quoteData.totalMarkup)}</span>
-                </div>
-                <div className="flex justify-between font-bold pt-2 border-t border-gray-200 mt-2">
-                  <span>Total:</span>
-                  <span>{formatCurrency(quoteData.grandTotal)}</span>
-                </div>
-              </div>
-              
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Visible Items:</span>
-                  <span>{quoteData.visibleItemsCount}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Hidden Items:</span>
-                  <span>{quoteData.hiddenItems.length}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Profit Margin:</span>
-                  <span>{quoteData.profitPercentage.toFixed(1)}%</span>
+                
+                <div className="summary-stats">
+                  <div className="summary-stat">
+                    <span className="stat-label">Visible Items:</span>
+                    <span className="stat-value">{quoteData.visibleItemsCount}</span>
+                  </div>
+                  <div className="summary-stat">
+                    <span className="stat-label">Hidden Items:</span>
+                    <span className="stat-value">{quoteData.hiddenItems.length}</span>
+                  </div>
+                  <div className="summary-stat">
+                    <span className="stat-label">Profit Margin:</span>
+                    <span className="stat-value">{quoteData.profitPercentage.toFixed(1)}%</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -647,152 +662,154 @@ const QuoteBuilder = () => {
       
       {/* Preview Tab */}
       {activeTab === 'preview' && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="border border-gray-200 rounded-lg p-6">
-            {/* Company header */}
-            <div className="flex justify-between mb-8">
-              <div>
-                {settings.company.logo && (
-                  <img src={settings.company.logo} alt="Company Logo" className="h-16 mb-2" />
-                )}
-                <h1 className="text-2xl font-bold">QUOTATION</h1>
-                <p className="text-gray-600">Reference: Q-{new Date().getFullYear()}-{Math.floor(Math.random() * 1000).toString().padStart(3, '0')}</p>
+        <div className="card">
+          <div className="card-body">
+            <div className="quote-preview">
+              {/* Company header */}
+              <div className="quote-preview-header">
+                <div>
+                  {settings.company.logo && (
+                    <img src={settings.company.logo} alt="Company Logo" className="quote-logo" />
+                  )}
+                  <h1 className="quote-title">QUOTATION</h1>
+                  <p className="quote-reference">Reference: Q-{new Date().getFullYear()}-{Math.floor(Math.random() * 1000).toString().padStart(3, '0')}</p>
+                </div>
+                
+                <div className="company-details">
+                  <p className="company-name">{settings.company.name}</p>
+                  <div className="company-address">{settings.company.address}</div>
+                  <p className="company-contact">{settings.company.email}</p>
+                  <p className="company-contact">{settings.company.phone}</p>
+                  <p className="company-contact">{settings.company.website}</p>
+                </div>
               </div>
               
-              <div className="text-right">
-                <p className="font-semibold">{settings.company.name}</p>
-                <div className="whitespace-pre-line">{settings.company.address}</div>
-                <p>{settings.company.email}</p>
-                <p>{settings.company.phone}</p>
-                <p>{settings.company.website}</p>
+              {/* Client section */}
+              <div className="client-section">
+                <h2 className="section-header">Client:</h2>
+                <p><span className="detail-label">Name:</span> {quoteDetails.client.name || '[Contact Name]'}</p>
+                {quoteDetails.client.company && (
+                  <p><span className="detail-label">Company:</span> {quoteDetails.client.company}</p>
+                )}
+                <p><span className="detail-label">Email:</span> {quoteDetails.client.email || '[Email]'}</p>
+                <p><span className="detail-label">Phone:</span> {quoteDetails.client.phone || '[Phone]'}</p>
+                {quoteDetails.client.address && (
+                  <>
+                    <p className="detail-label">Address:</p>
+                    <p className="detail-address">{quoteDetails.client.address}</p>
+                  </>
+                )}
               </div>
-            </div>
-            
-            {/* Client section */}
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-2">Client:</h2>
-              <p><span className="font-medium">Name:</span> {quoteDetails.client.name || '[Contact Name]'}</p>
-              {quoteDetails.client.company && (
-                <p><span className="font-medium">Company:</span> {quoteDetails.client.company}</p>
-              )}
-              <p><span className="font-medium">Email:</span> {quoteDetails.client.email || '[Email]'}</p>
-              <p><span className="font-medium">Phone:</span> {quoteDetails.client.phone || '[Phone]'}</p>
-              {quoteDetails.client.address && (
-                <>
-                  <p className="font-medium">Address:</p>
-                  <p className="ml-4 whitespace-pre-line">{quoteDetails.client.address}</p>
-                </>
-              )}
-            </div>
-            
-            {/* Date section */}
-            <div className="mb-6">
-              <p><span className="font-medium">Date:</span> {quoteDetails.date ? new Date(quoteDetails.date).toLocaleDateString('en-GB') : 'N/A'}</p>
-              <p><span className="font-medium">Valid Until:</span> {quoteDetails.validUntil ? new Date(quoteDetails.validUntil).toLocaleDateString('en-GB') : 'N/A'}</p>
-            </div>
-            
-            {/* Items table */}
-            <table className="w-full border-collapse mb-6">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Item Description</th>
-                  <th className="border border-gray-300 px-4 py-2 text-right">Qty</th>
-                  <th className="border border-gray-300 px-4 py-2 text-right">Unit Price</th>
-                  <th className="border border-gray-300 px-4 py-2 text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {quoteData.itemTotals.length === 0 ? (
+              
+              {/* Date section */}
+              <div className="date-section">
+                <p><span className="detail-label">Date:</span> {quoteDetails.date ? new Date(quoteDetails.date).toLocaleDateString('en-GB') : 'N/A'}</p>
+                <p><span className="detail-label">Valid Until:</span> {quoteDetails.validUntil ? new Date(quoteDetails.validUntil).toLocaleDateString('en-GB') : 'N/A'}</p>
+              </div>
+              
+              {/* Items table */}
+              <table className="quote-table">
+                <thead>
                   <tr>
-                    <td colSpan="4" className="border border-gray-300 px-4 py-2 text-center text-gray-500">
-                      No items added to quote yet
-                    </td>
+                    <th>Item Description</th>
+                    <th className="text-right">Qty</th>
+                    <th className="text-right">Unit Price</th>
+                    <th className="text-right">Amount</th>
                   </tr>
-                ) : (
-                  quoteData.itemTotals.map((item, index) => (
-                    <tr key={index} className="border-b border-gray-200">
-                      <td className="border border-gray-300 px-4 py-2">
-                        {item.description || item.name}
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-right">
-                        {item.quantity}
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-right">
-                        {formatCurrency(item.unitPrice)}
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-right">
-                        {formatCurrency(item.finalTotal)}
+                </thead>
+                <tbody>
+                  {quoteData.itemTotals.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="empty-table-message">
+                        No items added to quote yet
                       </td>
                     </tr>
-                  ))
+                  ) : (
+                    quoteData.itemTotals.map((item, index) => (
+                      <tr key={index}>
+                        <td>
+                          {item.description || item.name}
+                        </td>
+                        <td className="text-right">
+                          {item.quantity}
+                        </td>
+                        <td className="text-right">
+                          {formatCurrency(item.unitPrice)}
+                        </td>
+                        <td className="text-right">
+                          {formatCurrency(item.finalTotal)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                  
+                  {/* Total row */}
+                  <tr className="quote-table-total">
+                    <td colSpan="3" className="text-right">
+                      Total
+                    </td>
+                    <td className="text-right">
+                      {formatCurrency(quoteData.grandTotal)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              
+              {/* Terms section */}
+              <div className="terms-section">
+                <h2 className="terms-heading">Terms and Conditions:</h2>
+                
+                <h3 className="terms-subheading">Payment Terms:</h3>
+                <p>
+                  {quoteDetails.paymentTerms === '1'
+                    ? '50% deposit required, remainder due on completion.'
+                    : quoteDetails.paymentTerms === '2'
+                    ? '50% deposit required, 25% on completion of joinery, final 25% on completion.'
+                    : quoteDetails.paymentTerms === '4'
+                    ? 'Full amount to be paid before delivery.'
+                    : quoteDetails.customTerms || 'Custom payment terms'}
+                </p>
+                <p>This quote is valid for the period specified above.</p>
+                
+                {/* Exclusions */}
+                {quoteDetails.exclusions.length > 0 && (
+                  <>
+                    <h3 className="terms-subheading">Exclusions:</h3>
+                    <ul className="terms-list">
+                      {quoteDetails.exclusions.map((exclusion, index) => (
+                        <li key={index}>{exclusion}</li>
+                      ))}
+                    </ul>
+                  </>
                 )}
                 
-                {/* Total row */}
-                <tr className="bg-gray-100 font-semibold">
-                  <td colSpan="3" className="border border-gray-300 px-4 py-2 text-right">
-                    Total
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(quoteData.grandTotal)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            
-            {/* Terms section */}
-            <div className="mt-8">
-              <h2 className="text-lg font-semibold mb-2">Terms and Conditions:</h2>
-              
-              <h3 className="font-semibold text-gray-800 mt-4">Payment Terms:</h3>
-              <p>
-                {quoteDetails.paymentTerms === '1'
-                  ? '50% deposit required, remainder due on completion.'
-                  : quoteDetails.paymentTerms === '2'
-                  ? '50% deposit required, 25% on completion of joinery, final 25% on completion.'
-                  : quoteDetails.paymentTerms === '4'
-                  ? 'Full amount to be paid before delivery.'
-                  : quoteDetails.customTerms || 'Custom payment terms'}
-              </p>
-              <p>This quote is valid for the period specified above.</p>
-              
-              {/* Exclusions */}
-              {quoteDetails.exclusions.length > 0 && (
-                <>
-                  <h3 className="font-semibold text-gray-800 mt-4">Exclusions:</h3>
-                  <ul className="list-disc pl-5">
-                    {quoteDetails.exclusions.map((exclusion, index) => (
-                      <li key={index}>{exclusion}</li>
-                    ))}
-                  </ul>
-                </>
-              )}
-              
-              {/* Drawing option */}
-              {quoteDetails.includeDrawingOption && (
-                <>
-                  <h3 className="font-semibold text-gray-800 mt-4">Drawings:</h3>
-                  <p>Drawings are available before accepting the quote at a cost of £150, which will be deducted from the project total if the order proceeds.</p>
-                </>
-              )}
-              
-              {/* Notes */}
-              {quoteDetails.notes && (
-                <>
-                  <h3 className="font-semibold text-gray-800 mt-4">Additional Notes:</h3>
-                  <p className="whitespace-pre-line">{quoteDetails.notes}</p>
-                </>
-              )}
-              
-              {/* Add company footer */}
-              <div className="mt-8 pt-4 border-t border-gray-200 text-sm text-gray-600">
-                <p className="mb-1">{settings.company.name} | {settings.company.address}</p>
-                <p>{settings.company.phone} | {settings.company.email} | {settings.company.website}</p>
-                {settings.company.registration && (
-                  <p className="mt-1">Company Registration: {settings.company.registration}</p>
+                {/* Drawing option */}
+                {quoteDetails.includeDrawingOption && (
+                  <>
+                    <h3 className="terms-subheading">Drawings:</h3>
+                    <p>Drawings are available before accepting the quote at a cost of £150, which will be deducted from the project total if the order proceeds.</p>
+                  </>
                 )}
-                {settings.company.vat && (
-                  <p>VAT Registration: {settings.company.vat}</p>
+                
+                {/* Notes */}
+                {quoteDetails.notes && (
+                  <>
+                    <h3 className="terms-subheading">Additional Notes:</h3>
+                    <p className="terms-notes">{quoteDetails.notes}</p>
+                  </>
                 )}
+                
+                {/* Add company footer */}
+                <div className="quote-footer">
+                  <p>{settings.company.name} | {settings.company.address}</p>
+                  <p>{settings.company.phone} | {settings.company.email} | {settings.company.website}</p>
+                  {settings.company.registration && (
+                    <p>Company Registration: {settings.company.registration}</p>
+                  )}
+                  {settings.company.vat && (
+                    <p>VAT Registration: {settings.company.vat}</p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -805,8 +822,8 @@ const QuoteBuilder = () => {
         onClose={() => setShowItemDialog(false)}
         title="Add Item to Quote"
       >
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="form-field">
+          <label className="form-label">
             Search
           </label>
           <input
@@ -814,18 +831,18 @@ const QuoteBuilder = () => {
             value={itemSearchTerm}
             onChange={(e) => setItemSearchTerm(e.target.value)}
             placeholder="Search by name or description..."
-            className="w-full p-2 border border-gray-300 rounded-md"
+            className="form-input"
           />
         </div>
         
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="form-field">
+          <label className="form-label">
             Category
           </label>
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md"
+            className="form-select"
           >
             <option value="all">All Categories</option>
             {/* Create unique list of categories */}
@@ -838,31 +855,31 @@ const QuoteBuilder = () => {
           </select>
         </div>
         
-        <div className="max-h-96 overflow-y-auto mt-4">
+        <div className="catalog-items-list">
           {filteredCatalogItems.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
+            <div className="empty-message">
               No items match your search criteria
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
+            <div className="catalog-items">
               {filteredCatalogItems.map(item => (
                 <div
                   key={item.id}
-                  className="py-3 hover:bg-gray-50 cursor-pointer"
+                  className="catalog-item"
                   onClick={() => handleAddItem(item)}
                 >
-                  <div className="flex justify-between items-start">
+                  <div className="catalog-item-content">
                     <div>
-                      <h3 className="font-medium">{item.name}</h3>
-                      <p className="text-sm text-gray-500">{getSupplierName(item.supplier)}</p>
+                      <h3 className="catalog-item-name">{item.name}</h3>
+                      <p className="catalog-item-supplier">{getSupplierName(item.supplier)}</p>
                       {item.description && (
-                        <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                        <p className="catalog-item-description">{item.description}</p>
                       )}
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrency(item.cost)}</p>
+                    <div className="catalog-item-price">
+                      <p className="price-value">{formatCurrency(item.cost)}</p>
                       {item.category && (
-                        <p className="text-xs text-gray-500">{item.category}</p>
+                        <p className="category-label">{item.category}</p>
                       )}
                     </div>
                   </div>
@@ -879,8 +896,8 @@ const QuoteBuilder = () => {
         onClose={() => setShowHiddenCostDialog(false)}
         title="Add Hidden Cost"
       >
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="form-field">
+          <label className="form-label">
             Name
           </label>
           <input
@@ -888,12 +905,12 @@ const QuoteBuilder = () => {
             value={newHiddenCost.name}
             onChange={(e) => setNewHiddenCost({ ...newHiddenCost, name: e.target.value })}
             placeholder="e.g., Delivery, Installation, etc."
-            className="w-full p-2 border border-gray-300 rounded-md"
+            className="form-input"
           />
         </div>
         
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="form-field">
+          <label className="form-label">
             Amount (£)
           </label>
           <input
@@ -902,11 +919,11 @@ const QuoteBuilder = () => {
             step="0.01"
             value={newHiddenCost.amount}
             onChange={(e) => setNewHiddenCost({ ...newHiddenCost, amount: e.target.value })}
-            className="w-full p-2 border border-gray-300 rounded-md"
+            className="form-input"
           />
         </div>
         
-        <div className="flex justify-end space-x-2">
+        <div className="dialog-actions">
           <Button
             variant="secondary"
             onClick={() => setShowHiddenCostDialog(false)}
