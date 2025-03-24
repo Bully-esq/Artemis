@@ -185,26 +185,46 @@ const SupplierList = () => {
   
   // Render loading state
   if (isLoading) {
-    return <Loading fullScreen message="Loading suppliers..." />;
+    return (
+      <PageLayout 
+        title="Suppliers & Catalog" 
+        actions={
+          <Button variant="primary" onClick={handleAddSupplier}>
+            <svg className="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Supplier
+          </Button>
+        }
+      >
+        <Loading message="Loading suppliers..." />
+      </PageLayout>
+    );
   }
   
   // Render error state
   if (isError) {
     return (
-      <PageLayout title="Suppliers">
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-700">
-                Error loading suppliers: {error?.message || 'Unknown error'}
-              </p>
-            </div>
-          </div>
+      <PageLayout 
+        title="Suppliers & Catalog"
+        actions={
+          <Button variant="primary" onClick={handleAddSupplier}>
+            <svg className="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Supplier
+          </Button>
+        }
+      >
+        <div className="error-message">
+          <p>Error loading suppliers: {error?.message || 'Unknown error'}</p>
+          <Button 
+            className="mt-3" 
+            variant="secondary" 
+            onClick={() => queryClient.invalidateQueries('suppliers')}
+          >
+            Retry
+          </Button>
         </div>
       </PageLayout>
     );
@@ -214,16 +234,50 @@ const SupplierList = () => {
     <PageLayout 
       title="Suppliers & Catalog" 
       actions={
-        <Button
-          variant="primary"
-          onClick={handleAddSupplier}
-        >
+        <Button variant="primary" onClick={handleAddSupplier}>
+          <svg className="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
           Add Supplier
         </Button>
       }
     >
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-        <div className="px-4 py-5 sm:px-6">
+      {/* Page Header - Styled like Dashboard */}
+      <div className="page-header">
+        <h1 className="page-title">Supplier Management</h1>
+        <p className="page-description">Manage your suppliers and product catalog</p>
+      </div>
+
+      {/* Quick Actions - Same styling as Dashboard */}
+      <div className="quick-actions-section">
+        <h2 className="section-title">Quick Actions</h2>
+        <div className="quick-actions">
+          <div onClick={handleAddSupplier} className="quick-action-btn">
+            <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            <span>Add Supplier</span>
+          </div>
+          
+          <div onClick={() => setActiveTab('catalog')} className="quick-action-btn">
+            <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            </svg>
+            <span>View Catalog</span>
+          </div>
+          
+          <div onClick={() => navigate('/suppliers/catalog')} className="quick-action-btn">
+            <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span>Add Catalog Item</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main content with tabs */}
+      <div className="card">
+        <div className="tabs-container">
           <Tabs
             tabs={[
               { id: 'suppliers', label: 'Suppliers' },
@@ -233,117 +287,98 @@ const SupplierList = () => {
             onChange={setActiveTab}
             variant="underline"
           />
-          
-          {activeTab === 'suppliers' && (
-            <div className="mt-4">
-              <div className="mb-4">
-                <input
-                  type="text"
-                  placeholder="Search suppliers..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                />
-              </div>
-              
-              {filteredSuppliers.length === 0 ? (
-                <div className="text-center py-10">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No suppliers found</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {searchTerm ? 'Try adjusting your search.' : 'Get started by adding a new supplier.'}
-                  </p>
-                  <div className="mt-6">
-                    <Button onClick={handleAddSupplier}>
-                      <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                      </svg>
-                      Add Supplier
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Name
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Contact
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Email/Phone
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredSuppliers.map((supplier) => (
-                        <tr key={supplier.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="font-medium text-gray-900">{supplier.name}</div>
-                            {supplier.notes && (
-                              <div className="text-sm text-gray-500">{supplier.notes}</div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{supplier.contact || '-'}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{supplier.email || '-'}</div>
-                            <div className="text-sm text-gray-500">{supplier.phone || '-'}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="mr-2"
-                              onClick={() => handleEditSupplier(supplier)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => handleDeleteClick(supplier)}
-                            >
-                              Delete
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-          
-          {activeTab === 'catalog' && (
-            <div className="mt-4">
-              <div className="text-center py-10">
-                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">Catalog Items Management</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Click below to manage catalog items
-                </p>
-                <div className="mt-6">
-                  <Button onClick={() => navigate('/suppliers/catalog')}>
-                    Manage Catalog
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Suppliers Tab Content */}
+        {activeTab === 'suppliers' && (
+          <div className="tab-content">
+            <div className="search-container">
+              <input
+                type="text"
+                placeholder="Search suppliers..."
+                className="search-input"
+                value={searchTerm}
+                onChange={handleSearchChange}
+              />
+            </div>
+            
+            {filteredSuppliers.length === 0 ? (
+              <div className="empty-state">
+                <svg className="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <h3 className="empty-state-title">
+                  {searchTerm ? 'No suppliers match your search' : 'No suppliers found'}
+                </h3>
+                <p className="empty-state-description">
+                  {searchTerm ? 'Try adjusting your search.' : 'Get started by adding a new supplier.'}
+                </p>
+                {!searchTerm && (
+                  <Button onClick={handleAddSupplier}>
+                    Add Your First Supplier
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="recent-items">
+                {filteredSuppliers.map((supplier) => (
+                  <div key={supplier.id} className="recent-item">
+                    <div className="item-content">
+                      <div>
+                        <p className="item-title">{supplier.name}</p>
+                        <p className="item-subtitle">
+                          {supplier.contact && `${supplier.contact}`}
+                          {supplier.contact && supplier.email && ' • '}
+                          {supplier.email}
+                        </p>
+                      </div>
+                      <div className="item-actions">
+                        <p className="item-detail">{supplier.phone || ''}</p>
+                        <div className="action-buttons">
+                          <button
+                            className="action-button edit"
+                            onClick={() => handleEditSupplier(supplier)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="action-button delete"
+                            onClick={() => handleDeleteClick(supplier)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    {supplier.notes && (
+                      <div className="item-notes">
+                        <p>{supplier.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Catalog Tab Content */}
+        {activeTab === 'catalog' && (
+          <div className="tab-content">
+            <div className="empty-state">
+              <svg className="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              <h3 className="empty-state-title">Catalog Items Management</h3>
+              <p className="empty-state-description">
+                Click below to manage your product catalog
+              </p>
+              <Button onClick={() => navigate('/suppliers/catalog')}>
+                Manage Catalog
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Add Supplier Dialog */}
@@ -352,7 +387,7 @@ const SupplierList = () => {
           title="Add Supplier"
           onClose={() => setShowAddSupplierDialog(false)}
           footer={
-            <div className="flex space-x-3 justify-end">
+            <div className="dialog-footer">
               <Button 
                 variant="secondary" 
                 onClick={() => setShowAddSupplierDialog(false)}
@@ -369,7 +404,7 @@ const SupplierList = () => {
             </div>
           }
         >
-          <div className="space-y-4">
+          <div className="form-container">
             <FormField
               label="Supplier Name"
               name="name"
@@ -387,7 +422,7 @@ const SupplierList = () => {
               placeholder="Enter contact person name"
             />
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-row">
               <FormField
                 label="Email"
                 name="email"
@@ -424,7 +459,7 @@ const SupplierList = () => {
           title="Edit Supplier"
           onClose={() => setShowEditSupplierDialog(false)}
           footer={
-            <div className="flex space-x-3 justify-end">
+            <div className="dialog-footer">
               <Button 
                 variant="secondary" 
                 onClick={() => setShowEditSupplierDialog(false)}
@@ -441,7 +476,7 @@ const SupplierList = () => {
             </div>
           }
         >
-          <div className="space-y-4">
+          <div className="form-container">
             <FormField
               label="Supplier Name"
               name="name"
@@ -459,7 +494,7 @@ const SupplierList = () => {
               placeholder="Enter contact person name"
             />
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-row">
               <FormField
                 label="Email"
                 name="email"
@@ -496,7 +531,7 @@ const SupplierList = () => {
           title="Delete Supplier"
           onClose={() => setShowDeleteConfirmDialog(false)}
           footer={
-            <div className="flex space-x-3 justify-end">
+            <div className="dialog-footer">
               <Button 
                 variant="secondary" 
                 onClick={() => setShowDeleteConfirmDialog(false)}
@@ -513,10 +548,12 @@ const SupplierList = () => {
             </div>
           }
         >
-          <p>Are you sure you want to delete {currentSupplier?.name}?</p>
-          <p className="text-sm text-gray-500 mt-2">
-            This action cannot be undone. This will permanently delete the supplier and remove it from all associated catalog items.
-          </p>
+          <div className="confirm-delete">
+            <p className="confirm-message">Are you sure you want to delete {currentSupplier?.name}?</p>
+            <p className="confirm-warning">
+              This action cannot be undone. This will permanently delete the supplier and remove it from all associated catalog items.
+            </p>
+          </div>
         </Dialog>
       )}
     </PageLayout>

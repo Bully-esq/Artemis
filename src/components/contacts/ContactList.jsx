@@ -139,6 +139,15 @@ const ContactList = () => {
     setSelectedContact(null);
   };
   
+  // Handle navigating to create invoice or quote
+  const handleCreateInvoice = () => {
+    navigate('/invoices/new');
+  };
+  
+  const handleCreateQuote = () => {
+    navigate('/quotes/new');
+  };
+  
   // Actions for page header
   const pageActions = (
     <Button 
@@ -148,20 +157,27 @@ const ContactList = () => {
         setShowAddContactDialog(true);
       }}
     >
+      <svg className="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      </svg>
       Add Contact
     </Button>
   );
   
   // Loading state
   if (isLoading) {
-    return <Loading fullScreen message="Loading contacts..." />;
+    return (
+      <PageLayout title="Contacts" actions={pageActions}>
+        <Loading message="Loading contacts..." />
+      </PageLayout>
+    );
   }
   
   // Error state
   if (isError) {
     return (
-      <PageLayout title="Contacts">
-        <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded">
+      <PageLayout title="Contacts" actions={pageActions}>
+        <div className="error-message">
           <p>Error loading contacts: {error.message}</p>
           <Button 
             className="mt-3" 
@@ -176,164 +192,217 @@ const ContactList = () => {
   }
   
   return (
-    <PageLayout title="Contact Management" actions={pageActions}>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Contact List Panel */}
-        <div className="md:col-span-1">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold mb-4">All Contacts</h2>
-            
-            {/* Search Box */}
-            <div className="mb-4">
+    <PageLayout title="Contacts" actions={pageActions}>
+      {/* Page Header - Styled like Dashboard */}
+      <div className="page-header">
+        <h1 className="page-title">Contact Management</h1>
+        <p className="page-description">Manage your clients and business relationships</p>
+      </div>
+
+      {/* Quick Actions - Same styling as Dashboard */}
+      <div className="quick-actions-section">
+        <h2 className="section-title">Quick Actions</h2>
+        <div className="quick-actions">
+          <div onClick={() => setShowAddContactDialog(true)} className="quick-action-btn">
+            <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span>New Contact</span>
+          </div>
+          
+          <div onClick={handleCreateInvoice} className="quick-action-btn">
+            <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <span>Create Invoice</span>
+          </div>
+          
+          <div onClick={handleCreateQuote} className="quick-action-btn">
+            <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Create Quote</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Filters - in a card like Dashboard */}
+      <div className="card mb-6">
+        <div className="filter-container">
+          <div className="search-container">
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search contacts by name, company, email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <div className="checkbox-filters">
+            <label className="checkbox-label">
               <input
-                type="text"
-                placeholder="Search contacts..."
-                className="w-full p-2 border border-gray-300 rounded-md"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                type="checkbox"
+                className="checkbox-input"
+                checked={filterCompanies}
+                onChange={() => setFilterCompanies(!filterCompanies)}
               />
+              <span className="checkbox-text">Companies</span>
+            </label>
+            
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                className="checkbox-input"
+                checked={filterIndividuals}
+                onChange={() => setFilterIndividuals(!filterIndividuals)}
+              />
+              <span className="checkbox-text">Individuals</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      {/* Two-column layout with traditional CSS */}
+      <div className="contact-layout">
+        {/* Contact List Panel - Left Column */}
+        <div className="contact-list-panel">
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">All Contacts</h2>
+              <div>
+                <span className="item-count">
+                  {sortedContacts.length} contacts
+                </span>
+              </div>
             </div>
             
-            {/* Filter Controls */}
-            <div className="mb-4 flex items-center space-x-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  className="form-checkbox h-4 w-4 text-blue-600"
-                  checked={filterCompanies}
-                  onChange={() => setFilterCompanies(!filterCompanies)}
-                />
-                <span className="ml-2 text-sm">Companies</span>
-              </label>
-              
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  className="form-checkbox h-4 w-4 text-blue-600"
-                  checked={filterIndividuals}
-                  onChange={() => setFilterIndividuals(!filterIndividuals)}
-                />
-                <span className="ml-2 text-sm">Individuals</span>
-              </label>
-            </div>
-            
-            {/* Contact List */}
-            <div className="border border-gray-200 rounded-md overflow-hidden">
-              {sortedContacts.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">
-                  {searchTerm || !filterCompanies || !filterIndividuals
-                    ? 'No contacts match your filters'
-                    : 'No contacts found. Add your first contact.'}
-                </div>
-              ) : (
-                <div className="max-h-[600px] overflow-y-auto">
-                  {sortedContacts.map((contact) => (
-                    <div
-                      key={contact.id}
-                      className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors"
-                    >
-                      <div 
-                        className="p-4 cursor-pointer"
-                        onClick={() => handleContactClick(contact)}
-                      >
-                        <div className="flex justify-between mb-1">
-                          <div className="font-medium">{getContactDisplayName(contact)}</div>
-                          <div className="flex space-x-2">
+            {/* Contact List styled like Dashboard's recent-items */}
+            {sortedContacts.length === 0 ? (
+              <div className="empty-state">
+                <svg className="empty-state-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+                <h3 className="empty-state-title">
+                  {searchTerm || !filterCompanies || !filterIndividuals ? 
+                    'No contacts match your search criteria' : 
+                    'You haven\'t added any contacts yet'}
+                </h3>
+                <p className="empty-state-description">
+                  {searchTerm || !filterCompanies || !filterIndividuals ? 
+                    'Try adjusting your search or filters to find what you\'re looking for.' : 
+                    'Get started by adding your first contact.'}
+                </p>
+                {!searchTerm && filterCompanies && filterIndividuals && (
+                  <Button variant="primary" onClick={() => setShowAddContactDialog(true)}>
+                    Add Your First Contact
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="recent-items scrollable-list">
+                {sortedContacts.map((contact) => (
+                  <div
+                    key={contact.id}
+                    className="recent-item"
+                    onClick={() => handleContactClick(contact)}
+                  >
+                    <div className="item-content">
+                      <div>
+                        <p className="item-title">
+                          {getContactDisplayName(contact)}
+                        </p>
+                        <p className="item-subtitle">
+                          {contact.customerType === 'individual' && contact.company ? contact.company : ''}
+                          {contact.customerType === 'individual' && contact.company && contact.email && ' • '}
+                          {contact.email || ''}
+                        </p>
+                      </div>
+                      <div className="item-actions">
+                        <p className="item-detail">
+                          {contact.phone || ''}
+                        </p>
+                        <div className="item-badges">
+                          <span className={`status-badge ${
+                            contact.customerType === 'company' 
+                              ? 'status-badge-info' 
+                              : 'status-badge-success'
+                          }`}>
+                            {contact.customerType === 'company' ? 'Company' : 'Individual'}
+                          </span>
+                          <div className="action-buttons">
                             <button
-                              className="text-gray-500 hover:text-blue-600"
+                              className="action-button edit"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleEditContact(contact);
                               }}
                             >
-                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                              </svg>
+                              Edit
                             </button>
                             <button
-                              className="text-gray-500 hover:text-red-600"
+                              className="action-button delete"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteContact(contact);
                               }}
                             >
-                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
+                              Delete
                             </button>
                           </div>
                         </div>
-                        
-                        <div className="text-sm text-gray-500">
-                          {contact.customerType === 'individual' && contact.company && (
-                            <div>{contact.company}</div>
-                          )}
-                          {contact.email && <div>{contact.email}</div>}
-                          {contact.phone && <div>{contact.phone}</div>}
-                        </div>
-                        
-                        <div className="mt-2 flex items-center space-x-2">
-                          <span className={`
-                            inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                            ${contact.customerType === 'company' 
-                              ? 'bg-indigo-100 text-indigo-800' 
-                              : 'bg-blue-100 text-blue-800'}
-                          `}>
-                            {contact.customerType === 'company' ? 'Company' : 'Individual'}
-                          </span>
-                          
-                          <span className={`
-                            inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                            ${contact.gdprConsent 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'}
-                          `}>
-                            {contact.gdprConsent ? 'GDPR ✓' : 'No Consent'}
-                          </span>
-                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         
-        {/* Details Panel */}
-        <div className="md:col-span-2">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold mb-4">Contact Details</h2>
+        {/* Details Panel - Right Column */}
+        <div className="contact-details-panel">
+          <div className="card mb-6">
+            <h2 className="card-title">Contact Details</h2>
             
-            <div className="text-center text-gray-500 py-8">
-              Select a contact to view details or add a new contact.
+            <div className="empty-state">
+              <svg className="empty-state-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+              </svg>
+              <h3 className="empty-state-title">Select a contact to view details</h3>
+              <p className="empty-state-description">
+                Click on any contact from the list to view their details, or add a new contact.
+              </p>
+              <Button variant="primary" onClick={() => setShowAddContactDialog(true)}>
+                Add New Contact
+              </Button>
             </div>
           </div>
           
-          {/* Functionality Links */}
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white p-6 rounded-lg shadow text-center hover:shadow-md transition-shadow">
-              <svg className="h-8 w-8 mx-auto text-blue-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          {/* Quick Actions as cards in a grid - styled with traditional CSS */}
+          <div className="action-card-grid">
+            <div className="action-card" onClick={handleCreateQuote}>
+              <svg className="action-card-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <h3 className="text-gray-900 font-medium">Create Quote</h3>
-              <p className="text-gray-500 text-sm mt-1">Generate a new quote for a selected contact</p>
+              <h3 className="action-card-title">Create Quote</h3>
+              <p className="action-card-description">Generate a new quote for a selected contact</p>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow text-center hover:shadow-md transition-shadow">
-              <svg className="h-8 w-8 mx-auto text-blue-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="action-card" onClick={handleCreateInvoice}>
+              <svg className="action-card-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              <h3 className="text-gray-900 font-medium">Create Invoice</h3>
-              <p className="text-gray-500 text-sm mt-1">Generate a new invoice for a selected contact</p>
+              <h3 className="action-card-title">Create Invoice</h3>
+              <p className="action-card-description">Generate a new invoice for a selected contact</p>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow text-center hover:shadow-md transition-shadow">
-              <svg className="h-8 w-8 mx-auto text-blue-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="action-card">
+              <svg className="action-card-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
               </svg>
-              <h3 className="text-gray-900 font-medium">Export Data</h3>
-              <p className="text-gray-500 text-sm mt-1">Export contact data for portability</p>
+              <h3 className="action-card-title">Export Data</h3>
+              <p className="action-card-description">Export contact data for portability</p>
             </div>
           </div>
         </div>

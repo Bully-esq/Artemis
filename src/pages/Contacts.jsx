@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 
 // API and hooks
 import { contactsApi } from '../services/api';
-import { useAppContext } from '../../context/AppContext';
+import { useAppContext } from '../context/AppContext';
 
 // Components
 import PageLayout from '../components/common/PageLayout';
@@ -12,7 +12,6 @@ import Button from '../components/common/Button';
 import Loading from '../components/common/Loading';
 import Dialog from '../components/common/Dialog';
 import FormField from '../components/common/FormField';
-import ContactList from '../components/contacts/ContactList';
 import ContactForm from '../components/contacts/ContactForm';
 
 const Contacts = () => {
@@ -87,8 +86,10 @@ const Contacts = () => {
   };
   
   // Filter contacts based on search and filter options
-  const filteredContacts = contacts
-    .filter(contact => {
+  const filteredContacts = React.useMemo(() => {
+    if (!contacts) return [];
+    
+    return contacts.filter(contact => {
       // Filter by type
       if (contact.customerType === 'company' && !filterOptions.showCompanies) {
         return false;
@@ -110,6 +111,7 @@ const Contacts = () => {
       
       return true;
     });
+  }, [contacts, searchTerm, filterOptions]);
   
   // Action buttons for header
   const actionButtons = (
@@ -175,53 +177,182 @@ const Contacts = () => {
       title="Contacts"
       actions={actionButtons}
     >
-      <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="w-full md:w-96">
-          <FormField
-            type="text"
-            name="search"
-            placeholder="Search contacts..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="mb-0"
-          />
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          <label className="inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              checked={filterOptions.showCompanies}
-              onChange={(e) => setFilterOptions({
-                ...filterOptions,
-                showCompanies: e.target.checked
-              })}
-            />
-            <span className="ml-2 text-sm">Companies</span>
-          </label>
+      {/* Page Header - Styled like Dashboard */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-2">Contact Management</h1>
+        <p className="text-gray-600">Manage your clients and business relationships</p>
+      </div>
+
+      {/* Quick Actions - Same styling as Dashboard */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+        <div className="quick-actions">
+          <div onClick={() => setShowCreateDialog(true)} className="quick-action-btn">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span>New Contact</span>
+          </div>
           
-          <label className="inline-flex items-center cursor-pointer">
+          <div onClick={() => navigate('/invoices/new')} className="quick-action-btn">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <span>Create Invoice</span>
+          </div>
+          
+          <div onClick={() => navigate('/quotes/new')} className="quick-action-btn">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Create Quote</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Filters - in a card like Dashboard */}
+      <div className="card mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="w-full md:w-1/3">
             <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              checked={filterOptions.showIndividuals}
-              onChange={(e) => setFilterOptions({
-                ...filterOptions,
-                showIndividuals: e.target.checked
-              })}
+              type="text"
+              className="search-input w-full"
+              placeholder="Search contacts by name, company, email..."
+              value={searchTerm}
+              onChange={handleSearchChange}
             />
-            <span className="ml-2 text-sm">Individuals</span>
-          </label>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <label className="inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                checked={filterOptions.showCompanies}
+                onChange={(e) => setFilterOptions({
+                  ...filterOptions,
+                  showCompanies: e.target.checked
+                })}
+              />
+              <span className="ml-2 text-sm">Companies</span>
+            </label>
+            
+            <label className="inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                checked={filterOptions.showIndividuals}
+                onChange={(e) => setFilterOptions({
+                  ...filterOptions,
+                  showIndividuals: e.target.checked
+                })}
+              />
+              <span className="ml-2 text-sm">Individuals</span>
+            </label>
+          </div>
         </div>
       </div>
       
-      <ContactList
-        contacts={filteredContacts}
-        onEdit={handleEditContact}
-        onView={handleViewContact}
-        onDelete={handleDeleteContact}
-      />
+      {/* Contacts list - in a card with header like Dashboard */}
+      <div className="card">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Contacts</h2>
+          <div>
+            <span className="text-sm text-gray-600">
+              {filteredContacts.length} contacts found
+            </span>
+          </div>
+        </div>
+
+        {filteredContacts.length === 0 ? (
+          <div className="empty-state">
+            <svg className="empty-state-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            <h3 className="empty-state-title">
+              {searchTerm || !filterOptions.showCompanies || !filterOptions.showIndividuals ? 
+                'No contacts match your search criteria' : 
+                'You haven\'t added any contacts yet'}
+            </h3>
+            <p className="empty-state-description">
+              {searchTerm || !filterOptions.showCompanies || !filterOptions.showIndividuals ? 
+                'Try adjusting your search or filters to find what you\'re looking for.' : 
+                'Get started by adding your first contact.'}
+            </p>
+            {!searchTerm && filterOptions.showCompanies && filterOptions.showIndividuals && (
+              <Button variant="primary" onClick={() => setShowCreateDialog(true)}>
+                Add Your First Contact
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="recent-items">
+            {filteredContacts.map((contact) => (
+              <div 
+                key={contact.id} 
+                className="recent-item"
+                onClick={() => handleViewContact(contact.id)}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    {contact.customerType === 'company' ? (
+                      <>
+                        <p className="font-medium text-gray-900">{contact.company}</p>
+                        <p className="text-sm text-gray-500">
+                          {contact.firstName} {contact.lastName}
+                          {(contact.firstName || contact.lastName) && contact.email && ' • '}
+                          {contact.email}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-medium text-gray-900">
+                          {contact.firstName} {contact.lastName}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {contact.company}
+                          {contact.company && contact.email && ' • '}
+                          {contact.email}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">
+                      {contact.phone || 'No phone'}
+                    </p>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <span className={`status-badge ${contact.customerType === 'company' ? 'status-badge-info' : 'status-badge-success'}`}>
+                        {contact.customerType === 'company' ? 'Company' : 'Individual'}
+                      </span>
+                      <div className="flex space-x-1">
+                        <button
+                          className="text-blue-600 hover:text-blue-800"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditContact(contact.id);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="text-red-600 hover:text-red-800"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteContact(contact);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       
       {/* Create Contact Dialog */}
       {showCreateDialog && (
