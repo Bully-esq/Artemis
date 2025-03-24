@@ -184,12 +184,13 @@ const Quotes = () => {
 
   return (
     <PageLayout title="Quotes" actions={pageActions}>
+      {/* Page Header - Styled like Dashboard */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-2">Quote Management</h1>
         <p className="text-gray-600">Create and manage quotes for your clients</p>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions - Same styling as Dashboard */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
         <div className="quick-actions">
@@ -216,40 +217,40 @@ const Quotes = () => {
         </div>
       </div>
 
-      {/* Filters and search */}
+      {/* Filters and search - in a card like Dashboard */}
       <div className="card mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="w-full md:w-1/3">
             <input
               type="text"
-              className="search-input"
+              className="search-input w-full"
               placeholder="Search quotes by client or name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           
-          <div className="filter-buttons">
+          <div className="filter-group">
             <button
-              className={`btn ${filterStatus === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+              className={`filter-button ${filterStatus === 'all' ? 'active' : ''}`}
               onClick={() => setFilterStatus('all')}
             >
               All
             </button>
             <button
-              className={`btn ${filterStatus === 'active' ? 'btn-primary' : 'btn-secondary'}`}
+              className={`filter-button ${filterStatus === 'active' ? 'active' : ''}`}
               onClick={() => setFilterStatus('active')}
             >
               Active
             </button>
             <button
-              className={`btn ${filterStatus === 'expiring' ? 'btn-primary' : 'btn-secondary'}`}
+              className={`filter-button ${filterStatus === 'expiring' ? 'active' : ''}`}
               onClick={() => setFilterStatus('expiring')}
             >
               Expiring Soon
             </button>
             <button
-              className={`btn ${filterStatus === 'expired' ? 'btn-primary' : 'btn-secondary'}`}
+              className={`filter-button ${filterStatus === 'expired' ? 'active' : ''}`}
               onClick={() => setFilterStatus('expired')}
             >
               Expired
@@ -258,7 +259,7 @@ const Quotes = () => {
         </div>
       </div>
       
-      {/* Quotes list */}
+      {/* Quotes list - in a card with header like Dashboard */}
       <div className="card">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Quotes</h2>
@@ -270,16 +271,27 @@ const Quotes = () => {
         </div>
 
         {filteredQuotes.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
-            {searchTerm || filterStatus !== 'all' ? (
-              <p>No quotes match your search criteria.</p>
-            ) : (
-              <div>
-                <p className="mb-4">You haven't created any quotes yet.</p>
-                <Button variant="primary" onClick={handleCreateQuote}>
-                  Create Your First Quote
-                </Button>
-              </div>
+          <div className="empty-state">
+            <svg className="empty-state-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="12"></line>
+              <line x1="9" y1="15" x2="15" y2="15"></line>
+            </svg>
+            <h3 className="empty-state-title">
+              {searchTerm || filterStatus !== 'all' ? 
+                'No quotes match your search criteria' : 
+                'You haven\'t created any quotes yet'}
+            </h3>
+            <p className="empty-state-description">
+              {searchTerm || filterStatus !== 'all' ? 
+                'Try adjusting your search or filters to find what you\'re looking for.' : 
+                'Get started by creating your first quote for a client.'}
+            </p>
+            {!searchTerm && filterStatus === 'all' && (
+              <Button variant="primary" onClick={handleCreateQuote}>
+                Create Your First Quote
+              </Button>
             )}
           </div>
         ) : (

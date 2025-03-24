@@ -11,7 +11,7 @@ import { AppProvider } from './context/AppContext';
 
 // Pages
 import Dashboard from './pages/Dashboard';
-import QuoteList from './components/quotes/QuoteList';
+import Quotes from './pages/Quotes';
 import QuoteBuilder from './components/quotes/QuoteBuilder';
 import InvoiceList from './components/invoices/InvoiceList';
 import InvoiceBuilder from './components/invoices/InvoiceBuilder';
@@ -50,7 +50,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               
               {/* Quotes */}
-              <Route path="/quotes" element={<QuoteList />} />
+              <Route path="/quotes" element={<Quotes />} />
               <Route path="/quotes/new" element={<QuoteBuilder />} />
               <Route path="/quotes/:id" element={<QuoteBuilder />} />
               
