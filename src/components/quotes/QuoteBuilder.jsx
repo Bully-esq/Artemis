@@ -32,6 +32,23 @@ const QuoteBuilder = () => {
   const [showHiddenCostDialog, setShowHiddenCostDialog] = useState(false);
   const [newHiddenCost, setNewHiddenCost] = useState({ name: '', amount: 0 });
   
+  // Add debugging and more reliable dialog handling
+  const [useAlternativeDialog, setUseAlternativeDialog] = useState(false);
+  
+  // Handle opening the item dialog with debugging
+  const handleOpenItemDialog = () => {
+    console.log("Opening item dialog, current state:", showItemDialog);
+    setShowItemDialog(true);
+    
+    // If dialog doesn't open after a short delay, switch to alternative
+    setTimeout(() => {
+      if (!document.querySelector('.dialog-overlay')) {
+        console.log("Dialog component might be failing, switching to alternative");
+        setUseAlternativeDialog(true);
+      }
+    }, 300);
+  };
+  
   // Quote details
   const [quoteDetails, setQuoteDetails] = useState({
     id: id || Date.now().toString(),
@@ -57,28 +74,73 @@ const QuoteBuilder = () => {
   });
   
   // Fetch quote if we have an ID
-  const { data: quote, isLoading: isLoadingQuote } = useQuery(
+  const { data: quote, isLoading: isLoadingQuote, refetch: refetchQuote } = useQuery(
     ['quote', id],
     () => api.quotes.getById(id),
     {
       enabled: !!id,
       onSuccess: (data) => {
         if (data) {
-          // Fill in quote details from data
+          console.log("Loaded quote data:", data); // Debug log
+          
+          // Don't need to restructure client data, our API layer handles that now
           setQuoteDetails({
-            ...quoteDetails,
-            ...data,
-            client: data.client || quoteDetails.client
+            // Default quote skeleton
+            id: id,
+            client: {
+              name: '',
+              company: '',
+              email: '',
+              phone: '',
+              address: ''
+            },
+            date: new Date().toISOString().split('T')[0],
+            validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            paymentTerms: '1',
+            customTerms: '',
+            notes: '',
+            includeDrawingOption: false,
+            exclusions: [
+              'Boarding or fixing the underside of the new staircase.',
+              'Forming any under-stair cupboard or paneling.',
+              'Making good to any plastered walls or ceilings.',
+              'All components will arrive in their natural state, ready for fine sanding and finishing by others.'
+            ],
+            // Override with actual loaded data
+            ...data
           });
           
-          // Set other quote properties if available
-          if (data.selectedItems) setSelectedItems(data.selectedItems);
-          if (data.hiddenCosts) setHiddenCosts(data.hiddenCosts);
-          if (data.globalMarkup) setGlobalMarkup(data.globalMarkup);
-          if (data.distributionMethod) setDistributionMethod(data.distributionMethod);
+          // Directly set arrays from loaded data, with validation
+          if (Array.isArray(data.selectedItems)) {
+            setSelectedItems(data.selectedItems.map(item => ({
+              ...item,
+              quantity: parseFloat(item.quantity) || 1,
+              markup: parseInt(item.markup) || 0
+            })));
+          }
+          
+          if (Array.isArray(data.hiddenCosts)) {
+            setHiddenCosts(data.hiddenCosts);
+          }
+          
+          if (typeof data.globalMarkup === 'number') {
+            setGlobalMarkup(data.globalMarkup);
+          }
+          
+          if (data.distributionMethod) {
+            setDistributionMethod(data.distributionMethod);
+          }
+          
+          // Log the resolved state
+          console.log("Final state after loading:", {
+            quoteDetails: data,
+            selectedItems: data.selectedItems || [],
+            hiddenCosts: data.hiddenCosts || []
+          });
         }
       },
       onError: (error) => {
+        console.error("Error loading quote:", error);
         addNotification(`Error loading quote: ${error.message}`, 'error');
       }
     }
@@ -149,10 +211,15 @@ const QuoteBuilder = () => {
     setSelectedItems(newItems);
   };
   
-  // Handle updating an item in the quote
+  // Fix the item fields to ensure they always have default values
   const handleUpdateItem = (index, updatedItem) => {
     const newItems = [...selectedItems];
-    newItems[index] = updatedItem;
+    // Ensure quantity and markup are never undefined/null
+    newItems[index] = {
+      ...updatedItem,
+      quantity: parseFloat(updatedItem.quantity) || 0.1, // Default to 0.1 if falsy
+      markup: parseInt(updatedItem.markup) || 0 // Default to 0 if falsy
+    };
     setSelectedItems(newItems);
   };
   
@@ -215,19 +282,80 @@ const QuoteBuilder = () => {
   // Save quote
   const handleSaveQuote = async () => {
     try {
+      // Show a saving indicator to the user
+      addNotification('Saving quote...', 'info');
+      
+      // Ensure the ID is retained or generated correctly
+      const quoteId = quoteDetails.id || Date.now().toString();
+      
+      // Sanitize and prepare data for saving
       const quoteToSave = {
         ...quoteDetails,
-        selectedItems,
-        hiddenCosts,
+        id: quoteId,
+        // Client data with defaults
+        client: {
+          name: quoteDetails.client.name || '',
+          company: quoteDetails.client.company || '',
+          email: quoteDetails.client.email || '',
+          phone: quoteDetails.client.phone || '',
+          address: quoteDetails.client.address || ''
+        },
+        // Make sure selectedItems is always an array and each item has valid properties
+        selectedItems: Array.isArray(selectedItems) ? selectedItems.map(item => ({
+          ...item,
+          id: item.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          quantity: parseFloat(item.quantity) || 1,
+          markup: parseInt(item.markup) || 0,
+          hideInQuote: !!item.hideInQuote
+        })) : [],
+        // Make sure hiddenCosts is always an array
+        hiddenCosts: Array.isArray(hiddenCosts) ? hiddenCosts.map(cost => ({
+          ...cost,
+          id: cost.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          amount: parseFloat(cost.amount) || 0
+        })) : [],
         globalMarkup,
         distributionMethod,
         savedAt: new Date().toISOString()
       };
       
-      await api.quotes.save(quoteToSave);
+      console.log("Saving quote with data:", quoteToSave); // Debug log
+      
+      // Track how long the save takes
+      const startTime = new Date().getTime();
+      
+      // Call the API save function
+      const savedQuote = await api.quotes.save(quoteToSave);
+      
+      const endTime = new Date().getTime();
+      console.log(`Quote saved in ${endTime - startTime}ms`);
+      
+      // Log the response
+      console.log("Quote saved successfully:", savedQuote);
+      
+      // Show success message
       addNotification('Quote saved successfully', 'success');
+      
+      // For new quotes (without an existing ID in the URL params), 
+      // navigate to the edit page with the new ID
+      if (!id) {
+        navigate(`/quotes/${quoteId}`);
+      } else {
+        // For existing quotes, refetch to ensure we have the latest data
+        refetchQuote();
+      }
     } catch (error) {
-      addNotification(`Error saving quote: ${error.message}`, 'error');
+      console.error("Error saving quote:", error);
+      
+      // Handle different types of errors
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        addNotification(`Server error: ${error.response.status} ${error.response.statusText}`, 'error');
+      } else if (error.request) {
+        addNotification('Network error: No response from server. Check your connection.', 'error');
+      } else {
+        addNotification(`Error saving quote: ${error.message}`, 'error');
+      }
     }
   };
   
@@ -273,17 +401,14 @@ const QuoteBuilder = () => {
   // Header action buttons
   const headerActions = (
     <div className="action-buttons">
-      <Button variant="primary" onClick={handleSaveQuote}>
-        Save Quote
-      </Button>
-      <Button variant="secondary" onClick={handleExportPDF}>
-        Export PDF
+      <Button variant="secondary" onClick={() => navigate('/quotes')}>
+        Back to Quotes
       </Button>
       <Button variant="secondary" onClick={handleEmailQuote}>
         Email Quote
       </Button>
-      <Button variant="secondary" onClick={() => navigate('/quotes')}>
-        Back to Quotes
+      <Button variant="secondary" onClick={handleExportPDF}>
+        Export PDF
       </Button>
     </div>
   );
@@ -293,16 +418,25 @@ const QuoteBuilder = () => {
       <div className="tabs-container">
         <div className="card">
           <div className="card-body">
-            <Tabs
-              tabs={[
-                { id: 'details', label: 'Quote Details' },
-                { id: 'items', label: 'Items & Costs' },
-                { id: 'preview', label: 'Preview' }
-              ]}
-              activeTab={activeTab}
-              onChange={setActiveTab}
-              variant="underline"
-            />
+            <div className="tabs-with-actions">
+              <Tabs
+                tabs={[
+                  { id: 'details', label: 'Quote Details' },
+                  { id: 'items', label: 'Items & Costs' },
+                  { id: 'preview', label: 'Preview' }
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                variant="underline"
+              />
+              <Button 
+                variant="primary" 
+                onClick={handleSaveQuote}
+                className="save-tab-button"
+              >
+                Save Quote
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -456,7 +590,7 @@ const QuoteBuilder = () => {
                 <h2 className="card-title">Selected Items</h2>
                 <Button
                   variant="primary"
-                  onClick={() => setShowItemDialog(true)}
+                  onClick={handleOpenItemDialog}
                 >
                   Add Item
                 </Button>
@@ -485,10 +619,19 @@ const QuoteBuilder = () => {
                       finalTotal: (item.cost || 0) * (item.quantity || 1)
                     };
                     
+                    // Ensure item has all required properties with defaults
+                    const safeItem = {
+                      ...item,
+                      name: item.name || 'Unnamed Item',
+                      quantity: parseFloat(item.quantity) || 0.1,
+                      markup: parseInt(item.markup) || 0,
+                      hideInQuote: !!item.hideInQuote // Convert to boolean
+                    };
+                    
                     return (
                       <div
                         key={index}
-                        className={`item-card ${item.hideInQuote ? 'item-card-hidden' : ''}`}
+                        className={`item-card ${safeItem.hideInQuote ? 'item-card-hidden' : ''}`}
                       >
                         <div className="item-card-header">
                           <div>
@@ -512,7 +655,7 @@ const QuoteBuilder = () => {
                               type="number"
                               min="0.1"
                               step="0.1"
-                              value={item.quantity}
+                              value={safeItem.quantity} // Use the safe item with defaults
                               onChange={(e) => handleUpdateItem(index, { ...item, quantity: parseFloat(e.target.value) || 0.1 })}
                               className="form-input"
                             />
@@ -523,7 +666,7 @@ const QuoteBuilder = () => {
                               type="number"
                               min="0"
                               max="100"
-                              value={item.markup}
+                              value={safeItem.markup} // Use the safe item with defaults
                               onChange={(e) => handleUpdateItem(index, { ...item, markup: parseInt(e.target.value) || 0 })}
                               className="form-input"
                             />
@@ -817,78 +960,211 @@ const QuoteBuilder = () => {
       )}
       
       {/* Add Item Dialog */}
-      <Dialog
-        isOpen={showItemDialog}
-        onClose={() => setShowItemDialog(false)}
-        title="Add Item to Quote"
-      >
-        <div className="form-field">
-          <label className="form-label">
-            Search
-          </label>
-          <input
-            type="text"
-            value={itemSearchTerm}
-            onChange={(e) => setItemSearchTerm(e.target.value)}
-            placeholder="Search by name or description..."
-            className="form-input"
-          />
-        </div>
-        
-        <div className="form-field">
-          <label className="form-label">
-            Category
-          </label>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="form-select"
-          >
-            <option value="all">All Categories</option>
-            {/* Create unique list of categories */}
-            {Array.from(new Set(catalogItems.map(item => item.category)))
-              .filter(Boolean)
-              .sort()
-              .map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-          </select>
-        </div>
-        
-        <div className="catalog-items-list">
-          {filteredCatalogItems.length === 0 ? (
-            <div className="empty-message">
-              No items match your search criteria
-            </div>
-          ) : (
-            <div className="catalog-items">
-              {filteredCatalogItems.map(item => (
-                <div
-                  key={item.id}
-                  className="catalog-item"
-                  onClick={() => handleAddItem(item)}
-                >
-                  <div className="catalog-item-content">
-                    <div>
-                      <h3 className="catalog-item-name">{item.name}</h3>
-                      <p className="catalog-item-supplier">{getSupplierName(item.supplier)}</p>
-                      {item.description && (
-                        <p className="catalog-item-description">{item.description}</p>
-                      )}
-                    </div>
-                    <div className="catalog-item-price">
-                      <p className="price-value">{formatCurrency(item.cost)}</p>
-                      {item.category && (
-                        <p className="category-label">{item.category}</p>
-                      )}
+      {!useAlternativeDialog && (
+        <Dialog
+          isOpen={showItemDialog}
+          onClose={() => setShowItemDialog(false)}
+          title="Add Item to Quote"
+        >
+          <div className="form-field">
+            <label className="form-label">
+              Search
+            </label>
+            <input
+              type="text"
+              value={itemSearchTerm}
+              onChange={(e) => setItemSearchTerm(e.target.value)}
+              placeholder="Search by name or description..."
+              className="form-input"
+            />
+          </div>
+          
+          <div className="form-field">
+            <label className="form-label">
+              Category
+            </label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="form-select"
+            >
+              <option value="all">All Categories</option>
+              {Array.from(new Set(catalogItems.map(item => item.category)))
+                .filter(Boolean)
+                .sort()
+                .map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+            </select>
+          </div>
+          
+          <div className="catalog-items-list">
+            {filteredCatalogItems.length === 0 ? (
+              <div className="empty-message">
+                No items match your search criteria
+              </div>
+            ) : (
+              <div className="catalog-items">
+                {filteredCatalogItems.map(item => (
+                  <div
+                    key={item.id}
+                    className="catalog-item"
+                    onClick={() => handleAddItem(item)}
+                  >
+                    <div className="catalog-item-content">
+                      <div>
+                        <h3 className="catalog-item-name">{item.name}</h3>
+                        <p className="catalog-item-supplier">{getSupplierName(item.supplier)}</p>
+                        {item.description && (
+                          <p className="catalog-item-description">{item.description}</p>
+                        )}
+                      </div>
+                      <div className="catalog-item-price">
+                        <p className="price-value">{formatCurrency(item.cost)}</p>
+                        {item.category && (
+                          <p className="category-label">{item.category}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+        </Dialog>
+      )}
+      
+      {/* Alternative Dialog Implementation */}
+      {useAlternativeDialog && showItemDialog && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 1000,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowItemDialog(false);
+          }}
+        >
+          <div 
+            style={{
+              backgroundColor: 'white',
+              padding: '20px',
+              borderRadius: '5px',
+              width: '80%',
+              maxWidth: '800px',
+              maxHeight: '80vh',
+              overflow: 'auto'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0 }}>Add Item to Quote</h2>
+              <button 
+                style={{ 
+                  background: 'none', 
+                  border: 'none',
+                  cursor: 'pointer', 
+                  fontSize: '20px'
+                }}
+                onClick={() => setShowItemDialog(false)}
+              >
+                ×
+              </button>
             </div>
-          )}
+            
+            <div className="form-field">
+              <label className="form-label">
+                Search
+              </label>
+              <input
+                type="text"
+                value={itemSearchTerm}
+                onChange={(e) => setItemSearchTerm(e.target.value)}
+                placeholder="Search by name or description..."
+                className="form-input"
+              />
+            </div>
+            
+            <div className="form-field">
+              <label className="form-label">
+                Category
+              </label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="form-select"
+              >
+                <option value="all">All Categories</option>
+                {Array.from(new Set(catalogItems.map(item => item.category)))
+                  .filter(Boolean)
+                  .sort()
+                  .map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+              </select>
+            </div>
+            
+            <div className="catalog-items-list" style={{ maxHeight: '50vh', overflow: 'auto' }}>
+              {filteredCatalogItems.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                  No items match your search criteria
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  {filteredCatalogItems.map(item => (
+                    <div
+                      key={item.id}
+                      style={{ 
+                        padding: '10px', 
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        handleAddItem(item);
+                        setShowItemDialog(false);
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div>
+                          <h3 style={{ margin: '0 0 5px 0' }}>{item.name}</h3>
+                          <p style={{ margin: '0 0 5px 0', color: '#666' }}>{getSupplierName(item.supplier)}</p>
+                          {item.description && (
+                            <p style={{ margin: '0', fontSize: '14px' }}>{item.description}</p>
+                          )}
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{formatCurrency(item.cost)}</p>
+                          {item.category && (
+                            <p style={{ margin: '0', fontSize: '12px', color: '#666' }}>{item.category}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+              <Button
+                variant="secondary"
+                onClick={() => setShowItemDialog(false)}
+                style={{ marginRight: '10px' }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
         </div>
-      </Dialog>
+      )}
       
       {/* Hidden Cost Dialog */}
       <Dialog
@@ -917,8 +1193,11 @@ const QuoteBuilder = () => {
             type="number"
             min="0"
             step="0.01"
-            value={newHiddenCost.amount}
-            onChange={(e) => setNewHiddenCost({ ...newHiddenCost, amount: e.target.value })}
+            value={newHiddenCost.amount || 0} // Add fallback for undefined
+            onChange={(e) => setNewHiddenCost({ 
+              ...newHiddenCost, 
+              amount: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 
+            })}
             className="form-input"
           />
         </div>

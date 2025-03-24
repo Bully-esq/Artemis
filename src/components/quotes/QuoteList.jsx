@@ -37,29 +37,63 @@ const QuoteList = () => {
   
   // Delete quote mutation
   const deleteQuoteMutation = useMutation(
-    (id) => api.quotes.delete(id),
+    (id) => {
+      console.log('Attempting to delete quote with ID:', id);
+      // Add a slight delay to ensure the action is visible to users
+      return new Promise((resolve) => {
+        setTimeout(async () => {
+          try {
+            const result = await api.quotes.delete(id);
+            console.log('Delete API call succeeded:', result);
+            resolve(result);
+          } catch (error) {
+            console.error('Delete API call failed:', error);
+            throw error;
+          }
+        }, 300);
+      });
+    },
     {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        console.log('Delete mutation succeeded with data:', data);
         queryClient.invalidateQueries('quotes');
         addNotification('Quote deleted successfully', 'success');
         setDeleteDialogOpen(false);
+        setQuoteToDelete(null);
       },
       onError: (err) => {
-        addNotification(`Error deleting quote: ${err.message}`, 'error');
+        console.error('Delete mutation failed with error:', err);
+        addNotification(`Error deleting quote: ${err.message || 'Unknown error'}`, 'error');
+        setDeleteDialogOpen(false);
       }
     }
   );
   
-  // Handle delete confirmation
+  // Handle delete confirmation with better debugging
   const confirmDelete = (quote) => {
+    console.log('Opening delete confirmation for quote:', quote);
     setQuoteToDelete(quote);
     setDeleteDialogOpen(true);
   };
   
+  // Improved delete handler
   const handleDelete = () => {
-    if (quoteToDelete) {
-      deleteQuoteMutation.mutate(quoteToDelete.id);
+    if (!quoteToDelete) {
+      console.warn('Attempted to delete but no quote is selected');
+      return;
     }
+    
+    console.log(`Executing delete for quote ID: ${quoteToDelete.id}`);
+    
+    // Add a brief delay for visual feedback
+    setTimeout(() => {
+      try {
+        deleteQuoteMutation.mutate(quoteToDelete.id);
+      } catch (error) {
+        console.error('Error in delete handler:', error);
+        addNotification(`Failed to start delete operation: ${error.message}`, 'error');
+      }
+    }, 100);
   };
   
   // Filter quotes based on search term
@@ -223,13 +257,15 @@ const QuoteList = () => {
         )}
       </div>
       
-      {/* Delete confirmation dialog */}
+      {/* Delete confirmation dialog - positioned at root level */}
       <Dialog
         isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         title="Confirm Delete"
+        className="fixed inset-0 z-50 overflow-y-auto"
+        overlayClassName="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
       >
-        <div className="p-6">
+        <div className="p-6 bg-white rounded-lg shadow-xl max-w-md mx-auto mt-20">
           <p className="mb-4">
             Are you sure you want to delete this quote
             {quoteToDelete?.name ? ` for "${quoteToDelete.name}"` : ''}?
@@ -247,6 +283,7 @@ const QuoteList = () => {
               variant="danger" 
               onClick={handleDelete}
               isLoading={deleteQuoteMutation.isLoading}
+              data-quoteid={quoteToDelete?.id}
             >
               Delete Quote
             </Button>

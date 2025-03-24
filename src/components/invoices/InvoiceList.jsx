@@ -62,7 +62,7 @@ const InvoiceList = () => {
       variant="primary"
       onClick={() => navigate('/invoices/new')}
     >
-      <svg className="w-5 h-5 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="icon icon-plus" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
       </svg>
       New Invoice
@@ -80,11 +80,11 @@ const InvoiceList = () => {
   if (isError) {
     return (
       <PageLayout title="Invoices" actions={actionButtons}>
-        <div className="bg-red-50 p-4 rounded-md">
-          <p className="text-red-700">Error loading invoices: {error?.message}</p>
+        <div className="error-container">
+          <p className="error-message">Error loading invoices: {error?.message}</p>
           <Button 
             variant="primary"
-            className="mt-4"
+            className="error-retry-button"
             onClick={() => window.location.reload()}
           >
             Retry
@@ -97,31 +97,31 @@ const InvoiceList = () => {
   return (
     <PageLayout title="Invoices" actions={actionButtons}>
       {/* Page Header - Styled like Dashboard */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Invoice Management</h1>
-        <p className="text-gray-600">Create, view, and manage your invoices</p>
+      <div className="page-header">
+        <h1 className="page-title">Invoice Management</h1>
+        <p className="page-subtitle">Create, view, and manage your invoices</p>
       </div>
 
       {/* Quick Actions - Same styling as Dashboard */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+      <div className="section-container">
+        <h2 className="section-title">Quick Actions</h2>
         <div className="quick-actions">
           <div onClick={() => navigate('/invoices/new')} className="quick-action-btn">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="quick-action-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
             <span>New Invoice</span>
           </div>
           
           <div onClick={() => navigate('/quotes')} className="quick-action-btn">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="quick-action-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <span>Create Quote</span>
           </div>
           
           <div onClick={() => navigate('/contacts')} className="quick-action-btn">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="quick-action-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
             <span>Manage Contacts</span>
@@ -130,12 +130,12 @@ const InvoiceList = () => {
       </div>
 
       {/* Search and Filters - in a card like Dashboard */}
-      <div className="card mb-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="w-full md:w-1/3">
+      <div className="card search-filter-container">
+        <div className="filter-row">
+          <div className="search-container">
             <input
               type="text"
-              className="search-input w-full"
+              className="search-input"
               placeholder="Search invoices by number or client..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -167,10 +167,10 @@ const InvoiceList = () => {
       
       {/* Invoices list - in a card with header like Dashboard */}
       <div className="card">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Invoices</h2>
+        <div className="list-header">
+          <h2 className="card-title">Invoices</h2>
           <div>
-            <span className="text-sm text-gray-600">
+            <span className="result-count">
               {filteredInvoices.length} invoices found
             </span>
           </div>
@@ -205,31 +205,31 @@ const InvoiceList = () => {
                 className="recent-item"
                 onClick={() => navigate(`/invoices/${invoice.id}`)}
               >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium text-gray-900">
+                <div className="item-row">
+                  <div className="item-details">
+                    <p className="item-title">
                       {invoice.invoiceNumber || `INV-${invoice.id.substring(0, 8)}`}
                       {invoice.clientName && (
-                        <span className="ml-2">{invoice.clientName}</span>
+                        <span className="client-name">{invoice.clientName}</span>
                       )}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="item-subtitle">
                       {invoice.clientCompany || ''}
                       {invoice.clientCompany && invoice.invoiceDate && ' • '}
                       {invoice.invoiceDate ? `Date: ${new Date(invoice.invoiceDate).toLocaleDateString()}` : ''}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">
+                  <div className="item-actions">
+                    <p className="invoice-amount">
                       {formatCurrency(invoice.amount)}
                     </p>
-                    <div className="flex items-center space-x-2 mt-1">
+                    <div className="action-buttons">
                       <span className={getStatusBadgeClass(invoice.status)}>
                         {invoice.status === 'paid' ? 'Paid' : 'Pending'}
                       </span>
-                      <div className="flex space-x-1">
+                      <div className="button-group">
                         <button
-                          className="text-blue-600 hover:text-blue-800"
+                          className="view-button"
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(`/invoices/${invoice.id}`);
@@ -238,7 +238,7 @@ const InvoiceList = () => {
                           View
                         </button>
                         <button
-                          className="text-red-600 hover:text-red-800"
+                          className="delete-button"
                           onClick={(e) => {
                             e.stopPropagation();
                             if (window.confirm('Are you sure you want to delete this invoice?')) {

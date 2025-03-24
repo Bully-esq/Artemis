@@ -11,6 +11,7 @@ import Button from '../common/Button';
 import Loading from '../common/Loading';
 import FormField from '../common/FormField';
 import Tabs from '../common/Tabs';
+import InvoicePreview from './InvoicePreview';
 
 const InvoiceBuilder = () => {
   const { id } = useParams();
@@ -367,8 +368,12 @@ const InvoiceBuilder = () => {
             <div className="card-header">
               <h2 className="card-title">Invoice Preview</h2>
             </div>
-            <div className="card-body invoice-preview-placeholder">
-              <p>No invoice selected. Generate or select an invoice to preview.</p>
+            <div className="card-body">
+              <InvoicePreview 
+                invoice={invoiceDetails} 
+                settings={settings} 
+                printMode={false} 
+              />
             </div>
           </div>
           

@@ -23,26 +23,140 @@ apiClient.interceptors.response.use(
   }
 );
 
-// Quotes API
-export const quotesApi = {
+// Add this debugging function to help diagnose save issues
+const logApiOperation = (operation, data, result) => {
+  console.log(`API ${operation}:`, { request: data, response: result });
+  return result;
+};
+
+// Enhance quotes API with better debugging
+const quotesApi = {
   getAll: async () => {
-    const response = await apiClient.get('/quotes');
-    return response.data;
+    try {
+      const result = await apiClient.get('/quotes');
+      return logApiOperation('getAll quotes', null, result.data);
+    } catch (error) {
+      console.error('API Error - getAll quotes:', error);
+      throw error;
+    }
   },
   
   getById: async (id) => {
-    const response = await apiClient.get(`/quotes/${id}`);
-    return response.data;
+    try {
+      console.log('Getting quote by ID:', id);
+      const result = await apiClient.get(`/quotes/${id}`);
+      
+      console.log('Raw quote data from server:', result.data);
+      
+      // Server returns flat fields (clientName, clientEmail, etc.)
+      // Convert to client expected structure with nested client object
+      const serverQuote = result.data.quote || result.data;
+      
+      // Build the client-side expected structure
+      const clientFormattedQuote = {
+        ...serverQuote,
+        // Create client object from flat fields
+        client: {
+          name: serverQuote.clientName || '',
+          company: serverQuote.clientCompany || '',
+          email: serverQuote.clientEmail || '',
+          phone: serverQuote.clientPhone || '',
+          address: serverQuote.clientAddress || ''
+        },
+        // Ensure these are arrays (server should parse JSON strings)
+        selectedItems: Array.isArray(serverQuote.selectedItems) ? serverQuote.selectedItems : [],
+        hiddenCosts: Array.isArray(serverQuote.hiddenCosts) ? serverQuote.hiddenCosts : [],
+        exclusions: Array.isArray(serverQuote.exclusions) ? serverQuote.exclusions : []
+      };
+      
+      console.log('Formatted for client:', clientFormattedQuote);
+      return clientFormattedQuote;
+    } catch (error) {
+      console.error(`API Error - getById quote ${id}:`, error);
+      throw error;
+    }
   },
   
   save: async (quote) => {
-    const response = await apiClient.post('/quotes', { quote });
-    return response.data;
+    try {
+      console.log('Attempting to save quote:', quote);
+      
+      // Convert client object to flat fields for server compatibility
+      const serverQuote = {
+        ...quote,
+        id: quote.id || Date.now().toString(),
+        // Map client object to individual fields that server expects
+        clientName: quote.client?.name || '',
+        clientCompany: quote.client?.company || '',
+        clientEmail: quote.client?.email || '',
+        clientPhone: quote.client?.phone || '',
+        clientAddress: quote.client?.address || '',
+        // Serialize arrays to JSON strings if needed
+        selectedItems: Array.isArray(quote.selectedItems) ? quote.selectedItems : [],
+        hiddenCosts: Array.isArray(quote.hiddenCosts) ? quote.hiddenCosts : [],
+        exclusions: Array.isArray(quote.exclusions) ? quote.exclusions : []
+      };
+      
+      console.log('Formatted for server:', serverQuote);
+      
+      // Send to server
+      const response = await apiClient.post('/quotes', { quote: serverQuote });
+      console.log('Quote save successful, response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('API Error - save quote:', error);
+      // Log more details about the error
+      if (error.response) {
+        console.error('Server response:', error.response.status, error.response.data);
+      } else if (error.request) {
+        console.error('No response received from server');
+      } else {
+        console.error('Error setting up request:', error.message);
+      }
+      throw error;
+    }
   },
   
   delete: async (id) => {
-    const response = await apiClient.delete(`/quotes/${id}`);
-    return response.data;
+    try {
+      if (!id) {
+        console.error('API Error - delete quote: No ID provided');
+        throw new Error('No quote ID provided for deletion');
+      }
+      
+      console.log(`API: Deleting quote with ID: "${id}"`);
+      
+      // Log the full URL being called for debugging
+      const deleteUrl = `${apiClient.defaults.baseURL}/quotes/${id}`;
+      console.log(`Making DELETE request to: ${deleteUrl}`);
+      
+      // Make the DELETE request
+      const response = await apiClient.delete(`/quotes/${id}`);
+      
+      // Log response for debugging
+      console.log('Quote deletion response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`API Error - delete quote ${id}:`, error);
+      
+      // Enhanced error logging
+      if (error.response) {
+        console.error('Server responded with error:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+      } else if (error.request) {
+        console.error('No response received from server. Request details:', error.request);
+      } else {
+        console.error('Error setting up request:', error.message);
+      }
+      
+      // Add more details to the error before throwing
+      const enhancedError = new Error(`Failed to delete quote: ${error.message}`);
+      enhancedError.originalError = error;
+      throw enhancedError;
+    }
   }
 };
 

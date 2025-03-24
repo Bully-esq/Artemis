@@ -71,10 +71,25 @@ const Button = ({
     buttonClass += ' ' + className;
   }
   
+  // Enhanced click handler with debugging
+  const handleClick = (e) => {
+    // Prevent default for form buttons unless specified
+    if (rest.type === 'submit' && !rest.preventDefaultOff) {
+      e.preventDefault();
+    }
+    
+    console.log(`Button clicked: ${variant} ${children}`);
+    
+    // Call the provided onClick handler if available
+    if (onClick && typeof onClick === 'function') {
+      onClick(e);
+    }
+  };
+  
   return (
     <button 
       className={buttonClass}
-      onClick={onClick}
+      onClick={handleClick}
       disabled={isLoading || rest.disabled}
       {...rest}
     >
@@ -84,7 +99,9 @@ const Button = ({
           <span className="button-text">{children}</span>
         </span>
       ) : (
-        children
+        <span className="button-content">
+          {children}
+        </span>
       )}
     </button>
   );
