@@ -89,6 +89,7 @@ const Notification = ({
         <button
           className="notification-close"
           onClick={() => setVisible(false)}
+          aria-label="Close notification"
         >
           <span className="sr-only">Close</span>
           <svg className="notification-close-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">

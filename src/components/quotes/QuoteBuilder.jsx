@@ -110,33 +110,78 @@ const QuoteBuilder = () => {
             ...data
           });
           
-          // Directly set arrays from loaded data, with validation
-          if (Array.isArray(data.selectedItems)) {
-            setSelectedItems(data.selectedItems.map(item => ({
-              ...item,
+          // Handle items with better error checking
+          console.log("Selected items from API:", data.selectedItems);
+          
+          // Make sure selectedItems is an array, even if it's null or undefined in data
+          const items = Array.isArray(data.selectedItems) ? data.selectedItems : [];
+          
+          if (items.length > 0) {
+            // Map and validate each item to ensure all required properties exist
+            setSelectedItems(items.map(item => ({
+              // Ensure each item has all required properties with defaults
+              id: item.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              name: item.name || 'Unnamed Item',
+              cost: parseFloat(item.cost) || 0,
+              supplier: item.supplier || '',
               quantity: parseFloat(item.quantity) || 1,
-              markup: parseInt(item.markup) || 0
+              markup: parseInt(item.markup) || 0,
+              hideInQuote: !!item.hideInQuote,
+              description: item.description || '',
+              category: item.category || ''
             })));
+            console.log("Set selectedItems with:", items.length, "items");
+          } else {
+            console.log("No items found in quote data, using empty array");
+            setSelectedItems([]);
           }
           
-          if (Array.isArray(data.hiddenCosts)) {
-            setHiddenCosts(data.hiddenCosts);
+          // Handle hidden costs with better error checking
+          console.log("Hidden costs from API:", data.hiddenCosts);
+          
+          // Make sure hiddenCosts is an array, even if it's null or undefined in data
+          const costs = Array.isArray(data.hiddenCosts) ? data.hiddenCosts : [];
+          
+          if (costs.length > 0) {
+            // Map and validate each cost to ensure all required properties exist
+            setHiddenCosts(costs.map(cost => ({
+              id: cost.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              name: cost.name || 'Unnamed Cost',
+              amount: parseFloat(cost.amount) || 0
+            })));
+            console.log("Set hiddenCosts with:", costs.length, "costs");
+          } else {
+            console.log("No hidden costs found in quote data, using empty array");
+            setHiddenCosts([]);
           }
           
-          if (typeof data.globalMarkup === 'number') {
+          // Set global markup with fallback
+          if (typeof data.globalMarkup === 'number' && !isNaN(data.globalMarkup)) {
             setGlobalMarkup(data.globalMarkup);
+            console.log("Set globalMarkup to:", data.globalMarkup);
+          } else {
+            console.log("Using default globalMarkup:", globalMarkup);
           }
           
-          if (data.distributionMethod) {
+          // Set distribution method with fallback
+          if (data.distributionMethod && ['even', 'proportional'].includes(data.distributionMethod)) {
             setDistributionMethod(data.distributionMethod);
+            console.log("Set distributionMethod to:", data.distributionMethod);
+          } else {
+            console.log("Using default distributionMethod:", distributionMethod);
           }
           
-          // Log the resolved state
+          // Log the complete resolved state
           console.log("Final state after loading:", {
             quoteDetails: data,
-            selectedItems: data.selectedItems || [],
-            hiddenCosts: data.hiddenCosts || []
+            selectedItems: Array.isArray(data.selectedItems) ? data.selectedItems.length : 0,
+            hiddenCosts: Array.isArray(data.hiddenCosts) ? data.hiddenCosts.length : 0,
+            globalMarkup: data.globalMarkup || globalMarkup,
+            distributionMethod: data.distributionMethod || distributionMethod
           });
+        } else {
+          console.error("Quote data is null or undefined");
+          addNotification("Error loading quote: data is missing", "error");
         }
       },
       onError: (error) => {
@@ -282,7 +327,7 @@ const QuoteBuilder = () => {
   // Save quote
   const handleSaveQuote = async () => {
     try {
-      // Show a saving indicator to the user
+      // Show a saving notification
       addNotification('Saving quote...', 'info');
       
       // Ensure the ID is retained or generated correctly
@@ -300,7 +345,6 @@ const QuoteBuilder = () => {
           phone: quoteDetails.client.phone || '',
           address: quoteDetails.client.address || ''
         },
-        // Make sure selectedItems is always an array and each item has valid properties
         selectedItems: Array.isArray(selectedItems) ? selectedItems.map(item => ({
           ...item,
           id: item.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -308,7 +352,6 @@ const QuoteBuilder = () => {
           markup: parseInt(item.markup) || 0,
           hideInQuote: !!item.hideInQuote
         })) : [],
-        // Make sure hiddenCosts is always an array
         hiddenCosts: Array.isArray(hiddenCosts) ? hiddenCosts.map(cost => ({
           ...cost,
           id: cost.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -319,43 +362,23 @@ const QuoteBuilder = () => {
         savedAt: new Date().toISOString()
       };
       
-      console.log("Saving quote with data:", quoteToSave); // Debug log
-      
-      // Track how long the save takes
-      const startTime = new Date().getTime();
-      
       // Call the API save function
       const savedQuote = await api.quotes.save(quoteToSave);
       
-      const endTime = new Date().getTime();
-      console.log(`Quote saved in ${endTime - startTime}ms`);
+      // Show success notification
+      addNotification('Quote saved successfully ✓', 'success');
       
-      // Log the response
-      console.log("Quote saved successfully:", savedQuote);
-      
-      // Show success message
-      addNotification('Quote saved successfully', 'success');
-      
-      // For new quotes (without an existing ID in the URL params), 
-      // navigate to the edit page with the new ID
+      // Navigate or refetch - DO NOT CHANGE THIS PART
       if (!id) {
         navigate(`/quotes/${quoteId}`);
       } else {
-        // For existing quotes, refetch to ensure we have the latest data
         refetchQuote();
       }
     } catch (error) {
       console.error("Error saving quote:", error);
       
-      // Handle different types of errors
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        addNotification(`Server error: ${error.response.status} ${error.response.statusText}`, 'error');
-      } else if (error.request) {
-        addNotification('Network error: No response from server. Check your connection.', 'error');
-      } else {
-        addNotification(`Error saving quote: ${error.message}`, 'error');
-      }
+      // Error notification
+      addNotification(`Error saving quote: ${error.message}`, 'error');
     }
   };
   

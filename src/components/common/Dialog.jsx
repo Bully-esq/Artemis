@@ -11,6 +11,8 @@ import Button from './Button';
  * @param {React.ReactNode} props.children - Dialog content
  * @param {React.ReactNode} props.footer - Custom footer content
  * @param {string} props.size - Dialog size (sm, md, lg, xl)
+ * @param {string} props.className - Additional classes for dialog container
+ * @param {string} props.overlayClassName - Additional classes for overlay
  */
 const Dialog = ({
   isOpen = true,
@@ -20,6 +22,7 @@ const Dialog = ({
   footer,
   size = 'md',
   className = '',
+  overlayClassName = ''
 }) => {
   const dialogRef = useRef(null);
   
@@ -49,61 +52,48 @@ const Dialog = ({
     };
   }, [isOpen, onClose]);
   
-  // Dialog size classes
-  const sizeClasses = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl',
-    full: 'max-w-full mx-4',
-  };
-  
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className={`dialog-container ${className}`}>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+        className={`dialog-overlay ${overlayClassName}`}
         onClick={handleBackdropClick}
       />
       
       {/* Dialog position wrapper */}
-      <div className="flex min-h-full items-center justify-center p-4 text-center">
+      <div className="dialog-wrapper">
         {/* Dialog panel */}
         <div 
           ref={dialogRef}
-          className={`
-            relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all
-            ${sizeClasses[size] || sizeClasses.md}
-            ${className}
-          `}
+          className={`dialog-panel dialog-size-${size}`}
         >
           {/* Close button */}
           <button
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-500 focus:outline-none"
+            className="dialog-close-button"
             onClick={onClose}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="dialog-close-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
           
           {/* Title */}
           {title && (
-            <div className="border-b border-gray-200 px-6 py-4">
-              <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+            <div className="dialog-header">
+              <h3 className="dialog-title">{title}</h3>
             </div>
           )}
           
           {/* Content */}
-          <div className="px-6 py-4">
+          <div className="dialog-content">
             {children}
           </div>
           
           {/* Footer */}
           {(footer || onClose) && (
-            <div className="border-t border-gray-200 px-6 py-4 flex justify-end space-x-3">
+            <div className="dialog-footer">
               {footer || (
                 <Button variant="secondary" onClick={onClose}>
                   Close

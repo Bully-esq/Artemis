@@ -108,9 +108,9 @@ const Quotes = () => {
     navigate('/quotes/new');
   };
 
-  // Navigation to edit quote
+  // Navigation to edit quote - FIX THE ROUTE PATH
   const handleEditQuote = (quoteId) => {
-    navigate(`/quotes/edit/${quoteId}`);
+    navigate(`/quotes/${quoteId}`);  // Remove the "edit/" part
   };
   
   // Create invoice from quote
@@ -358,24 +358,20 @@ const Quotes = () => {
         onClose={() => setIsDeleteDialogOpen(false)}
         title="Delete Quote"
         size="sm"
-        className="fixed inset-0 z-50 overflow-y-auto"
-        overlayClassName="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
       >
-        <div className="p-6 bg-white rounded-lg shadow-xl max-w-md mx-auto mt-20">
-          <div className="mt-2">
-            <p className="text-gray-600">
-              Are you sure you want to delete this quote? This action cannot be undone.
-            </p>
-            {quoteToDelete && (
-              <div className="mt-4 bg-gray-50 p-4 rounded">
-                <p><strong>Client:</strong> {quoteToDelete.clientName || 'Unknown Client'}</p>
-                {quoteToDelete.clientCompany && (
-                  <p><strong>Company:</strong> {quoteToDelete.clientCompany}</p>
-                )}
-                <p><strong>Quote:</strong> {quoteToDelete.name || `Quote #${quoteToDelete.id.substr(0, 8)}`}</p>
-              </div>
-            )}
-          </div>
+        <div className="p-6">
+          <p className="text-gray-600 mb-4">
+            Are you sure you want to delete this quote? This action cannot be undone.
+          </p>
+          {quoteToDelete && (
+            <div className="mt-4 bg-gray-50 p-4 rounded border border-gray-200">
+              <p><strong>Client:</strong> {quoteToDelete.clientName || 'Unknown Client'}</p>
+              {quoteToDelete.clientCompany && (
+                <p><strong>Company:</strong> {quoteToDelete.clientCompany}</p>
+              )}
+              <p><strong>Quote:</strong> {quoteToDelete.name || `Quote #${quoteToDelete.id.substr(0, 8)}`}</p>
+            </div>
+          )}
           <div className="mt-6 flex justify-end gap-3">
             <Button 
               variant="secondary" 
