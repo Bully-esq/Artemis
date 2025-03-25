@@ -5,14 +5,15 @@ import { useAppContext } from '../../context/AppContext';
 import api from '../../services/api';
 import pdfGenerator from '../../services/pdfGenerator';
 import { calculateQuoteData } from '../../utils/calculations';
+import html2pdf from 'html2pdf.js';
 
 // Components
 import PageLayout from '../common/PageLayout';
 import Button from '../common/Button';
 import Loading from '../common/Loading';
-import FormField from '../common/FormField';
 import Tabs from '../common/Tabs';
 import Dialog from '../common/Dialog';
+import FormField from '../common/FormField';
 
 const QuoteBuilder = () => {
   const { id } = useParams();
@@ -48,6 +49,9 @@ const QuoteBuilder = () => {
       }
     }, 300);
   };
+  
+  // Add this state near your other dialog states
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
   
   // Quote details
   const [quoteDetails, setQuoteDetails] = useState({
@@ -382,24 +386,79 @@ const QuoteBuilder = () => {
     }
   };
   
-  // Export PDF
+  // Update the handleExportPDF function
   const handleExportPDF = async () => {
     try {
-      await pdfGenerator.generateQuotePDF(
-        quoteDetails,
-        quoteData,
-        settings
-      );
-      addNotification('Quote PDF generated successfully', 'success');
+      // Get the quote preview element
+      const quotePreviewElement = document.querySelector('.quote-preview');
+      
+      if (!quotePreviewElement) {
+        throw new Error('Quote preview element not found');
+      }
+      
+      // Add notification
+      addNotification('Generating PDF...', 'info');
+      
+      // Configure options
+      const options = {
+        filename: `Quote_${quoteDetails.client.name || 'Untitled'}_${new Date().toISOString().split('T')[0]}.pdf`,
+        margin: [15, 15, 15, 15],
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      
+      // Generate PDF using html2pdf
+      await html2pdf(quotePreviewElement, options).save();
+      
+      // Show success notification
+      addNotification('PDF exported successfully!', 'success');
+      
+      return true;
     } catch (error) {
+      console.error('PDF generation error:', error);
       addNotification(`Error generating PDF: ${error.message}`, 'error');
+      return false;
     }
   };
   
-  // Handle emails
+  // Replace the existing handleEmailQuote function with this one
   const handleEmailQuote = () => {
-    // Email logic would go here
-    addNotification('Email functionality coming soon!', 'info');
+    setShowEmailDialog(true);
+  };
+  
+  // Add a function to create a mailto link
+  const handleOpenEmailClient = () => {
+    const subject = `Quote for ${quoteDetails.client.name || 'your project'}`;
+    const body = `Dear ${quoteDetails.client.name},\n\nPlease find attached the quote for your project.\n\nThe quote is valid until ${quoteDetails.validUntil ? new Date(quoteDetails.validUntil).toLocaleDateString('en-GB') : 'the date specified'}.\n\nIf you have any questions, please don't hesitate to contact me.\n\nBest regards,\n${settings.company.name}`;
+    
+    // Open the mailto link
+    window.location.href = `mailto:${quoteDetails.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    // Close the dialog
+    setShowEmailDialog(false);
+  };
+  
+  // Update the combined function for export and email
+  const handleExportAndEmail = () => {
+    // First generate the PDF - this will trigger browser save dialog
+    html2pdf()
+      .from(document.querySelector('.quote-preview'))
+      .set({
+        filename: `Quote_${quoteDetails.client.name || 'Untitled'}_${new Date().toISOString().split('T')[0]}.pdf`,
+        margin: [15, 15, 15, 15],
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      })
+      .save()
+      .then(() => {
+        // After PDF is saved, open email client
+        handleOpenEmailClient();
+      })
+      .catch(error => {
+        addNotification(`Error generating PDF: ${error.message}`, 'error');
+      });
   };
   
   // Loading state
@@ -423,14 +482,36 @@ const QuoteBuilder = () => {
   
   // Header action buttons
   const headerActions = (
-    <div className="action-buttons">
-      <Button variant="secondary" onClick={() => navigate('/quotes')}>
+    <div className="action-buttons" style={{ position: 'relative', top: '-25px' }}>
+      <Button 
+        variant="primary" 
+        size="sm"
+        style={{ marginRight: '5px' }}
+        onClick={() => navigate('/quotes')}
+      >
         Back to Quotes
       </Button>
-      <Button variant="secondary" onClick={handleEmailQuote}>
+      <Button 
+        variant="primary" 
+        size="sm"
+        style={{ marginRight: '5px' }}
+        onClick={handleSaveQuote}
+      >
+        Save Quote
+      </Button>
+      <Button 
+        variant="primary" 
+        size="sm"
+        style={{ marginRight: '5px' }}
+        onClick={handleEmailQuote}
+      >
         Email Quote
       </Button>
-      <Button variant="secondary" onClick={handleExportPDF}>
+      <Button 
+        variant="primary" 
+        size="sm"
+        onClick={handleExportPDF}
+      >
         Export PDF
       </Button>
     </div>
@@ -452,13 +533,6 @@ const QuoteBuilder = () => {
                 onChange={setActiveTab}
                 variant="underline"
               />
-              <Button 
-                variant="primary" 
-                onClick={handleSaveQuote}
-                className="save-tab-button"
-              >
-                Save Quote
-              </Button>
             </div>
           </div>
         </div>
@@ -472,7 +546,12 @@ const QuoteBuilder = () => {
             <div className="card-body">
               <h2 className="card-title">Client Information</h2>
               
-              <div className="form-row">
+              <div className="form-row" style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
+                gap: '1.5rem',
+                alignItems: 'start' 
+              }}>
                 <FormField
                   label="Contact Name"
                   value={quoteDetails.client.name}
@@ -514,7 +593,12 @@ const QuoteBuilder = () => {
             <div className="card-body">
               <h2 className="card-title">Quote Settings</h2>
               
-              <div className="form-row">
+              <div className="form-row" style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
+                gap: '1.5rem',
+                alignItems: 'start' 
+              }}>
                 <FormField
                   label="Quote Date"
                   type="date"
@@ -580,23 +664,104 @@ const QuoteBuilder = () => {
               />
               
               <h3 className="section-title">Exclusions</h3>
-              {quoteDetails.exclusions.map((exclusion, index) => (
-                <div key={index} className="form-field">
-                  <FormField
-                    value={exclusion}
-                    onChange={(e) => handleExclusionsChange(index, e.target.value)}
-                  />
-                </div>
-              ))}
+
+              {/* Predefined exclusions with checkboxes */}
+              <div className="exclusions-list">
+                {[
+                  'Boarding or fixing the underside of the new staircase.',
+                  'Forming any under-stair cupboard or paneling.',
+                  'Making good to any plastered walls or ceilings.',
+                  'All components will arrive in their natural state, ready for fine sanding and finishing by others.'
+                ].map((exclusion, index) => (
+                  <div key={index} className="form-field">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={quoteDetails.exclusions.includes(exclusion)}
+                        onChange={(e) => {
+                          const newExclusions = e.target.checked
+                            ? [...quoteDetails.exclusions, exclusion]
+                            : quoteDetails.exclusions.filter(item => item !== exclusion);
+                          setQuoteDetails({
+                            ...quoteDetails,
+                            exclusions: newExclusions
+                          });
+                        }}
+                        className="form-checkbox"
+                      />
+                      <span className="checkbox-text">{exclusion}</span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+
+              {/* Custom exclusions */}
+              {quoteDetails.exclusions
+                .filter(item => ![
+                  'Boarding or fixing the underside of the new staircase.',
+                  'Forming any under-stair cupboard or paneling.',
+                  'Making good to any plastered walls or ceilings.',
+                  'All components will arrive in their natural state, ready for fine sanding and finishing by others.'
+                ].includes(item))
+                .map((exclusion, index) => (
+                  <div key={`custom-${index}`} className="form-field custom-exclusion">
+                    <FormField
+                      value={exclusion}
+                      onChange={(e) => {
+                        const customExclusions = quoteDetails.exclusions.filter(item => ![
+                          'Boarding or fixing the underside of the new staircase.',
+                          'Forming any under-stair cupboard or paneling.',
+                          'Making good to any plastered walls or ceilings.',
+                          'All components will arrive in their natural state, ready for fine sanding and finishing by others.'
+                        ].includes(item));
+                        
+                        customExclusions[index] = e.target.value;
+                        
+                        setQuoteDetails({
+                          ...quoteDetails,
+                          exclusions: [
+                            ...quoteDetails.exclusions.filter(item => [
+                              'Boarding or fixing the underside of the new staircase.',
+                              'Forming any under-stair cupboard or paneling.',
+                              'Making good to any plastered walls or ceilings.',
+                              'All components will arrive in their natural state, ready for fine sanding and finishing by others.'
+                            ].includes(item)),
+                            ...customExclusions
+                          ]
+                        });
+                      }}
+                    />
+                    <button
+                      className="delete-button-small"
+                      style={{ marginLeft: '8px' }}
+                      onClick={() => {
+                        const newExclusions = [...quoteDetails.exclusions];
+                        const customIndex = newExclusions.findIndex(item => item === exclusion);
+                        if (customIndex !== -1) {
+                          newExclusions.splice(customIndex, 1);
+                          setQuoteDetails({
+                            ...quoteDetails,
+                            exclusions: newExclusions
+                          });
+                        }
+                      }}
+                    >
+                      <svg className="delete-icon-small" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+
               <Button
-                variant="secondary"
+                variant="primary"  // Changed from "secondary" to "primary" to make it blue
                 size="sm"
                 onClick={() => setQuoteDetails({
                   ...quoteDetails,
                   exclusions: [...quoteDetails.exclusions, '']
                 })}
               >
-                Add Exclusion
+                Add Custom Exclusion
               </Button>
             </div>
           </div>
@@ -730,7 +895,7 @@ const QuoteBuilder = () => {
                 <div className="card-header-flex">
                   <h2 className="card-title">Hidden Costs</h2>
                   <Button
-                    variant="secondary"
+                    variant="primary"  // Changed from "secondary" to "primary" to make it blue
                     size="sm"
                     onClick={() => setShowHiddenCostDialog(true)}
                   >
@@ -1238,6 +1403,45 @@ const QuoteBuilder = () => {
           >
             Add Cost
           </Button>
+        </div>
+      </Dialog>
+      
+      {/* Email Instructions Dialog */}
+      <Dialog
+        isOpen={showEmailDialog}
+        onClose={() => setShowEmailDialog(false)}
+        title="Email Quote"
+      >
+        <div className="email-instructions">
+          <p>Follow these steps to email your quote:</p>
+          <ol style={{ textAlign: 'left', marginBottom: '15px' }}>
+            <li>First export the quote as a PDF</li>
+            <li>Then open your email client</li>
+            <li>Attach the saved PDF to your email</li>
+          </ol>
+          
+          <div className="dialog-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'space-between' }}>
+            <Button
+              variant="secondary"
+              onClick={() => setShowEmailDialog(false)}
+            >
+              Cancel
+            </Button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <Button
+                variant="primary"
+                onClick={handleExportPDF}
+              >
+                Export PDF
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleOpenEmailClient}
+              >
+                Open Email Client
+              </Button>
+            </div>
+          </div>
         </div>
       </Dialog>
     </PageLayout>

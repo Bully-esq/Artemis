@@ -3539,3 +3539,46 @@ input, textarea, select {
   justify-content: flex-end;
   gap: 0.75rem;
 }
+
+/* Form field styling for better spacing - add to your app.css */
+
+/* Increase spacing between form elements */
+.form-field {
+  margin-bottom: 24px;
+}
+
+/* Add more space between label and input */
+.form-label {
+  display: block;
+  margin-bottom: 12px; /* Increased spacing between label and input */
+  font-weight: 500;
+}
+
+/* Required mark styling */
+.required-mark {
+  color: #ef4444;
+  margin-left: 4px;
+}
+
+/* Input styling */
+.form-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  margin-top: 8px; /* Additional spacing between label and input */
+}
+
+/* Error message styling */
+.error-message {
+  color: #ef4444;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+/* Help text styling */
+.help-text {
+  color: #6b7280;
+  font-size: 14px;
+  margin-top: 8px;
+}

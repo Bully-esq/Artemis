@@ -31,31 +31,31 @@ const FormField = ({
   ...rest
 }) => {
   // Common input classes
-  const inputClasses = `
-    w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500
-    ${error ? 'border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:ring-red-500' : ''}
-    ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}
+  const inputClasses = `form-input
+    ${error ? 'input-error' : ''}
+    ${disabled ? 'input-disabled' : ''}
+    ${className}
   `.trim();
   
   // Label component
   const labelComponent = label ? (
     <label 
       htmlFor={name} 
-      className="block text-sm font-medium text-gray-700 mb-1"
+      className="form-label"
     >
       {label}
-      {required && <span className="text-red-500 ml-1">*</span>}
+      {required && <span className="required-mark">*</span>}
     </label>
   ) : null;
   
   // Error message component
   const errorComponent = error ? (
-    <p className="mt-1 text-sm text-red-600">{error}</p>
+    <p className="error-message">{error}</p>
   ) : null;
   
   // Help text component
   const helpTextComponent = helpText && !error ? (
-    <p className="mt-1 text-sm text-gray-500">{helpText}</p>
+    <p className="help-text">{helpText}</p>
   ) : null;
   
   // Render different field types
@@ -71,7 +71,7 @@ const FormField = ({
             placeholder={placeholder}
             required={required}
             disabled={disabled}
-            className={`${inputClasses} ${className}`}
+            className={inputClasses}
             rows={rest.rows || 3}
             {...rest}
           />
@@ -86,7 +86,7 @@ const FormField = ({
             onChange={onChange}
             required={required}
             disabled={disabled}
-            className={`${inputClasses} ${className}`}
+            className={inputClasses}
             {...rest}
           >
             {children}
@@ -95,8 +95,8 @@ const FormField = ({
         
       case 'checkbox':
         return (
-          <div className="flex items-start">
-            <div className="flex items-center h-5">
+          <div className="checkbox-container">
+            <div className="checkbox-wrapper">
               <input
                 id={name}
                 name={name}
@@ -104,15 +104,15 @@ const FormField = ({
                 checked={value}
                 onChange={onChange}
                 disabled={disabled}
-                className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${className}`}
+                className={`checkbox-input ${className}`}
                 {...rest}
               />
             </div>
             {label && (
-              <div className="ml-3 text-sm">
-                <label htmlFor={name} className="font-medium text-gray-700">
+              <div className="checkbox-label-wrapper">
+                <label htmlFor={name} className="checkbox-label">
                   {label}
-                  {required && <span className="text-red-500 ml-1">*</span>}
+                  {required && <span className="required-mark">*</span>}
                 </label>
               </div>
             )}
@@ -130,7 +130,7 @@ const FormField = ({
             placeholder={placeholder}
             required={required}
             disabled={disabled}
-            className={`${inputClasses} ${className}`}
+            className={inputClasses}
             {...rest}
           />
         );
@@ -138,7 +138,7 @@ const FormField = ({
   };
   
   return (
-    <div className="mb-4">
+    <div className="form-field">
       {type !== 'checkbox' && labelComponent}
       {renderField()}
       {errorComponent}
