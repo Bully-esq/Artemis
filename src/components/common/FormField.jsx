@@ -28,6 +28,8 @@ const FormField = ({
   disabled = false,
   children,
   className = '',
+  min,
+  max,
   ...rest
 }) => {
   // Common input classes
@@ -119,6 +121,24 @@ const FormField = ({
           </div>
         );
         
+      case 'number':
+        return (
+          <input
+            id={name}
+            name={name}
+            type="number"
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            required={required}
+            disabled={disabled}
+            className={inputClasses}
+            min={min}
+            max={max}
+            {...rest}
+          />
+        );
+
       default:
         return (
           <input

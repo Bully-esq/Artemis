@@ -2600,7 +2600,7 @@ input, textarea, select {
 }
 
 .delete-button:hover {
-  color: var(--danger-hover);
+  color: var (--danger-hover);
 }
 
 .delete-icon {
@@ -3784,4 +3784,50 @@ table.spaced-table td .cell-content {
 
 .button-group {
   margin-left: 12px;
+}
+
+/* Invoice Bank Details */
+.invoice-bank-details {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background-color: #f9fafb;
+}
+
+.invoice-bank-details .bank-details-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 1rem;
+}
+
+.invoice-bank-details .bank-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.invoice-bank-details .bank-detail {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.invoice-bank-details .bank-detail .label {
+  font-weight: 500;
+  color: #6b7280;
+  min-width: 120px;
+}
+
+.invoice-bank-details .bank-detail .value {
+  color: #111827;
+}
+
+/* Print styles for bank details */
+@media print {
+  .invoice-bank-details {
+    break-inside: avoid;
+    border: none;
+    padding: 1rem 0;
+  }
 }

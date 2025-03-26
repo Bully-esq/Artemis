@@ -76,6 +76,8 @@ const SettingsForm = () => {
   // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Save the settings exactly as entered without applying defaults
     saveSettingsMutation.mutate(settings);
   };
   
@@ -213,8 +215,8 @@ const SettingsForm = () => {
               type="number"
               min={0}
               max={100}
-              value={settings.quote.defaultMarkup || 20}
-              onChange={(e) => handleChange('quote', 'defaultMarkup', parseInt(e.target.value) || 0)}
+              value={settings.quote.defaultMarkup || ''}
+              onChange={(e) => handleChange('quote', 'defaultMarkup', e.target.value)}
               helpText="Default markup percentage applied to new quotes"
             />
             
@@ -222,9 +224,8 @@ const SettingsForm = () => {
               label="Default Validity Period (days)"
               name="validity-period"
               type="number"
-              min={1}
-              value={settings.quote.validityPeriod || 30}
-              onChange={(e) => handleChange('quote', 'validityPeriod', parseInt(e.target.value) || 30)}
+              value={settings.quote.validityPeriod || ''}
+              onChange={(e) => handleChange('quote', 'validityPeriod', e.target.value)}
               helpText="How long quotes are valid for by default"
             />
             
@@ -275,7 +276,7 @@ const SettingsForm = () => {
               name="payment-terms"
               type="number"
               min={0}
-              value={settings.invoice.defaultPaymentTerms || 14}
+              value={settings.invoice.defaultPaymentTerms || ''}
               onChange={(e) => handleChange('invoice', 'defaultPaymentTerms', e.target.value)}
               helpText="Days until payment is due by default"
             />
@@ -394,8 +395,8 @@ const SettingsForm = () => {
               type="number"
               min={0}
               max={30}
-              value={settings.cis.defaultRate || 20}
-              onChange={(e) => handleChange('cis', 'defaultRate', parseInt(e.target.value) || 20)}
+              value={settings.cis.defaultRate || ''}
+              onChange={(e) => handleChange('cis', 'defaultRate', e.target.value)}
               helpText="Standard CIS deduction rate (typically 20%)"
             />
           </div>

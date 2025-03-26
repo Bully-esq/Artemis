@@ -19,7 +19,22 @@ const Settings = () => {
 
   // Prepare mutation for saving settings 
   const saveSettingsMutation = useMutation(
-    (newSettings) => api.settings.save(newSettings),
+    (newSettings) => {
+      // Parse number values before saving
+      const processedSettings = {
+        ...newSettings,
+        quote: newSettings.quote ? {
+          ...newSettings.quote,
+          defaultMarkup: parseInt(newSettings.quote.defaultMarkup) || 0,
+          validityPeriod: parseInt(newSettings.quote.validityPeriod) || 30,
+        } : {},
+        invoice: newSettings.invoice ? {
+          ...newSettings.invoice,
+          defaultPaymentTerms: parseInt(newSettings.invoice.defaultPaymentTerms) || 0,
+        } : {},
+      };
+      return api.settings.save(processedSettings);
+    },
     {
       onSuccess: () => {
         updateSettings(localSettings);
@@ -96,13 +111,14 @@ const Settings = () => {
               { id: 'company', label: 'Company Details' },
               { id: 'quote', label: 'Quote Settings' },
               { id: 'invoice', label: 'Invoice Settings' },
+              { id: 'bank', label: 'Bank Details' },
               { id: 'cis', label: 'CIS Settings' }
             ]}
             activeTab={activeTab}
             onChange={setActiveTab}
             variant="underline"
             className="settings-tabs"
-            style={{ gap: '2rem', display: 'flex' }} // Add inline style for spacing
+            style={{ gap: '2rem', display: 'flex' }}
           />
 
           {/* Company Details */}
@@ -218,9 +234,9 @@ const Settings = () => {
                 type="number"
                 min={0}
                 max={100}
-                value={localSettings.quote?.defaultMarkup || 20}
+                value={localSettings.quote?.defaultMarkup ?? ''}
                 onChange={(e) =>
-                  handleChange('quote', 'defaultMarkup', parseInt(e.target.value) || 0)
+                  handleChange('quote', 'defaultMarkup', e.target.value)
                 }
                 helpText="Default markup percentage applied to new quotes"
               />
@@ -238,9 +254,9 @@ const Settings = () => {
                 name="validity-period"
                 type="number"
                 min={1}
-                value={localSettings.quote?.validityPeriod || 30}
+                value={localSettings.quote?.validityPeriod ?? ''}
                 onChange={(e) =>
-                  handleChange('quote', 'validityPeriod', parseInt(e.target.value) || 30)
+                  handleChange('quote', 'validityPeriod', e.target.value)
                 }
                 helpText="How long quotes are valid for by default"
               />
@@ -276,7 +292,7 @@ const Settings = () => {
                 name="payment-terms"
                 type="number"
                 min={0}
-                value={localSettings.invoice?.defaultPaymentTerms || 14}
+                value={localSettings.invoice?.defaultPaymentTerms ?? ''}
                 onChange={(e) =>
                   handleChange('invoice', 'defaultPaymentTerms', e.target.value)
                 }
@@ -303,6 +319,56 @@ const Settings = () => {
                 onChange={(e) => handleChange('invoice', 'footer', e.target.value)}
                 rows={3}
                 helpText="Text to appear at the bottom of all invoices"
+              />
+            </div>
+          )}
+
+          {/* Bank Details */}
+          {activeTab === 'bank' && (
+            <div className="settings-section">
+              <FormField
+                label="Bank Name"
+                name="bank-name"
+                value={localSettings.bank?.name || ''}
+                onChange={(e) => handleChange('bank', 'name', e.target.value)}
+              />
+
+              <FormField
+                label="Account Name"
+                name="account-name"
+                value={localSettings.bank?.accountName || ''}
+                onChange={(e) => handleChange('bank', 'accountName', e.target.value)}
+              />
+
+              <div className="form-row">
+                <FormField
+                  label="Account Number"
+                  name="account-number"
+                  value={localSettings.bank?.accountNumber || ''}
+                  onChange={(e) => handleChange('bank', 'accountNumber', e.target.value)}
+                />
+                <FormField
+                  label="Sort Code"
+                  name="sort-code"
+                  value={localSettings.bank?.sortCode || ''}
+                  onChange={(e) => handleChange('bank', 'sortCode', e.target.value)}
+                />
+              </div>
+
+              <FormField
+                label="IBAN (Optional)"
+                name="iban"
+                value={localSettings.bank?.iban || ''}
+                onChange={(e) => handleChange('bank', 'iban', e.target.value)}
+                helpText="International Bank Account Number"
+              />
+
+              <FormField
+                label="BIC/SWIFT (Optional)"
+                name="bic"
+                value={localSettings.bank?.bic || ''}
+                onChange={(e) => handleChange('bank', 'bic', e.target.value)}
+                helpText="Bank Identifier Code"
               />
             </div>
           )}

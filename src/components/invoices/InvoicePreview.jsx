@@ -246,6 +246,49 @@ const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
         </table>
       </div>
       
+      {/* After the items table and totals, add bank details */}
+      <div className="invoice-bank-details">
+        <h3 className="bank-details-title">Bank Details</h3>
+        <div className="bank-details-grid">
+          {settings.bank?.name && (
+            <div className="bank-detail">
+              <span className="label">Bank:</span>
+              <span className="value">{settings.bank.name}</span>
+            </div>
+          )}
+          {settings.bank?.accountName && (
+            <div className="bank-detail">
+              <span className="label">Account Name:</span>
+              <span className="value">{settings.bank.accountName}</span>
+            </div>
+          )}
+          {settings.bank?.accountNumber && (
+            <div className="bank-detail">
+              <span className="label">Account Number:</span>
+              <span className="value">{settings.bank.accountNumber}</span>
+            </div>
+          )}
+          {settings.bank?.sortCode && (
+            <div className="bank-detail">
+              <span className="label">Sort Code:</span>
+              <span className="value">{settings.bank.sortCode}</span>
+            </div>
+          )}
+          {settings.bank?.iban && (
+            <div className="bank-detail">
+              <span className="label">IBAN:</span>
+              <span className="value">{settings.bank.iban}</span>
+            </div>
+          )}
+          {settings.bank?.bic && (
+            <div className="bank-detail">
+              <span className="label">BIC/SWIFT:</span>
+              <span className="value">{settings.bank.bic}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* CIS Information with more detailed explanation */}
       {invoice.cisApplied && (
         <div className="cis-information">
