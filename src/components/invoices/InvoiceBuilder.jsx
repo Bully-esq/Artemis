@@ -655,22 +655,37 @@ const InvoiceBuilder = () => {
     }
   };
 
-  // Add this combined function for export and email
+  // Add handleDeleteInvoice function after handleApplyCIS
+  const handleDeleteInvoice = async () => {
+    // Show confirmation dialog before deletion
+    if (window.confirm(`Are you sure you want to delete invoice ${invoiceDetails.invoiceNumber}? This action cannot be undone.`)) {
+      try {
+        if (id) {
+          // Delete the invoice if it exists in the database
+          await api.invoices.delete(id);
+          addNotification('Invoice deleted successfully', 'success');
+        } else {
+          // For new invoices just reset the form
+          addNotification('Invoice draft discarded', 'info');
+        }
+        // Navigate back to the invoices list
+        navigate('/invoices');
+      } catch (error) {
+        console.error('Error deleting invoice:', error);
+        addNotification(`Error deleting invoice: ${error.message}`, 'error');
+      }
+    }
+  };
+
+  // Add function to export PDF and open email client
   const handleExportAndOpenEmail = async () => {
     try {
-      // Show notification
-      addNotification('Preparing invoice for email...', 'info');
+      // First export the PDF
+      const exported = await safeExportPDF();
       
-      // First generate the PDF
-      const success = await safeExportPDF();
-      
-      if (success) {
-        addNotification('PDF saved. Opening email client...', 'success');
-        
-        // Open email client with template after a short delay to allow PDF to finish saving
-        setTimeout(() => {
-          handleOpenEmailClient();
-        }, 1000);
+      if (exported) {
+        // Then open email client
+        handleOpenEmailClient();
       }
     } catch (error) {
       console.error('Error in export and email process:', error);
@@ -872,6 +887,7 @@ const InvoiceBuilder = () => {
                 
                 <Button
                   variant="danger"
+                  onClick={handleDeleteInvoice}
                 >
                   <span className="btn-icon">🗑</span>
                   Delete Invoice
