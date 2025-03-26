@@ -381,193 +381,181 @@ const InvoiceBuilder = () => {
   // Handle Apply CIS
   const handleApplyCIS = async () => {
     console.log("Starting CIS application...");
-    
-    // Check if CIS has already been applied
+
     if (invoiceDetails.cisApplied) {
-      addNotification('CIS has already been applied to this invoice', 'info');
-      return;
+        addNotification('CIS has already been applied to this invoice', 'info');
+        return;
     }
 
-    // Create a copy of the invoice details to work with
-    const updatedInvoiceDetails = { ...invoiceDetails };
-    console.log("Invoice details:", updatedInvoiceDetails);
-    
-    // Ensure lineItems exists
-    if (!updatedInvoiceDetails.lineItems) {
-      updatedInvoiceDetails.lineItems = [];
+    // Capture the original gross amount
+    const originalGrossAmount = invoiceDetails.amount || 0;
+
+    if (originalGrossAmount <= 0) {
+        addNotification('Invoice amount must be greater than zero to apply CIS.', 'warning');
+        return;
     }
-    
+
     try {
-      // If we have a quote ID, fetch the quote data from the server
-      if (updatedInvoiceDetails.quoteId) {
-        console.log("Fetching quote with ID:", updatedInvoiceDetails.quoteId);
-        const quoteData = await api.quotes.getById(updatedInvoiceDetails.quoteId);
-        console.log("Raw quote data from server:", quoteData);
-        
-        // DIRECTLY use selectedItems without fallback - this is what the server stores
-        const quoteLineItems = quoteData.selectedItems || [];
-        console.log("Quote line items from selectedItems:", quoteLineItems);
-        
-        if (quoteLineItems.length > 0) {
-          // Log the first item to see its structure
-          console.log("Sample item structure:", quoteLineItems[0]);
-          
-          // Find labor items using more flexible criteria
-          const quoteLaborItems = quoteLineItems.filter(item => 
-            (item.description && (
-              item.description.toLowerCase().includes('labour') || 
-              item.description.toLowerCase().includes('labor')
-            )) ||
-            item.category === 'labour' ||
-            item.isLabour === true ||
-            // Add additional checks
-            (item.type && item.type.toLowerCase() === 'labour') ||
-            (item.name && (
-              item.name.toLowerCase().includes('labour') || 
-              item.name.toLowerCase().includes('labor')
-            ))
-          );
-          
-          console.log("Labor items found:", quoteLaborItems);
-          
-          // If we found labor items in the server data
-          if (quoteLaborItems.length > 0) {
-            // Calculate total labor amount
-            const totalLaborAmount = quoteLaborItems.reduce(
-              (sum, item) => sum + (parseFloat(item.amount) || 0), 
-              0
-            );
-            
-            console.log("Total labor amount:", totalLaborAmount);
-            
-            // Add a single labor line item
-            updatedInvoiceDetails.lineItems.push({
-              id: `labor-${Date.now()}`,
-              description: "Labor charges (from server data)",
-              amount: totalLaborAmount,
-              quantity: 1,
-              isLabour: true
-            });
-            
-            // Calculate 20% deduction
-            const cisDeduction = totalLaborAmount * 0.2;
-            
-            // Add CIS line item
-            updatedInvoiceDetails.lineItems.push({
-              id: `cis-${Date.now()}`,
-              description: "CIS Deduction (20%)",
-              amount: -cisDeduction,
-              quantity: 1,
-              type: 'cis'
-            });
-            
-            // Recalculate the total amount
-            updatedInvoiceDetails.amount = updatedInvoiceDetails.lineItems.reduce(
-              (sum, item) => sum + (parseFloat(item.amount) || 0), 
-              0
-            );
-            
-            // Mark CIS as applied and store the deduction amount
-            updatedInvoiceDetails.cisApplied = true;
-            updatedInvoiceDetails.cisDeduction = cisDeduction;
-            
-            // Update the invoice details
-            setInvoiceDetails(updatedInvoiceDetails);
-            addNotification(`CIS deduction of £${cisDeduction.toFixed(2)} applied to labor charges from server data`, 'success');
-            return;
-          } else {
-            console.log("No labor items found in quote line items");
-          }
-        } else {
-          console.log("No line items found in quote data");
+        // --- STEP 1: Find all labor items in the connected quote ---
+        let laborItems = [];
+        let totalLaborAmount = 0;
+        let quoteData = null;
+
+        if (invoiceDetails.quoteId) {
+            // Fetch the quote to analyze items
+            quoteData = await api.quotes.getById(invoiceDetails.quoteId);
+            console.log("Quote data for CIS analysis:", quoteData);
+
+            if (quoteData) {
+                // Get items from the quote (use selectedItems if available, otherwise lineItems)
+                const quoteItems = quoteData.selectedItems || quoteData.lineItems || [];
+                
+                // First pass - look for items explicitly marked as labor
+                laborItems = quoteItems.filter(item => 
+                    item.category === 'labour' || 
+                    item.isLabour === true ||
+                    (item.type && item.type.toLowerCase() === 'labour')
+                );
+                
+                // If no explicit labor items, check descriptions for labor-related terms
+                if (laborItems.length === 0) {
+                    laborItems = quoteItems.filter(item => 
+                        (item.description && (
+                            item.description.toLowerCase().includes('labour') ||
+                            item.description.toLowerCase().includes('labor')
+                        )) ||
+                        (item.name && (
+                            item.name.toLowerCase().includes('labour') ||
+                            item.name.toLowerCase().includes('labor')
+                        ))
+                    );
+                }
+                
+                // If still no labor items, check for installation terms (like in the HTML version)
+                if (laborItems.length === 0) {
+                    laborItems = quoteItems.filter(item => 
+                        (item.description && (
+                            item.description.toLowerCase().includes('install') ||
+                            item.description.toLowerCase().includes('fitting') ||
+                            item.description.toLowerCase().includes('fitter')
+                        )) ||
+                        (item.name && (
+                            item.name.toLowerCase().includes('install') ||
+                            item.name.toLowerCase().includes('fitting') ||
+                            item.name.toLowerCase().includes('fitter')
+                        ))
+                    );
+                }
+                
+                console.log("Labor items found:", laborItems);
+                
+                // Calculate total labor amount
+                totalLaborAmount = laborItems.reduce((sum, item) => {
+                    const itemAmount = parseFloat(item.cost || item.amount || 0);
+                    const itemQuantity = parseFloat(item.quantity || 1);
+                    return sum + (itemAmount * itemQuantity);
+                }, 0);
+                
+                console.log("Total labor amount:", totalLaborAmount);
+            }
         }
-      }
-      
-      // Rest of your existing function...
-      
-      // Fall back to checking existing line items if server data doesn't have labor items
-      const laborItems = updatedInvoiceDetails.lineItems.filter(item => 
-        (item.description && (
-          item.description.toLowerCase().includes('labour') || 
-          item.description.toLowerCase().includes('labor')
-        )) ||
-        item.category === 'labour' ||
-        item.isLabour === true
-      );
-      
-      // If no labor items found but we have a laborTotal, add a generic labor item
-      if (laborItems.length === 0) {
-        if (updatedInvoiceDetails.laborTotal && updatedInvoiceDetails.laborTotal > 0) {
-          // Add a generic labor item
-          updatedInvoiceDetails.lineItems.push({
-            id: `labor-${Date.now()}`,
-            description: "Labor charge",
-            amount: updatedInvoiceDetails.laborTotal,
-            quantity: 1,
-            isLabour: true
-          });
-          
-          // Calculate CIS deduction
-          const cisDeduction = updatedInvoiceDetails.laborTotal * 0.2;
-          
-          // Add CIS line item
-          updatedInvoiceDetails.lineItems.push({
+        
+        // --- STEP 2: If no labor found, ask user for confirmation ---
+        if (laborItems.length === 0 || totalLaborAmount <= 0) {
+            console.log("No labor items found. Asking user for confirmation.");
+            
+            if (window.confirm('No labour items were found. Do you want to treat the entire invoice amount as labor for CIS calculation?')) {
+                // User confirmed to treat everything as labor
+                totalLaborAmount = originalGrossAmount;
+                console.log("User confirmed treating entire amount as labor:", totalLaborAmount);
+            } else {
+                // User declined - allow manual labor entry via a prompt
+                const manualLabor = window.prompt('Enter the labour portion of the invoice amount:', `${(originalGrossAmount * 0.5).toFixed(2)}`);
+                if (manualLabor === null) {
+                    // User cancelled the prompt
+                    return;
+                }
+                totalLaborAmount = parseFloat(manualLabor) || 0;
+                
+                if (totalLaborAmount <= 0) {
+                    addNotification('Invalid labour amount. CIS not applied.', 'error');
+                    return;
+                }
+                
+                console.log("User entered manual labour amount:", totalLaborAmount);
+            }
+        }
+        
+        // Sanity check: labor amount cannot exceed the original gross amount
+        if (totalLaborAmount > originalGrossAmount) {
+            console.warn(`Labour amount (£${totalLaborAmount.toFixed(2)}) exceeds invoice gross amount (£${originalGrossAmount.toFixed(2)}). Clamping to gross amount.`);
+            totalLaborAmount = originalGrossAmount;
+        }
+        
+        // --- STEP 3: Calculate CIS deduction (exactly like in HTML version) ---
+        const nonLaborAmount = originalGrossAmount - totalLaborAmount;
+        const cisRate = 0.20; // 20% like in the HTML version
+        const cisDeduction = totalLaborAmount * cisRate;
+        const netAmount = originalGrossAmount - cisDeduction;
+        
+        console.log(`
+            Original Gross: £${originalGrossAmount.toFixed(2)}
+            Labour Amount: £${totalLaborAmount.toFixed(2)}
+            Non-Labor Amount: £${nonLaborAmount.toFixed(2)}
+            CIS Rate: ${(cisRate * 100).toFixed(0)}%
+            CIS Deduction: £${cisDeduction.toFixed(2)}
+            Net Amount: £${netAmount.toFixed(2)}
+        `);
+        
+        // --- STEP 4: Create new line items with labor, non-labor and CIS deduction ---
+        const newLineItems = [];
+        
+        // Add non-labor item if applicable
+        if (nonLaborAmount > 0.01) { // Use a small threshold for floating-point comparison
+            newLineItems.push({
+                id: `nonlabor-${Date.now()}`,
+                description: "Balance on completion",
+                amount: nonLaborAmount,
+                quantity: 1
+            });
+        }
+        
+        // Add labor item
+        if (totalLaborAmount > 0.01) {
+            newLineItems.push({
+                id: `labour-${Date.now()}`,
+                description: "Labour Charges",
+                amount: totalLaborAmount,
+                quantity: 1,
+                isLabour: true,
+                category: 'labour'
+            });
+        }
+        
+        // Add CIS deduction line
+        newLineItems.push({
             id: `cis-${Date.now()}`,
-            description: "CIS Deduction (20%)",
-            amount: -cisDeduction,
+            description: `CIS Deduction (${(cisRate * 100).toFixed(0)}%)`,
+            amount: -cisDeduction, // Negative to show as a deduction
             quantity: 1,
             type: 'cis'
-          });
-          
-          // Update total amount
-          updatedInvoiceDetails.amount = updatedInvoiceDetails.lineItems.reduce(
-            (sum, item) => sum + (parseFloat(item.amount) || 0), 
-            0
-          );
-          
-          // Mark CIS as applied and store the deduction amount
-          updatedInvoiceDetails.cisApplied = true;
-          updatedInvoiceDetails.cisDeduction = cisDeduction;
-          
-          setInvoiceDetails(updatedInvoiceDetails);
-          addNotification(`CIS deduction of £${cisDeduction.toFixed(2)} applied to labor charges`, 'success');
-          return;
-        }
+        });
         
-        // No labor items found and no labor total
-        addNotification('No labor charges found. Please add a line item with "labour" in the description or mark items as labor.', 'warning');
-        return;
-      }
-      
-      // For existing labor items, apply CIS
-      const totalLaborAmount = laborItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-      const cisDeduction = totalLaborAmount * 0.2;
-      
-      // Add CIS line item
-      updatedInvoiceDetails.lineItems.push({
-        id: `cis-${Date.now()}`,
-        description: "CIS Deduction (20%)",
-        amount: -cisDeduction,
-        quantity: 1,
-        type: 'cis'
-      });
-      
-      // Update total amount
-      updatedInvoiceDetails.amount = updatedInvoiceDetails.lineItems.reduce(
-        (sum, item) => sum + (parseFloat(item.amount) || 0), 
-        0
-      );
-      
-      // Mark CIS as applied and store the deduction amount
-      updatedInvoiceDetails.cisApplied = true;
-      updatedInvoiceDetails.cisDeduction = cisDeduction;
-      
-      // Update the invoice details
-      setInvoiceDetails(updatedInvoiceDetails);
-      addNotification(`CIS deduction of £${cisDeduction.toFixed(2)} applied to labor charges`, 'success');
+        // --- STEP 5: Update invoice state with new details ---
+        setInvoiceDetails(prev => ({
+            ...prev,
+            lineItems: newLineItems,
+            amount: netAmount,
+            cisApplied: true,
+            cisDeduction: cisDeduction,
+            laborTotal: totalLaborAmount,
+            originalGrossAmount: originalGrossAmount // Store the original amount
+        }));
+        
+        addNotification(`CIS deduction of £${cisDeduction.toFixed(2)} applied. Net amount is now £${netAmount.toFixed(2)}.`, 'success');
     } catch (error) {
-      console.error('Error applying CIS:', error);
-      addNotification(`Error applying CIS: ${error.message}`, 'error');
+        console.error('Error applying CIS:', error);
+        addNotification(`Error applying CIS: ${error.message}`, 'error');
     }
   };
 
