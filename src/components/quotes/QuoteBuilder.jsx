@@ -260,15 +260,18 @@ const QuoteBuilder = () => {
     setSelectedItems(newItems);
   };
   
-  // Fix the item fields to ensure they always have default values
+  // Fix the item fields to allow empty values during input
   const handleUpdateItem = (index, updatedItem) => {
     const newItems = [...selectedItems];
-    // Ensure quantity and markup are never undefined/null
+    
+    // Allow empty string values for quantity and markup during input
+    // Only parse to numbers when the value isn't an empty string
     newItems[index] = {
       ...updatedItem,
-      quantity: parseFloat(updatedItem.quantity) || 0.1, // Default to 0.1 if falsy
-      markup: parseInt(updatedItem.markup) || 0 // Default to 0 if falsy
+      quantity: updatedItem.quantity === '' ? '' : parseFloat(updatedItem.quantity) || 0.1,
+      markup: updatedItem.markup === '' ? '' : parseInt(updatedItem.markup) || 0
     };
+    
     setSelectedItems(newItems);
   };
   
@@ -328,14 +331,51 @@ const QuoteBuilder = () => {
     setHiddenCosts(newCosts);
   };
   
-  // Save quote
+  // Save quote function with additional debugging and error handling
   const handleSaveQuote = async () => {
     try {
+      console.log("Save quote button clicked - starting save process");
+      
       // Show a saving notification
       addNotification('Saving quote...', 'info');
       
       // Ensure the ID is retained or generated correctly
       const quoteId = quoteDetails.id || Date.now().toString();
+      console.log("Using quote ID:", quoteId);
+      
+      // Fix potential issues with quantity values
+      const sanitizedItems = Array.isArray(selectedItems) ? selectedItems.map(item => {
+        // Make sure quantity is converted to a number properly
+        let quantity = item.quantity;
+        if (quantity === '' || quantity === undefined || quantity === null) {
+          quantity = 1; // Default to 1 if empty
+        } else {
+          quantity = parseFloat(quantity) || 1; // Convert to float, default to 1 if NaN
+        }
+        
+        // Make sure markup is converted to a number properly
+        let markup = item.markup;
+        if (markup === '' || markup === undefined || markup === null) {
+          markup = 0; // Default to 0 if empty
+        } else {
+          markup = parseInt(markup) || 0; // Convert to int, default to 0 if NaN
+        }
+        
+        return {
+          ...item,
+          id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 9),
+          quantity: quantity,
+          markup: markup,
+          hideInQuote: !!item.hideInQuote
+        };
+      }) : [];
+      
+      // Sanitize hidden costs similarly
+      const sanitizedCosts = Array.isArray(hiddenCosts) ? hiddenCosts.map(cost => ({
+        ...cost,
+        id: cost.id || Date.now().toString() + Math.random().toString(36).substring(2, 9),
+        amount: parseFloat(cost.amount) || 0
+      })) : [];
       
       // Sanitize and prepare data for saving
       const quoteToSave = {
@@ -349,34 +389,41 @@ const QuoteBuilder = () => {
           phone: quoteDetails.client.phone || '',
           address: quoteDetails.client.address || ''
         },
-        selectedItems: Array.isArray(selectedItems) ? selectedItems.map(item => ({
-          ...item,
-          id: item.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          quantity: parseFloat(item.quantity) || 1,
-          markup: parseInt(item.markup) || 0,
-          hideInQuote: !!item.hideInQuote
-        })) : [],
-        hiddenCosts: Array.isArray(hiddenCosts) ? hiddenCosts.map(cost => ({
-          ...cost,
-          id: cost.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          amount: parseFloat(cost.amount) || 0
-        })) : [],
+        selectedItems: sanitizedItems,
+        hiddenCosts: sanitizedCosts,
         globalMarkup,
         distributionMethod,
-        savedAt: new Date().toISOString()
+        savedAt: new Date().toISOString(),
+        // Add clientName and clientCompany for compatibility with quotes list
+        clientName: quoteDetails.client.name || '',
+        clientCompany: quoteDetails.client.company || ''
       };
       
-      // Call the API save function
-      const savedQuote = await api.quotes.save(quoteToSave);
+      console.log("Saving quote data:", quoteToSave);
       
-      // Show success notification
-      addNotification('Quote saved successfully ✓', 'success');
-      
-      // Navigate or refetch - DO NOT CHANGE THIS PART
-      if (!id) {
-        navigate(`/quotes/${quoteId}`);
-      } else {
-        refetchQuote();
+      // Call the API save function with more detailed error handling
+      try {
+        const savedQuote = await api.quotes.save(quoteToSave);
+        console.log("Quote saved successfully:", savedQuote);
+        
+        // Show success notification with more details
+        addNotification(
+          `Quote for ${quoteDetails.client.name || 'client'} saved successfully ✓`,
+          'success',
+          5000 // 5 seconds duration
+        );
+        
+        // Navigate or refetch - DO NOT CHANGE THIS PART
+        if (!id) {
+          console.log("Navigating to new quote:", quoteId);
+          navigate(`/quotes/${quoteId}`);
+        } else {
+          console.log("Refetching existing quote");
+          refetchQuote();
+        }
+      } catch (apiError) {
+        console.error("API error during save:", apiError);
+        throw new Error(`API Error: ${apiError.message || 'Unknown API error'}`);
       }
     } catch (error) {
       console.error("Error saving quote:", error);
@@ -404,24 +451,33 @@ const QuoteBuilder = () => {
         filename: `Quote_${quoteDetails.client.name || 'Untitled'}_${new Date().toISOString().split('T')[0]}.pdf`,
         margin: [15, 15, 15, 15],
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2, useCORS: true, logging: true }, // Added logging
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
       
-      // Generate PDF using html2pdf
-      await html2pdf(quotePreviewElement, options).save();
-      
-      // Show success notification
-      addNotification('PDF exported successfully!', 'success');
-      
-      return true;
+      // Generate PDF using html2pdf - force a more explicit promise pattern
+      return new Promise((resolve, reject) => {
+        html2pdf()
+          .from(quotePreviewElement)
+          .set(options)
+          .save()
+          .then(() => {
+            addNotification('PDF exported successfully!', 'success');
+            resolve(true);
+          })
+          .catch(err => {
+            console.error('PDF generation error in promise:', err);
+            addNotification(`Error generating PDF: ${err.message}`, 'error');
+            reject(err);
+          });
+      });
     } catch (error) {
       console.error('PDF generation error:', error);
       addNotification(`Error generating PDF: ${error.message}`, 'error');
-      return false;
+      return Promise.reject(error);
     }
   };
-  
+
   // Replace the existing handleEmailQuote function with this one
   const handleEmailQuote = () => {
     setShowEmailDialog(true);
@@ -460,7 +516,90 @@ const QuoteBuilder = () => {
         addNotification(`Error generating PDF: ${error.message}`, 'error');
       });
   };
-  
+
+  // Add this new combined function for export and email
+  const handleExportAndOpenEmail = async () => {
+    try {
+      // First activate the preview tab to ensure the quote-preview element is in the DOM
+      setActiveTab('preview');
+      
+      // Show notification
+      addNotification('Preparing quote for email...', 'info');
+      
+      // Use setTimeout to ensure DOM is updated
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Get the quote preview element
+      const quotePreviewElement = document.querySelector('.quote-preview');
+      
+      if (!quotePreviewElement) {
+        throw new Error('Quote preview element not found');
+      }
+      
+      // Configure options
+      const options = {
+        filename: `Quote_${quoteDetails.client.name || 'Untitled'}_${new Date().toISOString().split('T')[0]}.pdf`,
+        margin: [15, 15, 15, 15],
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      
+      // Generate PDF using html2pdf
+      await html2pdf()
+        .from(quotePreviewElement)
+        .set(options)
+        .save();
+      
+      addNotification('PDF saved. Opening email client...', 'success');
+      
+      // Open email client with template after a short delay to allow PDF to finish saving
+      setTimeout(() => {
+        const subject = `Quote for ${quoteDetails.client.name || 'your project'}`;
+        const body = `Dear ${quoteDetails.client.name},\n\nPlease find attached the quote for your project.\n\nThe quote is valid until ${quoteDetails.validUntil ? new Date(quoteDetails.validUntil).toLocaleDateString('en-GB') : 'the date specified'}.\n\nIf you have any questions, please don't hesitate to contact me.\n\nBest regards,\n${settings.company.name}`;
+        
+        // Open the mailto link
+        window.location.href = `mailto:${quoteDetails.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        
+        // Close dialog
+        setShowEmailDialog(false);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Error in export and email process:', error);
+      addNotification(`Error: ${error.message}`, 'error');
+    }
+  };
+
+  // Create a safer export PDF function that ensures preview is visible
+  const safeExportPDF = async () => {
+    try {
+      // First, make sure we're on the preview tab
+      if (activeTab !== 'preview') {
+        setActiveTab('preview');
+        
+        // Wait for the tab change to take effect and DOM to update
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      // Now execute the normal PDF export
+      return handleExportPDF();
+    } catch (error) {
+      console.error('Error in safe PDF export:', error);
+      addNotification(`Error exporting PDF: ${error.message}`, 'error');
+      return Promise.reject(error);
+    }
+  };
+
+  // Debug company logo
+  useEffect(() => {
+    if (settings?.company?.logo) {
+      console.log('Company logo is available:', settings.company.logo.substring(0, 50) + '...');
+    } else {
+      console.log('Company logo is not available in settings');
+    }
+  }, [settings]);
+
   // Loading state
   if (isLoadingQuote || isLoadingCatalog || isLoadingSuppliers) {
     return <Loading message="Loading quote builder..." />;
@@ -495,7 +634,11 @@ const QuoteBuilder = () => {
         variant="primary" 
         size="sm"
         style={{ marginRight: '5px' }}
-        onClick={handleSaveQuote}
+        type="button" // Explicitly set button type to prevent form submission
+        onClick={() => {
+          console.log("Save button clicked");
+          handleSaveQuote();
+        }}
       >
         Save Quote
       </Button>
@@ -510,7 +653,7 @@ const QuoteBuilder = () => {
       <Button 
         variant="primary" 
         size="sm"
-        onClick={handleExportPDF}
+        onClick={safeExportPDF} // Use the safer export function here
       >
         Export PDF
       </Button>
@@ -807,12 +950,13 @@ const QuoteBuilder = () => {
                       finalTotal: (item.cost || 0) * (item.quantity || 1)
                     };
                     
-                    // Ensure item has all required properties with defaults
+                    // Don't apply defaults in safeItem if we have empty string values
                     const safeItem = {
                       ...item,
                       name: item.name || 'Unnamed Item',
-                      quantity: parseFloat(item.quantity) || 0.1,
-                      markup: parseInt(item.markup) || 0,
+                      // Don't use parseFloat here if we want to preserve empty string
+                      quantity: item.quantity,
+                      markup: item.markup,
                       hideInQuote: !!item.hideInQuote // Convert to boolean
                     };
                     
@@ -840,22 +984,42 @@ const QuoteBuilder = () => {
                           <div className="form-field">
                             <label className="field-label">Quantity</label>
                             <input
-                              type="number"
-                              min="0.1"
-                              step="0.1"
-                              value={safeItem.quantity} // Use the safe item with defaults
-                              onChange={(e) => handleUpdateItem(index, { ...item, quantity: parseFloat(e.target.value) || 0.1 })}
+                              type="text" // Changed from number to text to allow empty values
+                              value={safeItem.quantity} // Use safeItem to preserve empty string
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                // Allow empty string or valid numbers
+                                if (value === '' || (!isNaN(value) && value.trim() !== '')) {
+                                  handleUpdateItem(index, { ...item, quantity: value });
+                                }
+                              }}
+                              onBlur={(e) => {
+                                // Only convert to default on blur if still empty
+                                if (e.target.value === '') {
+                                  handleUpdateItem(index, { ...item, quantity: 0.1 });
+                                }
+                              }}
                               className="form-input"
                             />
                           </div>
                           <div className="form-field">
                             <label className="field-label">Markup %</label>
                             <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={safeItem.markup} // Use the safe item with defaults
-                              onChange={(e) => handleUpdateItem(index, { ...item, markup: parseInt(e.target.value) || 0 })}
+                              type="text" // Changed from number to text to allow empty values
+                              value={safeItem.markup} // Use safeItem to preserve empty string
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                // Allow empty string or valid numbers
+                                if (value === '' || (!isNaN(value) && value.trim() !== '')) {
+                                  handleUpdateItem(index, { ...item, markup: value });
+                                }
+                              }}
+                              onBlur={(e) => {
+                                // Only convert to default on blur if still empty
+                                if (e.target.value === '') {
+                                  handleUpdateItem(index, { ...item, markup: 0 });
+                                }
+                              }}
                               className="form-input"
                             />
                           </div>
@@ -998,20 +1162,47 @@ const QuoteBuilder = () => {
             <div className="quote-preview">
               {/* Company header */}
               <div className="quote-preview-header">
-                <div>
-                  {settings.company.logo && (
-                    <img src={settings.company.logo} alt="Company Logo" className="quote-logo" />
+                <div className="quote-branding">
+                  {settings?.company?.logo ? (
+                    <div className="logo-container" style={{ maxWidth: '330px', marginBottom: '15px' }}>
+                      <img 
+                        src={settings.company.logo} 
+                        alt={settings.company?.name || 'Company Logo'} 
+                        className="quote-logo" 
+                        style={{ 
+                          width: '100%', 
+                          maxHeight: '133px', 
+                          objectFit: 'contain',
+                          display: 'block'
+                        }} 
+                      />
+                    </div>
+                  ) : (
+                    <div className="logo-placeholder" style={{ 
+                      height: '60px', 
+                      width: '180px', 
+                      backgroundColor: '#f3f4f6', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      marginBottom: '15px',
+                      color: '#9ca3af',
+                      fontSize: '14px',
+                      borderRadius: '4px'
+                    }}>
+                      No logo available
+                    </div>
                   )}
-                  <h1 className="quote-title">QUOTATION</h1>
+                  <h1 className="quote-title" style={{ marginTop: '5px' }}>QUOTATION</h1>
                   <p className="quote-reference">Reference: Q-{new Date().getFullYear()}-{Math.floor(Math.random() * 1000).toString().padStart(3, '0')}</p>
                 </div>
                 
                 <div className="company-details">
-                  <p className="company-name">{settings.company.name}</p>
-                  <div className="company-address">{settings.company.address}</div>
-                  <p className="company-contact">{settings.company.email}</p>
-                  <p className="company-contact">{settings.company.phone}</p>
-                  <p className="company-contact">{settings.company.website}</p>
+                  <p className="company-name" style={{ fontWeight: 'bold', fontSize: '16px' }}>{settings.company?.name || 'Your Company Name'}</p>
+                  <div className="company-address">{settings.company?.address || 'Company Address'}</div>
+                  <p className="company-contact">{settings.company?.email || 'company@example.com'}</p>
+                  <p className="company-contact">{settings.company?.phone || 'Phone Number'}</p>
+                  <p className="company-contact">{settings.company?.website || 'www.company.com'}</p>
                 </div>
               </div>
               
@@ -1411,35 +1602,43 @@ const QuoteBuilder = () => {
         isOpen={showEmailDialog}
         onClose={() => setShowEmailDialog(false)}
         title="Email Quote"
+        className="email-dialog"
       >
-        <div className="email-instructions">
-          <p>Follow these steps to email your quote:</p>
-          <ol style={{ textAlign: 'left', marginBottom: '15px' }}>
-            <li>First export the quote as a PDF</li>
-            <li>Then open your email client</li>
-            <li>Attach the saved PDF to your email</li>
-          </ol>
-          
-          <div className="dialog-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'space-between' }}>
-            <Button
-              variant="secondary"
-              onClick={() => setShowEmailDialog(false)}
-            >
-              Cancel
-            </Button>
-            <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="email-dialog-content">
+          <div className="email-instructions">
+            <p className="email-description">How would you like to proceed?</p>
+            
+            <div className="email-actions-container">
               <Button
                 variant="primary"
-                onClick={handleExportPDF}
+                onClick={handleExportAndOpenEmail}
+                className="email-action-button-primary"
               >
-                Export PDF
+                Export PDF and Open Email
               </Button>
-              <Button
-                variant="primary"
-                onClick={handleOpenEmailClient}
-              >
-                Open Email Client
-              </Button>
+              
+              <div className="email-actions-row">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowEmailDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <div className="email-actions-group">
+                  <Button
+                    variant="secondary"
+                    onClick={safeExportPDF}
+                  >
+                    Export PDF Only
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleOpenEmailClient}
+                  >
+                    Email Only
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

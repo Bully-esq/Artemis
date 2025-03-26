@@ -10,6 +10,42 @@ const apiClient = axios.create({
   }
 });
 
+// Add a local storage wrapper for offline storage
+const db = {
+  getItem: async (key) => {
+    try {
+      const data = localStorage.getItem(key);
+      console.log(`Retrieved from localStorage: ${key}`, data ? 'data found' : 'no data');
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error(`Error getting item from localStorage: ${key}`, error);
+      return null;
+    }
+  },
+  
+  setItem: async (key, value) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      console.log(`Saved to localStorage: ${key}`);
+      return true;
+    } catch (error) {
+      console.error(`Error setting item in localStorage: ${key}`, error);
+      throw new Error(`Storage error: ${error.message}`);
+    }
+  },
+  
+  removeItem: async (key) => {
+    try {
+      localStorage.removeItem(key);
+      console.log(`Removed from localStorage: ${key}`);
+      return true;
+    } catch (error) {
+      console.error(`Error removing item from localStorage: ${key}`);
+      return false;
+    }
+  }
+};
+
 // Add interceptors for handling network status
 apiClient.interceptors.response.use(
   response => response,
@@ -29,10 +65,11 @@ const logApiOperation = (operation, data, result) => {
   return result;
 };
 
-// Enhance quotes API with better debugging
+// Enhance quotes API with better debugging - fix to use server endpoints properly
 const quotesApi = {
   getAll: async () => {
     try {
+      console.log('Fetching all quotes from server');
       const result = await apiClient.get('/quotes');
       return logApiOperation('getAll quotes', null, result.data);
     } catch (error) {
@@ -50,7 +87,7 @@ const quotesApi = {
       
       // Server returns flat fields (clientName, clientEmail, etc.)
       // Convert to client expected structure with nested client object
-      const serverQuote = result.data.quote || result.data;
+      const serverQuote = result.data;
       
       // Build the client-side expected structure
       const clientFormattedQuote = {
@@ -62,11 +99,8 @@ const quotesApi = {
           email: serverQuote.clientEmail || '',
           phone: serverQuote.clientPhone || '',
           address: serverQuote.clientAddress || ''
-        },
-        // Ensure these are arrays (server should parse JSON strings)
-        selectedItems: Array.isArray(serverQuote.selectedItems) ? serverQuote.selectedItems : [],
-        hiddenCosts: Array.isArray(serverQuote.hiddenCosts) ? serverQuote.hiddenCosts : [],
-        exclusions: Array.isArray(serverQuote.exclusions) ? serverQuote.exclusions : []
+        }
+        // Note: Server now parses JSON strings for us
       };
       
       console.log('Formatted for client:', clientFormattedQuote);
@@ -79,41 +113,26 @@ const quotesApi = {
   
   save: async (quote) => {
     try {
-      console.log('Attempting to save quote:', quote);
+      console.log('Saving quote to server:', quote.id);
       
-      // Convert client object to flat fields for server compatibility
-      const serverQuote = {
+      // Make sure we include clientName and clientCompany at the top level
+      // for compatibility with the server and quotes list
+      const quoteToSave = {
         ...quote,
-        id: quote.id || Date.now().toString(),
-        // Map client object to individual fields that server expects
         clientName: quote.client?.name || '',
         clientCompany: quote.client?.company || '',
         clientEmail: quote.client?.email || '',
         clientPhone: quote.client?.phone || '',
-        clientAddress: quote.client?.address || '',
-        // Serialize arrays to JSON strings if needed
-        selectedItems: Array.isArray(quote.selectedItems) ? quote.selectedItems : [],
-        hiddenCosts: Array.isArray(quote.hiddenCosts) ? quote.hiddenCosts : [],
-        exclusions: Array.isArray(quote.exclusions) ? quote.exclusions : []
+        clientAddress: quote.client?.address || ''
       };
       
-      console.log('Formatted for server:', serverQuote);
+      const response = await apiClient.post('/quotes', { quote: quoteToSave });
+      console.log('Server response after saving quote:', response.data);
       
-      // Send to server
-      const response = await apiClient.post('/quotes', { quote: serverQuote });
-      console.log('Quote save successful, response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('API Error - save quote:', error);
-      // Log more details about the error
-      if (error.response) {
-        console.error('Server response:', error.response.status, error.response.data);
-      } else if (error.request) {
-        console.error('No response received from server');
-      } else {
-        console.error('Error setting up request:', error.message);
-      }
-      throw error;
+      console.error('API Error in quotes.save:', error);
+      throw new Error(`Failed to save quote: ${error.message}`);
     }
   },
   

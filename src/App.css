@@ -594,37 +594,50 @@ p {
 /* Notifications */
 .notifications-container {
   position: fixed;
-  top: 1rem;
-  right: 1rem;
-  z-index: 1000;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999; /* Ensure it's above everything else */
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   max-width: 360px;
-  width: calc(100% - 2rem);
+  width: calc(100% - 3rem);
+  pointer-events: none; /* Allow clicking through the container */
 }
 
 .notification {
-  background-color: var(--bg-white);
-  border-radius: var(--border-radius);
+  background-color: white;
+  border-radius: 0.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   transform-origin: top right;
   transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
   max-width: 100%;
   width: 100%;
-  pointer-events: auto;
+  pointer-events: auto; /* Make each notification clickable */
   border-left-width: 4px;
   position: relative;
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 .notification-visible {
-  transform: translateY(0) scale(1);
+  transform: translateX(0) scale(1);
   opacity: 1;
 }
 
 .notification-hidden {
-  transform: translateY(-10px) scale(0.95);
+  transform: translateX(100%) scale(0.95);
   opacity: 0;
 }
 
@@ -3581,4 +3594,50 @@ input, textarea, select {
   color: #6b7280;
   font-size: 14px;
   margin-top: 8px;
+}
+
+/* Add these new styles to your App.css */
+
+/* Email Dialog Styles - replaced from Tailwind */
+.email-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow-y: auto;
+}
+
+.email-dialog-content {
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  max-width: 28rem;
+  margin: 5rem auto 0;
+}
+
+.email-description {
+  margin-bottom: 1rem;
+  color: #4b5563;
+}
+
+.email-actions-container {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.email-action-button-primary {
+  width: 100%;
+}
+
+.email-actions-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+}
+
+.email-actions-group {
+  display: flex;
+  gap: 0.5rem;
 }
