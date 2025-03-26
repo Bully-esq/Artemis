@@ -5,12 +5,14 @@ import { useAppContext } from '../../context/AppContext';
 import api from '../../services/api';
 import pdfGenerator from '../../services/pdfGenerator';
 import { formatDate } from '../../utils/formatters';
+import html2pdf from 'html2pdf.js'; // Add html2pdf import
 
 // Components
 import Button from '../common/Button';
 import Loading from '../common/Loading';
 import FormField from '../common/FormField';
 import Tabs from '../common/Tabs';
+import Dialog from '../common/Dialog';
 import InvoicePreview from './InvoicePreview';
 import PaymentSchedule from './PaymentSchedule'; // Import PaymentSchedule component
 
@@ -48,6 +50,7 @@ const InvoiceBuilder = () => {
   });
 
   const [activeTab, setActiveTab] = useState('create');
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
   
   // Fetch invoice if we have an ID
   const { data: invoice, isLoading: isLoadingInvoice } = useQuery(
@@ -209,17 +212,51 @@ const InvoiceBuilder = () => {
   // Generate PDF
   const handleExportPDF = async () => {
     try {
-      await pdfGenerator.generateInvoicePDF(invoiceDetails, settings);
-      addNotification('Invoice PDF generated successfully', 'success');
+      // Get the invoice preview element
+      const invoicePreviewElement = document.querySelector('.invoice-preview');
+      
+      if (!invoicePreviewElement) {
+        throw new Error('Invoice preview element not found');
+      }
+      
+      // Add notification
+      addNotification('Generating PDF...', 'info');
+      
+      // Configure options
+      const options = {
+        filename: `Invoice_${invoiceDetails.invoiceNumber || 'Untitled'}_${new Date().toISOString().split('T')[0]}.pdf`,
+        margin: [15, 15, 15, 15],
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      
+      // Generate PDF using html2pdf - using explicit promise pattern
+      return new Promise((resolve, reject) => {
+        html2pdf()
+          .from(invoicePreviewElement)
+          .set(options)
+          .save()
+          .then(() => {
+            addNotification('PDF exported successfully!', 'success');
+            resolve(true);
+          })
+          .catch(err => {
+            console.error('PDF generation error in promise:', err);
+            addNotification(`Error generating PDF: ${err.message}`, 'error');
+            reject(err);
+          });
+      });
     } catch (error) {
+      console.error('PDF generation error:', error);
       addNotification(`Error generating PDF: ${error.message}`, 'error');
+      return Promise.reject(error);
     }
   };
 
   // Handle emails
   const handleEmailInvoice = () => {
-    // Email logic would go here
-    addNotification('Email functionality coming soon!', 'info');
+    setShowEmailDialog(true);
   };
 
   // Handle save invoice
@@ -559,6 +596,88 @@ const InvoiceBuilder = () => {
     }
   };
 
+  // Add this function to open email client
+  const handleOpenEmailClient = () => {
+    const subject = `Invoice ${invoiceDetails.invoiceNumber} for ${invoiceDetails.clientName || 'your project'}`;
+    const body = `Dear ${invoiceDetails.clientName},\n\nPlease find attached your invoice (${invoiceDetails.invoiceNumber}) for ${invoiceDetails.description || 'your project'}.\n\nThe invoice is due by ${
+      invoiceDetails.dueDate ? new Date(invoiceDetails.dueDate).toLocaleDateString('en-GB') : 'the date specified'
+    }.\n\nIf you have any questions, please don't hesitate to contact me.\n\nBest regards,\n${settings.company?.name || 'Your Company'}`;
+    
+    // Open the mailto link
+    window.location.href = `mailto:${invoiceDetails.clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    // Close the dialog
+    setShowEmailDialog(false);
+  };
+
+  // Create a safer export PDF function that ensures preview is visible
+  const safeExportPDF = async () => {
+    try {
+      // Get the invoice preview element
+      const invoicePreviewElement = document.querySelector('.invoice-preview');
+      
+      if (!invoicePreviewElement) {
+        throw new Error('Invoice preview element not found');
+      }
+      
+      // Add notification
+      addNotification('Generating PDF...', 'info');
+      
+      // Configure options
+      const options = {
+        filename: `Invoice_${invoiceDetails.invoiceNumber || 'Untitled'}_${new Date().toISOString().split('T')[0]}.pdf`,
+        margin: [15, 15, 15, 15],
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      
+      // Generate PDF using html2pdf - using explicit promise pattern
+      return new Promise((resolve, reject) => {
+        html2pdf()
+          .from(invoicePreviewElement)
+          .set(options)
+          .save()
+          .then(() => {
+            addNotification('PDF exported successfully!', 'success');
+            resolve(true);
+          })
+          .catch(err => {
+            console.error('PDF generation error in promise:', err);
+            addNotification(`Error generating PDF: ${err.message}`, 'error');
+            reject(err);
+          });
+      });
+    } catch (error) {
+      console.error('Error in safe PDF export:', error);
+      addNotification(`Error exporting PDF: ${error.message}`, 'error');
+      return false;
+    }
+  };
+
+  // Add this combined function for export and email
+  const handleExportAndOpenEmail = async () => {
+    try {
+      // Show notification
+      addNotification('Preparing invoice for email...', 'info');
+      
+      // First generate the PDF
+      const success = await safeExportPDF();
+      
+      if (success) {
+        addNotification('PDF saved. Opening email client...', 'success');
+        
+        // Open email client with template after a short delay to allow PDF to finish saving
+        setTimeout(() => {
+          handleOpenEmailClient();
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error in export and email process:', error);
+      addNotification(`Error: ${error.message}`, 'error');
+    }
+  };
+
   if (isLoadingInvoice || (quoteId && isLoadingQuote)) {
     return <Loading message="Loading data..." />;
   }
@@ -667,7 +786,7 @@ const InvoiceBuilder = () => {
                     className="form-input"
                     step="0.01"
                     min="0"
-                    value={invoiceDetails.amount || ''}
+                    value={Number(invoiceDetails.amount || 0).toFixed(2)}
                     onChange={(e) => setInvoiceDetails({...invoiceDetails, amount: parseFloat(e.target.value) || 0})}
                     required
                   />
@@ -704,7 +823,7 @@ const InvoiceBuilder = () => {
           <div className="card action-card">
             <div className="card-body">
               <div className="action-buttons">
-                <Link to="/quotes" className="btn btn-secondary">
+                <Link to="/quotes" className="btn btn-primary">
                   <span className="btn-icon">←</span>
                   Quotes
                 </Link>
@@ -718,7 +837,7 @@ const InvoiceBuilder = () => {
                 </Button>
                 
                 <Button
-                  variant="secondary"
+                  variant="primary"
                   onClick={handleExportPDF}
                 >
                   <span className="btn-icon">📄</span>
@@ -726,7 +845,7 @@ const InvoiceBuilder = () => {
                 </Button>
                 
                 <Button
-                  variant="secondary"
+                  variant="primary"
                   onClick={handleEmailInvoice}
                 >
                   <span className="btn-icon">✉️</span>
@@ -734,7 +853,7 @@ const InvoiceBuilder = () => {
                 </Button>
                 
                 <Button
-                  variant="green"
+                  variant="primary"
                   onClick={handleMarkAsPaid}
                   disabled={invoiceDetails.status === 'paid'}
                 >
@@ -743,7 +862,7 @@ const InvoiceBuilder = () => {
                 </Button>
                 
                 <Button
-                  variant="info"
+                  variant="primary"
                   onClick={handleApplyCIS}
                   disabled={invoiceDetails.cisApplied}
                 >
@@ -759,7 +878,7 @@ const InvoiceBuilder = () => {
                 </Button>
                 
                 <Button
-                  variant="secondary"
+                  variant="primary"
                   onClick={() => navigate('/settings')}
                 >
                   <span className="btn-icon">⚙️</span>
@@ -865,6 +984,53 @@ const InvoiceBuilder = () => {
           </div>
         </div>
       </div>
+
+      {/* Email Instructions Dialog */}
+      <Dialog
+        isOpen={showEmailDialog}
+        onClose={() => setShowEmailDialog(false)}
+        title="Email Invoice"
+        className="email-dialog"
+      >
+        <div className="email-dialog-content">
+          <div className="email-instructions">
+            <p className="email-description">How would you like to proceed?</p>
+            
+            <div className="email-actions-container">
+              <Button
+                variant="primary"
+                onClick={handleExportAndOpenEmail}
+                className="email-action-button-primary"
+              >
+                Export PDF and Open Email
+              </Button>
+              
+              <div className="email-actions-row">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowEmailDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <div className="email-actions-group">
+                  <Button
+                    variant="secondary"
+                    onClick={safeExportPDF}
+                  >
+                    Export PDF Only
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleOpenEmailClient}
+                  >
+                    Email Only
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 };
