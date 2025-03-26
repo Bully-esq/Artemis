@@ -247,10 +247,32 @@ export const suppliersApi = {
 export const catalogApi = {
   getAll: async () => {
     const response = await apiClient.get('/catalog');
+    // Clean up item names by removing trailing zeros
+    if (response.data && Array.isArray(response.data)) {
+      response.data = response.data.map(item => ({
+        ...item,
+        name: item.name?.endsWith('0') ? item.name.slice(0, -1) : item.name
+      }));
+    }
     return response.data;
   },
   
   update: async (items) => {
+    // If items is an array, clean up each item's name
+    if (Array.isArray(items)) {
+      items = items.map(item => ({
+        ...item,
+        name: item.name?.endsWith('0') ? item.name.slice(0, -1) : item.name
+      }));
+    } 
+    // If items is a single item, clean up its name
+    else if (items && typeof items === 'object') {
+      items = {
+        ...items,
+        name: items.name?.endsWith('0') ? items.name.slice(0, -1) : items.name
+      };
+    }
+    
     const response = await apiClient.put('/catalog', { items });
     return response.data;
   },

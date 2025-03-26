@@ -100,16 +100,16 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
   // Error state
   if (isErrorItems) {
     return (
-      <div className="bg-red-50 p-4 rounded-md">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+      <div className="error-container">
+        <div className="error-content">
+          <div className="error-icon">
+            <svg className="icon-error" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
             </svg>
           </div>
-          <div className="ml-3">
-            <h3 className="text-sm font-medium text-red-800">Error loading catalog items</h3>
-            <div className="mt-2 text-sm text-red-700">
+          <div className="error-message">
+            <h3 className="error-title">Error loading catalog items</h3>
+            <div className="error-details">
               <p>{errorItems?.message || 'Unknown error'}</p>
             </div>
           </div>
@@ -119,11 +119,11 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
   }
   
   return (
-    <div className="space-y-4">
+    <div className="catalog-container">
       {/* Filters */}
-      <div className="bg-white p-4 rounded-md shadow-sm space-y-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-grow">
+      <div className="filter-panel">
+        <div className="filter-row">
+          <div className="search-field">
             <FormField
               name="search"
               type="text"
@@ -133,9 +133,9 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
             />
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="filter-selects">
             <select
-              className="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="category-select"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
             >
@@ -146,7 +146,7 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
             </select>
             
             <select
-              className="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="supplier-select"
               value={selectedSupplier}
               onChange={(e) => setSelectedSupplier(e.target.value)}
             >
@@ -158,22 +158,22 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
           </div>
         </div>
         
-        <div className="flex justify-between items-center">
-          <div className="flex items-center">
+        <div className="filter-actions">
+          <div className="show-hidden-option">
             <input
               id="show-hidden"
               type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="checkbox"
               checked={showHidden}
               onChange={(e) => setShowHidden(e.target.checked)}
             />
-            <label htmlFor="show-hidden" className="ml-2 text-sm text-gray-700">
+            <label htmlFor="show-hidden" className="checkbox-label">
               Show hidden items
             </label>
           </div>
           
-          <div className="flex space-x-2">
-            <span className="text-sm text-gray-600">
+          <div className="action-buttons">
+            <span className="item-count">
               {filteredItems.length} items
             </span>
             
@@ -190,106 +190,106 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
       
       {/* Items list */}
       {filteredItems.length === 0 ? (
-        <div className="bg-white p-8 rounded-md shadow-sm text-center">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="empty-state">
+          <svg className="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
           </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No items found</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <h3 className="empty-title">No items found</h3>
+          <p className="empty-description">
             {searchTerm || selectedCategory || selectedSupplier ? 
               'Try adjusting your filters' : 
               'Get started by adding a new catalog item'}
           </p>
-          <div className="mt-6">
+          <div className="empty-action">
             <Button variant="primary" onClick={onAddItem}>
               Add New Item
             </Button>
           </div>
         </div>
       ) : (
-        <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="table-container">
+          <table className="catalog-table">
+            <thead className="table-header">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="column-header">
                   Name
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="column-header">
                   Category
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="column-header">
                   Supplier
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="column-header">
                   Cost
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="column-header">
                   Lead Time
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="column-header column-actions">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="table-body">
               {filteredItems.map((item) => {
                 const supplier = suppliers?.find(s => s.id === item.supplier) || { name: 'Unknown' };
                 const category = categories.find(c => c.id === item.category) || { name: 'Other' };
                 
                 return (
-                  <tr key={item.id} className={item.hidden ? 'bg-gray-50' : ''}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
+                  <tr key={item.id} className={item.hidden ? 'row-hidden' : ''}>
+                    <td className="table-cell">
+                      <div className="item-name-container">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {item.name}
+                          <div className="item-name">
+                            {item.name?.endsWith('0') ? item.name.slice(0, -1) : item.name}
                             {item.hidden && (
-                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                              <span className="hidden-badge">
                                 Hidden
                               </span>
                             )}
                           </div>
                           {item.description && (
-                            <div className="text-sm text-gray-500">
+                            <div className="item-description">
                               {item.description}
                             </div>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <td className="table-cell">
+                      <span className="category-badge">
                         {category.name}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="table-cell">
                       {supplier.name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="table-cell">
                       £{item.cost?.toFixed(2) || '0.00'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="table-cell">
                       {item.leadTime || 0} days
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-2">
+                    <td className="table-cell cell-actions">
+                      <div className="action-buttons-container">
                         <button
                           type="button"
-                          className="text-blue-600 hover:text-blue-900"
+                          className="btn-select"
                           onClick={() => onSelectItem && onSelectItem(item)}
                         >
                           Select
                         </button>
                         <button
                           type="button"
-                          className="text-indigo-600 hover:text-indigo-900"
+                          className="btn-edit"
                           onClick={() => setItemToEdit(item)}
                         >
                           Edit
                         </button>
                         <button
                           type="button"
-                          className="text-red-600 hover:text-red-900"
+                          className="btn-delete"
                           onClick={() => setItemToDelete(item)}
                         >
                           Delete
@@ -312,12 +312,12 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
           title="Delete Item"
           size="sm"
         >
-          <div className="space-y-4">
-            <p className="text-sm text-gray-500">
+          <div className="dialog-content">
+            <p className="dialog-message">
               Are you sure you want to delete the item "{itemToDelete.name}"? This action cannot be undone.
             </p>
             
-            <div className="flex justify-end space-x-3">
+            <div className="dialog-actions">
               <Button
                 variant="secondary"
                 onClick={() => setItemToDelete(null)}
@@ -344,12 +344,12 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
           title="Edit Item"
         >
           {/* This is just a placeholder. The actual editing form would be implemented by the parent component */}
-          <div className="space-y-4">
-            <p className="text-sm text-gray-500">
+          <div className="dialog-content">
+            <p className="dialog-message">
               Edit form for "{itemToEdit.name}" would be displayed here.
             </p>
             
-            <div className="flex justify-end space-x-3">
+            <div className="dialog-actions">
               <Button
                 variant="secondary"
                 onClick={() => setItemToEdit(null)}

@@ -11,6 +11,7 @@ import Dialog from '../common/Dialog';
 import FormField from '../common/FormField';
 import Loading from '../common/Loading';
 import Tabs from '../common/Tabs';
+import CatalogItemList from './CatalogItemList'; // Import CatalogItemList
 
 const SupplierList = () => {
   const navigate = useNavigate();
@@ -183,6 +184,20 @@ const SupplierList = () => {
       )
     : suppliers;
   
+  // Handle navigation for adding/editing catalog items
+  const handleManageCatalogItem = (itemToEdit = null) => {
+    // Navigate to a dedicated page or open a modal for catalog item management
+    // For now, let's navigate to a placeholder route, assuming it exists
+    // You might need to create this route/page or implement a modal
+    navigate('/suppliers/catalog', { state: { itemToEdit } });
+  };
+
+  // Placeholder for selecting an item (if needed elsewhere)
+  const handleSelectItem = (item) => {
+    console.log('Selected item:', item);
+    // Implement selection logic if required by other parts of the application
+  };
+
   // Render loading state
   if (isLoading) {
     return (
@@ -365,18 +380,11 @@ const SupplierList = () => {
         {/* Catalog Tab Content */}
         {activeTab === 'catalog' && (
           <div className="tab-content">
-            <div className="empty-state">
-              <svg className="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-              <h3 className="empty-state-title">Catalog Items Management</h3>
-              <p className="empty-state-description">
-                Click below to manage your product catalog
-              </p>
-              <Button onClick={() => navigate('/suppliers/catalog')}>
-                Manage Catalog
-              </Button>
-            </div>
+            {/* Render CatalogItemList directly */}
+            <CatalogItemList
+              onAddItem={handleManageCatalogItem}
+              onSelectItem={handleSelectItem}
+            />
           </div>
         )}
       </div>
