@@ -9,6 +9,7 @@ import PageLayout from '../../components/common/PageLayout';
 import Button from '../../components/common/Button';
 import Loading from '../../components/common/Loading';
 
+
 const InvoiceList = () => {
   const navigate = useNavigate();
   const { addNotification } = useAppContext();
@@ -56,17 +57,18 @@ const InvoiceList = () => {
     return status === 'paid' ? 'status-badge status-badge-success' : 'status-badge status-badge-warning';
   };
 
-  // Action buttons for the page header
+  // Action buttons for the page header - styled with invoice-action-button class
   const actionButtons = (
-    <Button 
-      variant="primary"
+    <button 
+      className="invoice-action-button"
       onClick={() => navigate('/invoices/new')}
+      style={{ marginTop: '14px' }} // Add this line to push it down a bit
     >
       <svg className="icon icon-plus" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
       </svg>
       New Invoice
-    </Button>
+    </button>
   );
   
   if (isLoading) {
@@ -236,24 +238,6 @@ const InvoiceList = () => {
                           }}
                         >
                           View
-                        </button>
-                        <button
-                          className="delete-button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm('Are you sure you want to delete this invoice?')) {
-                              api.invoices.delete(invoice.id)
-                                .then(() => {
-                                  addNotification('Invoice deleted successfully', 'success');
-                                  window.location.reload();
-                                })
-                                .catch(err => {
-                                  addNotification(`Error deleting invoice: ${err.message}`, 'error');
-                                });
-                            }
-                          }}
-                        >
-                          Delete
                         </button>
                       </div>
                     </div>

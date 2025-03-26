@@ -30,8 +30,8 @@ const PaymentSchedule = ({ quote, onInvoiceCreate }) => {
   
   if (!quote) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow-sm">
-        <p className="text-gray-500 text-center py-6">
+      <div className="payment-schedule-container">
+        <p className="empty-message">
           No quote connected. Please select a quote to view its payment schedule.
         </p>
       </div>
@@ -48,8 +48,8 @@ const PaymentSchedule = ({ quote, onInvoiceCreate }) => {
   // Check if there are any payments
   if (paymentSchedule.length === 0) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow-sm">
-        <p className="text-gray-500 text-center py-6">
+      <div className="payment-schedule-container">
+        <p className="empty-message">
           No payment schedule available for this quote.
         </p>
       </div>
@@ -64,14 +64,14 @@ const PaymentSchedule = ({ quote, onInvoiceCreate }) => {
     
     // Determine status based on invoices
     let status = 'Not invoiced';
-    let statusColor = 'text-gray-500';
+    let statusClass = 'status-not-invoiced';
     
     if (stageInvoices.length > 0) {
       const paidInvoices = stageInvoices.filter(inv => inv.status === 'paid');
       
       if (paidInvoices.length > 0) {
         status = 'Paid';
-        statusColor = 'text-green-600';
+        statusClass = 'status-paid';
       } else {
         // Check if any invoice is overdue
         const now = new Date();
@@ -81,10 +81,10 @@ const PaymentSchedule = ({ quote, onInvoiceCreate }) => {
         
         if (overdueInvoices.length > 0) {
           status = 'Overdue';
-          statusColor = 'text-red-600';
+          statusClass = 'status-overdue';
         } else {
           status = 'Invoiced - Pending';
-          statusColor = 'text-blue-600';
+          statusClass = 'status-pending';
         }
       }
     }
@@ -93,7 +93,7 @@ const PaymentSchedule = ({ quote, onInvoiceCreate }) => {
       ...stage,
       invoices: stageInvoices,
       status,
-      statusColor
+      statusClass
     };
   });
   
@@ -118,53 +118,53 @@ const PaymentSchedule = ({ quote, onInvoiceCreate }) => {
   };
   
   return (
-    <div className="bg-white p-4 rounded-lg shadow-sm">
-      <h3 className="font-medium text-lg mb-4">Payment Schedule</h3>
+    <div className="payment-schedule-container">
+      <h3 className="payment-schedule-title">Payment Schedule</h3>
       
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="payment-schedule-table">
+        <thead className="payment-schedule-header">
           <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="payment-schedule-header-cell">
               Stage
             </th>
-            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="payment-schedule-header-cell text-right">
               Amount
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="payment-schedule-header-cell">
               Due When
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="payment-schedule-header-cell">
               Status
             </th>
-            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="payment-schedule-header-cell text-right">
               Actions
             </th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="payment-schedule-body">
           {enhancedSchedule.map((stage, index) => (
             <tr key={stage.stage}>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
+              <td className="payment-schedule-cell">
+                <div className="stage-description">
                   {stage.description}
                 </div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right">
-                <div className="text-sm font-medium text-gray-900">
+              <td className="payment-schedule-cell text-right">
+                <div className="stage-amount">
                   £{stage.amount.toFixed(2)}
                 </div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-500">
+              <td className="payment-schedule-cell">
+                <div className="stage-due-when">
                   {stage.dueWhen}
                 </div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className={`text-sm font-medium ${stage.statusColor}`}>
+              <td className="payment-schedule-cell">
+                <div className={`stage-status ${stage.statusClass}`}>
                   {stage.status}
                 </div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <td className="payment-schedule-cell text-right">
                 {stage.status === 'Not invoiced' ? (
                   <Button
                     variant="primary"
@@ -188,9 +188,9 @@ const PaymentSchedule = ({ quote, onInvoiceCreate }) => {
         </tbody>
       </table>
       
-      <div className="mt-4 text-sm text-gray-500">
+      <div className="payment-terms">
         <p>
-          <span className="font-semibold">Payment Terms:</span> {' '}
+          <span className="payment-terms-label">Payment Terms:</span> {' '}
           {quote.paymentTerms === '1' ? '50% deposit, 50% on completion' :
            quote.paymentTerms === '2' ? '50% deposit, 25% on joinery completion, 25% on final completion' :
            quote.paymentTerms === '4' ? 'Full payment before delivery' :

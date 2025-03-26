@@ -3641,3 +3641,95 @@ input, textarea, select {
   display: flex;
   gap: 0.5rem;
 }
+
+/* Add to your CSS file */
+.title-bar-centered-button {
+  position: relative;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* Add to your CSS file */
+.invoice-action-button {
+  position: relative;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  font-size: 14px;
+  margin: 0;
+  /* Make sure these don't override your existing button styles */
+  background-color: #3b82f6; /* or whatever your blue color is */
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+
+/* Loading Component Styles */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+  color: #2563eb; /* blue-600 equivalent */
+}
+
+.spinner-sm {
+  height: 1.25rem;
+  width: 1.25rem;
+}
+
+.spinner-md {
+  height: 2rem;
+  width: 2rem;
+}
+
+.spinner-lg {
+  height: 3rem;
+  width: 3rem;
+}
+
+.loading-circle {
+  opacity: 0.25;
+}
+
+.loading-path {
+  opacity: 0.75;
+}
+
+.loading-message {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.loading-fullscreen {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

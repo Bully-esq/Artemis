@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatDate } from '../../utils/formatters';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 
 /**
  * Invoice preview component that renders a formatted invoice
@@ -9,7 +9,7 @@ import { formatDate } from '../../utils/formatters';
  * @param {Object} props.settings - Application settings
  * @param {boolean} props.printMode - Whether to optimize for printing/PDF export
  */
-const InvoicePreview = ({ invoice, settings, printMode = false }) => {
+const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
   if (!invoice) {
     return (
       <div className="empty-state">
@@ -17,6 +17,12 @@ const InvoicePreview = ({ invoice, settings, printMode = false }) => {
       </div>
     );
   }
+
+  // Ensure we have settings objects to prevent null reference errors
+  const safeSettings = settings || {};
+  const companySettings = safeSettings.company || {};
+  const invoiceSettings = safeSettings.invoice || {};
+  const cisSettings = safeSettings.cis || {};
 
   // Format dates
   const invoiceDate = invoice.invoiceDate 
@@ -45,8 +51,12 @@ const InvoicePreview = ({ invoice, settings, printMode = false }) => {
     return <div className="status-badge status-badge-info">Pending</div>;
   };
 
+  // Check if the invoice has line items
+  const hasLineItems = invoice.lineItems && invoice.lineItems.length > 0;
+  
   // Determine if the invoice has CIS deductions
-  const hasCisDeduction = invoice.items && invoice.items.some(item => item.type === 'cis');
+  const hasCisDeduction = invoice.cisApplied || 
+    (hasLineItems && invoice.lineItems.some(item => item.type === 'cis'));
 
   // Wrapper classes for print mode
   const containerClass = printMode ? "invoice-preview print-mode" : "invoice-preview";
@@ -57,11 +67,11 @@ const InvoicePreview = ({ invoice, settings, printMode = false }) => {
       <div className="invoice-header">
         <div className="invoice-branding">
           {/* Logo */}
-          {settings.company.logo && (
+          {companySettings.logo && (
             <div className="logo-container">
               <img 
-                src={settings.company.logo} 
-                alt={`${settings.company.name} Logo`}
+                src={companySettings.logo} 
+                alt={`${companySettings.name || 'Company'} Logo`}
                 className="company-logo"
               />
             </div>
@@ -79,14 +89,14 @@ const InvoicePreview = ({ invoice, settings, printMode = false }) => {
         
         {/* Company details */}
         <div className="company-details">
-          <h3 className="company-name">{settings.company.name}</h3>
+          <h3 className="company-name">{companySettings.name || 'Your Company'}</h3>
           <div className="company-address">
-            {settings.company.address}
+            {companySettings.address || 'Company Address'}
           </div>
           <div className="company-contact">
-            <p>{settings.company.email}</p>
-            <p>{settings.company.phone}</p>
-            <p>{settings.company.website}</p>
+            {companySettings.email && <p>{companySettings.email}</p>}
+            {companySettings.phone && <p>{companySettings.phone}</p>}
+            {companySettings.website && <p>{companySettings.website}</p>}
           </div>
         </div>
       </div>
@@ -98,11 +108,13 @@ const InvoicePreview = ({ invoice, settings, printMode = false }) => {
           <div className="client-details">
             <p className="client-name">{invoice.clientName || '[Client Name]'}</p>
             {invoice.clientCompany && <p>{invoice.clientCompany}</p>}
-            <p>{invoice.clientEmail || '[Email]'}</p>
-            <p>{invoice.clientPhone || '[Phone]'}</p>
-            <div className="client-address">
-              {invoice.clientAddress || '[Address]'}
-            </div>
+            {invoice.clientEmail && <p>{invoice.clientEmail}</p>}
+            {invoice.clientPhone && <p>{invoice.clientPhone}</p>}
+            {invoice.clientAddress && (
+              <div className="client-address">
+                {invoice.clientAddress}
+              </div>
+            )}
           </div>
         </div>
         
@@ -131,29 +143,40 @@ const InvoicePreview = ({ invoice, settings, printMode = false }) => {
           <thead>
             <tr>
               <th className="description-column">Description</th>
+              <th className="quantity-column">Qty</th>
               <th className="amount-column">Amount</th>
             </tr>
           </thead>
           <tbody>
             {/* If there are itemized invoice items */}
-            {invoice.items && invoice.items.length > 0 ? (
+            {hasLineItems ? (
               <>
                 {/* Display all non-CIS items first */}
-                {invoice.items
+                {invoice.lineItems
                   .filter(item => item.type !== 'cis')
                   .map((item, index) => {
                     const amount = parseFloat(item.amount) || 0;
+                    const quantity = parseFloat(item.quantity) || 1;
                     
-                    // Determine if this is a labor item (for styling)
-                    const isLabourItem = item.isLabour || item.category === 'labour';
+                    // More thorough check for labor items
+                    const isLabourItem = item.isLabour || 
+                      item.category === 'labour' ||
+                      (item.description && (
+                        item.description.toLowerCase().includes('labour') || 
+                        item.description.toLowerCase().includes('labor')
+                      ));
                     
                     return (
                       <tr 
-                        key={item.id || index}
+                        key={item.id || `item-${index}`}
                         className={isLabourItem ? 'labour-row' : ''}
                       >
                         <td className="description-cell">
-                          {item.description || item.name || 'Item'}
+                          {item.description || 'Item'}
+                          {isLabourItem && invoice.cisApplied && ' (CIS Applicable)'}
+                        </td>
+                        <td className="quantity-cell text-center">
+                          {quantity}
                         </td>
                         <td className="amount-cell text-right">
                           £{Math.abs(amount).toFixed(2)}
@@ -163,12 +186,12 @@ const InvoicePreview = ({ invoice, settings, printMode = false }) => {
                   })
                 }
                 
-                {/* If we have CIS deductions, show a subtotal */}
+                {/* If we have CIS deductions, show a subtotal of all non-CIS items */}
                 {hasCisDeduction && (
                   <tr className="subtotal-row">
-                    <td className="text-right">Subtotal</td>
+                    <td className="text-right" colSpan="2">Subtotal</td>
                     <td className="text-right">
-                      £{invoice.items
+                      £{invoice.lineItems
                         .filter(item => item.type !== 'cis')
                         .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
                         .toFixed(2)}
@@ -176,21 +199,22 @@ const InvoicePreview = ({ invoice, settings, printMode = false }) => {
                   </tr>
                 )}
                 
-                {/* Now add CIS deduction items */}
-                {invoice.items
+                {/* Now add CIS deduction items with clear styling */}
+                {hasCisDeduction && invoice.lineItems
                   .filter(item => item.type === 'cis')
                   .map((item, index) => {
                     const amount = parseFloat(item.amount) || 0;
                     
                     return (
                       <tr 
-                        key={`cis-${item.id || index}`}
+                        key={item.id || `cis-${index}`}
                         className="cis-deduction-row"
                       >
                         <td className="description-cell">
-                          {item.description || 'CIS Deduction'}
+                          {item.description || 'CIS Deduction (20%)'}
                         </td>
-                        <td className="amount-cell text-right">
+                        <td className="quantity-cell text-center">1</td>
+                        <td className="amount-cell text-right text-danger">
                           -£{Math.abs(amount).toFixed(2)}
                         </td>
                       </tr>
@@ -204,90 +228,49 @@ const InvoicePreview = ({ invoice, settings, printMode = false }) => {
                 <td className="description-cell">
                   {invoice.description || 'Invoice payment'}
                 </td>
+                <td className="quantity-cell text-center">1</td>
                 <td className="amount-cell text-right">
-                  £{invoice.amount.toFixed(2)}
+                  £{(invoice.amount || 0).toFixed(2)}
                 </td>
               </tr>
             )}
             
             {/* Total row */}
             <tr className="total-row">
-              <td className="total-label">Total</td>
+              <td className="total-label" colSpan="2">Total</td>
               <td className="total-value">
-                £{invoice.amount.toFixed(2)}
+                £{(invoice.amount || 0).toFixed(2)}
               </td>
             </tr>
           </tbody>
         </table>
       </div>
       
-      {/* Payment instructions and CIS information */}
-      <div className="invoice-info-grid">
-        <div className="payment-info">
-          <h3 className="section-header">Payment Instructions:</h3>
-          <div className="payment-details">
-            <p><span className="detail-label">Bank:</span> {settings.bank?.name || 'Not specified'}</p>
-            <p><span className="detail-label">Account Name:</span> {settings.bank?.accountName || 'Not specified'}</p>
-            <p><span className="detail-label">Account Number:</span> {settings.bank?.accountNumber || 'Not specified'}</p>
-            <p><span className="detail-label">Sort Code:</span> {settings.bank?.sortCode || 'Not specified'}</p>
-            
-            {/* Show IBAN and BIC if available */}
-            {settings.bank?.iban && (
-              <p><span className="detail-label">IBAN:</span> {settings.bank.iban}</p>
-            )}
-            {settings.bank?.bic && (
-              <p><span className="detail-label">BIC/SWIFT:</span> {settings.bank.bic}</p>
-            )}
-            
-            {/* Payment reference */}
-            {settings.bank?.paymentReference && (
-              <p>
-                <span className="detail-label">Payment Reference:</span>{' '}
-                {settings.bank.paymentReference.replace(
-                  '[Invoice Number]',
-                  invoice.invoiceNumber || `INV-${invoice.id?.substring(0, 6)}`
-                )}
-              </p>
-            )}
-          </div>
-        </div>
-        
-        {/* CIS Information */}
-        {hasCisDeduction && (
-          <div className="cis-info">
-            <h3 className="section-header">CIS Information:</h3>
-            <div className="cis-details">
-              <p>
-                This invoice includes a Construction Industry Scheme (CIS) deduction
-                as required by HMRC.
-              </p>
-              
-              {/* Get CIS details from first CIS item or settings */}
-              {(() => {
-                const cisItem = invoice.items?.find(item => item.type === 'cis');
-                const cisDetails = cisItem?.cisDetails || settings.cis;
-                const cisRate = cisItem?.cisRate || 20;
-                
-                return (
-                  <div className="cis-details-box">
-                    <p className="font-medium">CIS Details:</p>
-                    {cisDetails?.companyName && (
-                      <p><span className="detail-label">Company:</span> {cisDetails.companyName}</p>
-                    )}
-                    {cisDetails?.utr && (
-                      <p><span className="detail-label">UTR Number:</span> {cisDetails.utr}</p>
-                    )}
-                    {cisDetails?.niNumber && (
-                      <p><span className="detail-label">NI Number:</span> {cisDetails.niNumber}</p>
-                    )}
-                    <p><span className="detail-label">CIS Rate:</span> {cisRate}%</p>
-                  </div>
-                );
-              })()}
+      {/* CIS Information with more detailed explanation */}
+      {invoice.cisApplied && (
+        <div className="cis-information">
+          <h3 className="section-header">Construction Industry Scheme (CIS) Information</h3>
+          <div className="cis-grid">
+            <div className="cis-field">
+              <span className="cis-label">Name:</span>
+              <span className="cis-value">{cisSettings.companyName || 'Not Set'}</span>
+            </div>
+            <div className="cis-field">
+              <span className="cis-label">UTR Number:</span>
+              <span className="cis-value">{cisSettings.utr || 'Not Set'}</span>
+            </div>
+            <div className="cis-field">
+              <span className="cis-label">National Insurance Number:</span>
+              <span className="cis-value">{cisSettings.niNumber || 'Not Set'}</span>
             </div>
           </div>
-        )}
-      </div>
+          <div className="cis-note">
+            <p>
+              As required by the Construction Industry Scheme, a 20% tax deduction of <strong>£{(invoice.cisDeduction || 0).toFixed(2)}</strong> has been applied to labor charges only.
+            </p>
+          </div>
+        </div>
+      )}
       
       {/* Additional notes */}
       {invoice.notes && (
@@ -300,9 +283,9 @@ const InvoicePreview = ({ invoice, settings, printMode = false }) => {
       )}
       
       {/* Footer */}
-      {settings.invoice?.footer && (
+      {invoiceSettings.footer && (
         <div className="invoice-footer">
-          {settings.invoice.footer}
+          {invoiceSettings.footer}
         </div>
       )}
     </div>

@@ -80,12 +80,22 @@ const QuoteBuilder = () => {
   // Fetch quote if we have an ID
   const { data: quote, isLoading: isLoadingQuote, refetch: refetchQuote } = useQuery(
     ['quote', id],
-    () => api.quotes.getById(id),
+    () => {
+      console.log("Fetching quote with ID:", id);
+      return api.quotes.getById(id);
+    },
     {
       enabled: !!id,
+      retry: 1, // Only retry once to avoid infinite loop on real errors
       onSuccess: (data) => {
-        if (data) {
-          console.log("Loaded quote data:", data); // Debug log
+        try {
+          console.log("API returned quote data:", data); // Debug log
+          
+          if (!data) {
+            console.error("Quote data is null or undefined");
+            addNotification("Error loading quote: data is missing", "error");
+            return;
+          }
           
           // Don't need to restructure client data, our API layer handles that now
           setQuoteDetails({
@@ -114,11 +124,9 @@ const QuoteBuilder = () => {
             ...data
           });
           
-          // Handle items with better error checking
-          console.log("Selected items from API:", data.selectedItems);
-          
           // Make sure selectedItems is an array, even if it's null or undefined in data
           const items = Array.isArray(data.selectedItems) ? data.selectedItems : [];
+          console.log("Processing selected items:", items.length > 0 ? items : "Empty array");
           
           if (items.length > 0) {
             // Map and validate each item to ensure all required properties exist
@@ -134,17 +142,13 @@ const QuoteBuilder = () => {
               description: item.description || '',
               category: item.category || ''
             })));
-            console.log("Set selectedItems with:", items.length, "items");
           } else {
-            console.log("No items found in quote data, using empty array");
             setSelectedItems([]);
           }
           
-          // Handle hidden costs with better error checking
-          console.log("Hidden costs from API:", data.hiddenCosts);
-          
           // Make sure hiddenCosts is an array, even if it's null or undefined in data
           const costs = Array.isArray(data.hiddenCosts) ? data.hiddenCosts : [];
+          console.log("Processing hidden costs:", costs.length > 0 ? costs : "Empty array");
           
           if (costs.length > 0) {
             // Map and validate each cost to ensure all required properties exist
@@ -153,39 +157,24 @@ const QuoteBuilder = () => {
               name: cost.name || 'Unnamed Cost',
               amount: parseFloat(cost.amount) || 0
             })));
-            console.log("Set hiddenCosts with:", costs.length, "costs");
           } else {
-            console.log("No hidden costs found in quote data, using empty array");
             setHiddenCosts([]);
           }
           
           // Set global markup with fallback
           if (typeof data.globalMarkup === 'number' && !isNaN(data.globalMarkup)) {
             setGlobalMarkup(data.globalMarkup);
-            console.log("Set globalMarkup to:", data.globalMarkup);
-          } else {
-            console.log("Using default globalMarkup:", globalMarkup);
           }
           
           // Set distribution method with fallback
           if (data.distributionMethod && ['even', 'proportional'].includes(data.distributionMethod)) {
             setDistributionMethod(data.distributionMethod);
-            console.log("Set distributionMethod to:", data.distributionMethod);
-          } else {
-            console.log("Using default distributionMethod:", distributionMethod);
           }
           
-          // Log the complete resolved state
-          console.log("Final state after loading:", {
-            quoteDetails: data,
-            selectedItems: Array.isArray(data.selectedItems) ? data.selectedItems.length : 0,
-            hiddenCosts: Array.isArray(data.hiddenCosts) ? data.hiddenCosts.length : 0,
-            globalMarkup: data.globalMarkup || globalMarkup,
-            distributionMethod: data.distributionMethod || distributionMethod
-          });
-        } else {
-          console.error("Quote data is null or undefined");
-          addNotification("Error loading quote: data is missing", "error");
+          console.log("Quote data successfully processed");
+        } catch (error) {
+          console.error("Error processing quote data:", error);
+          addNotification(`Error processing quote data: ${error.message}`, 'error');
         }
       },
       onError: (error) => {
@@ -619,6 +608,99 @@ const QuoteBuilder = () => {
     return supplier ? supplier.name : 'Unknown Supplier';
   };
   
+  // Create invoice helper function inside component
+  const createInvoiceFromQuote = (quote, quoteData, amount, description, type) => {
+    // Generate invoice number with current year and random number
+    const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+    
+    // Set due date (14 days from now for deposit, 30 days for others)
+    const today = new Date();
+    const dueDate = new Date(today);
+    dueDate.setDate(dueDate.getDate() + (type === 'deposit' ? 14 : 30));
+    
+    // Get client details
+    const clientName = quote.client.name || '';
+    const clientCompany = quote.client.company || '';
+    
+    return {
+      id: Date.now().toString() + Math.floor(Math.random() * 1000),
+      invoiceNumber,
+      status: 'pending',
+      quoteId: quote.id,
+      invoiceDate: today.toISOString().split('T')[0],
+      dueDate: dueDate.toISOString().split('T')[0],
+      
+      // Client details
+      clientName,
+      clientCompany,
+      clientEmail: quote.client.email || '',
+      clientPhone: quote.client.phone || '',
+      clientAddress: quote.client.address || '',
+      
+      // Invoice details
+      amount: amount,
+      description: `${description} for ${clientCompany ? clientCompany : 'project'}`,
+      
+      // Notes
+      notes: `This invoice represents the ${description.toLowerCase()} as outlined in Quote Reference: ${quote.id || 'N/A'}.`,
+      
+      // Metadata
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      
+      // Type of invoice (useful for filtering)
+      invoiceType: type
+    };
+  };
+
+  // Replace the existing handleGenerateInvoice function with this one
+  const handleGenerateInvoice = async () => {
+    try {
+      // First, ensure the quote is saved
+      await handleSaveQuote();
+      
+      // Show a notification
+      addNotification('Navigating to invoice builder...', 'info');
+      
+      // Get the payment term type
+      const paymentTerms = quoteDetails.paymentTerms;
+      
+      // Calculate amounts based on payment terms
+      let amounts = [];
+      let types = [];
+      
+      if (paymentTerms === '1') {
+        // 50% deposit, 50% on completion
+        amounts = [quoteData.grandTotal * 0.5, quoteData.grandTotal * 0.5];
+        types = ['Deposit (50%)', 'Final Payment (50%)'];
+      } else if (paymentTerms === '2') {
+        // 50% deposit, 25% on joinery completion, 25% final
+        amounts = [
+          quoteData.grandTotal * 0.5, 
+          quoteData.grandTotal * 0.25, 
+          quoteData.grandTotal * 0.25
+        ];
+        types = ['Deposit (50%)', 'Interim Payment (25%)', 'Final Payment (25%)'];
+      } else if (paymentTerms === '4') {
+        // Full payment before delivery
+        amounts = [quoteData.grandTotal];
+        types = ['Full Payment'];
+      } else {
+        // Custom terms - create single invoice
+        amounts = [quoteData.grandTotal];
+        types = ['Custom'];
+      }
+      
+      // Navigate to invoice builder with the first invoice details
+      // Pass the amount and type for the first invoice
+      navigate(`/invoices/new?quoteId=${quoteDetails.id}&amount=${amounts[0]}&type=${encodeURIComponent(types[0])}&total=${quoteData.grandTotal}`);
+      
+    } catch (error) {
+      console.error('Error navigating to invoice builder:', error);
+      addNotification(`Error: ${error.message}`, 'error');
+    }
+  };
+
   // Header action buttons
   const headerActions = (
     <div className="action-buttons" style={{ position: 'relative', top: '-25px' }}>
@@ -653,13 +735,21 @@ const QuoteBuilder = () => {
       <Button 
         variant="primary" 
         size="sm"
+        style={{ marginRight: '5px' }}
         onClick={safeExportPDF} // Use the safer export function here
       >
         Export PDF
       </Button>
+      <Button 
+        variant="primary" 
+        size="sm"
+        onClick={handleGenerateInvoice}
+      >
+        Generate Invoice
+      </Button>
     </div>
   );
-  
+
   return (
     <PageLayout title={id ? 'Edit Quote' : 'Create Quote'} actions={headerActions}>
       <div className="tabs-container">

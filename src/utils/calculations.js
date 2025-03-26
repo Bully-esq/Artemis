@@ -93,88 +93,91 @@ export function calculateQuoteData(selectedItems = [], hiddenCosts = [], globalM
   }
   
   /**
-   * Calculate payment schedule based on quote data and payment terms
+   * Calculate payment schedule based on quote details
+   * 
    * @param {Object} quote - The quote object
-   * @returns {Array} Array of payment schedule items
+   * @returns {Array} Array of payment stages
    */
-  export function calculatePaymentSchedule(quote) {
-    if (!quote) {
-      return [];
-    }
+  export const calculatePaymentSchedule = (quote) => {
+    if (!quote) return [];
     
-    // Get the total quote amount
-    const quoteData = calculateQuoteData(
-      quote.selectedItems || [], 
-      quote.hiddenCosts || [], 
-      quote.globalMarkup || 20, 
-      quote.distributionMethod || 'even'
-    );
+    // Determine the total amount
+    const total = typeof quote.grandTotal === 'number' 
+      ? quote.grandTotal 
+      : (calculateQuoteData(
+          quote.selectedItems || [], 
+          quote.hiddenCosts || [], 
+          quote.globalMarkup || 0, 
+          quote.distributionMethod || 'even'
+        ).grandTotal);
     
-    const quoteTotal = quoteData.grandTotal;
+    // Get payment terms
+    const paymentTerms = quote.paymentTerms;
     
-    // Determine payment schedule based on payment terms
-    const schedule = [];
+    let schedule = [];
     
-    switch (quote.paymentTerms) {
-      case '1': // 50% deposit, 50% on completion
-        schedule.push({
+    if (paymentTerms === '1') {
+      // 50% deposit, 50% on completion
+      schedule = [
+        {
           stage: 'deposit',
-          description: '50% Deposit',
-          amount: quoteTotal * 0.5,
-          dueWhen: 'Before work begins'
-        });
-        schedule.push({
+          description: 'Deposit - 50%',
+          amount: total * 0.5,
+          dueWhen: 'On order confirmation'
+        },
+        {
           stage: 'final',
-          description: '50% Final Payment',
-          amount: quoteTotal * 0.5,
-          dueWhen: 'Upon completion'
-        });
-        break;
-      
-      case '2': // 50% deposit, 25% on joinery completion, 25% on final completion
-        schedule.push({
+          description: 'Final Payment - 50%',
+          amount: total * 0.5,
+          dueWhen: 'On completion of work'
+        }
+      ];
+    } else if (paymentTerms === '2') {
+      // 50% deposit, 25% on joinery completion, 25% final
+      schedule = [
+        {
           stage: 'deposit',
-          description: '50% Deposit',
-          amount: quoteTotal * 0.5,
-          dueWhen: 'Before work begins'
-        });
-        schedule.push({
+          description: 'Deposit - 50%',
+          amount: total * 0.5,
+          dueWhen: 'On order confirmation'
+        },
+        {
           stage: 'interim',
-          description: '25% Interim Payment',
-          amount: quoteTotal * 0.25,
-          dueWhen: 'On joinery completion'
-        });
-        schedule.push({
+          description: 'Interim Payment - 25%',
+          amount: total * 0.25,
+          dueWhen: 'On completion of joinery'
+        },
+        {
           stage: 'final',
-          description: '25% Final Payment',
-          amount: quoteTotal * 0.25,
-          dueWhen: 'Upon completion'
-        });
-        break;
-      
-      case '4': // Full payment before delivery
-        schedule.push({
+          description: 'Final Payment - 25%',
+          amount: total * 0.25,
+          dueWhen: 'On completion of work'
+        }
+      ];
+    } else if (paymentTerms === '4') {
+      // Full payment before delivery
+      schedule = [
+        {
           stage: 'full',
-          description: 'Full Payment',
-          amount: quoteTotal,
+          description: 'Full Payment - 100%',
+          amount: total,
           dueWhen: 'Before delivery'
-        });
-        break;
-      
-      case '3': // Custom terms
-      default:
-        // For custom terms, just create a single payment
-        schedule.push({
+        }
+      ];
+    } else if (paymentTerms === '3' && quote.customTerms) {
+      // Custom payment terms - just create a single payment
+      schedule = [
+        {
           stage: 'custom',
-          description: 'Custom Payment',
-          amount: quoteTotal,
-          dueWhen: 'As per agreement'
-        });
-        break;
+          description: 'Payment - 100%',
+          amount: total,
+          dueWhen: 'As per custom terms'
+        }
+      ];
     }
     
     return schedule;
-  }
+  };
   
   /**
    * Calculate CIS deduction for an invoice
