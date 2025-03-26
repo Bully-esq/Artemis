@@ -207,36 +207,36 @@ const QuoteList = () => {
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto p-2"> {/* Added p-2 padding to the table container */}
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quote</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th scope="col" className="px-10 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                  <th scope="col" className="px-10 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quote</th>
+                  <th scope="col" className="px-10 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th scope="col" className="px-10 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {sortedQuotes.map((quote) => (
                   <tr key={quote.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{quote.clientName || 'Unknown'}</div>
-                      {quote.clientCompany && <div className="text-sm text-gray-500">{quote.clientCompany}</div>}
+                    <td className="px-10 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900 pl-3">{quote.clientName || 'Unknown'}</div>
+                      {quote.clientCompany && <div className="text-sm text-gray-500 pl-3">{quote.clientCompany}</div>}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{quote.name || `Quote #${quote.id.substring(0, 8)}`}</div>
+                    <td className="px-10 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 pl-3">{quote.name || `Quote #${quote.id.substring(0, 8)}`}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">
+                    <td className="px-10 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500 pl-3">
                         {quote.date ? new Date(quote.date).toLocaleDateString() : 'No date'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-10 py-4 whitespace-nowrap text-right text-sm font-medium pr-8">
                       <Button
                         variant="secondary"
                         size="sm"
-                        className="mr-2"
+                        className="mr-4" // Increased margin between buttons
                         onClick={() => navigate(`/quotes/${quote.id}`)}
                       >
                         Edit

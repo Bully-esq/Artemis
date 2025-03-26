@@ -3733,3 +3733,55 @@ input, textarea, select {
     transform: rotate(360deg);
   }
 }
+
+/* Table spacing improvements */
+.table-container {
+  padding: 12px;
+}
+
+table.spaced-table th {
+  padding: 12px 24px;
+  text-align: left;
+}
+
+table.spaced-table td {
+  padding: 16px 24px;
+}
+
+table.spaced-table td .cell-content {
+  padding-left: 8px;
+}
+
+.action-cell {
+  padding-right: 20px !important;
+  text-align: right;
+}
+
+.action-buttons .btn {
+  margin-right: 12px;
+}
+
+.action-buttons .btn:last-child {
+  margin-right: 0;
+}
+
+/* Invoice list improvements */
+.recent-item {
+  padding: 16px 24px;
+}
+
+.item-details {
+  padding-left: 12px;
+}
+
+.item-actions {
+  padding-right: 12px;
+}
+
+.action-buttons {
+  margin-left: 16px;
+}
+
+.button-group {
+  margin-left: 12px;
+}

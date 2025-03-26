@@ -206,9 +206,10 @@ const InvoiceList = () => {
                 key={invoice.id} 
                 className="recent-item"
                 onClick={() => navigate(`/invoices/${invoice.id}`)}
+                style={{ padding: '16px 24px' }} // Add more padding to the item
               >
                 <div className="item-row">
-                  <div className="item-details">
+                  <div className="item-details" style={{ paddingLeft: '8px' }}> {/* Add left padding */}
                     <p className="item-title">
                       {invoice.invoiceNumber || `INV-${invoice.id.substring(0, 8)}`}
                       {invoice.clientName && (
@@ -221,15 +222,15 @@ const InvoiceList = () => {
                       {invoice.invoiceDate ? `Date: ${new Date(invoice.invoiceDate).toLocaleDateString()}` : ''}
                     </p>
                   </div>
-                  <div className="item-actions">
+                  <div className="item-actions" style={{ paddingRight: '8px' }}> {/* Add right padding */}
                     <p className="invoice-amount">
                       {formatCurrency(invoice.amount)}
                     </p>
-                    <div className="action-buttons">
+                    <div className="action-buttons" style={{ marginLeft: '16px' }}> {/* Add margin to action buttons */}
                       <span className={getStatusBadgeClass(invoice.status)}>
                         {invoice.status === 'paid' ? 'Paid' : 'Pending'}
                       </span>
-                      <div className="button-group">
+                      <div className="button-group" style={{ marginLeft: '12px' }}> {/* Add margin between status badge and button */}
                         <button
                           className="view-button"
                           onClick={(e) => {
