@@ -25,6 +25,18 @@ const SupplierList = () => {
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
   const [currentSupplier, setCurrentSupplier] = useState(null);
   const [activeTab, setActiveTab] = useState('suppliers');
+  const [showCatalogItemDialog, setShowCatalogItemDialog] = useState(false);
+  const [catalogItemForm, setCatalogItemForm] = useState({
+    id: '',
+    name: '',
+    description: '',
+    category: '',
+    supplier: '',
+    cost: '',
+    leadTime: '',
+    unit: '',
+    hidden: false
+  });
   
   // Form state for add/edit
   const [supplierForm, setSupplierForm] = useState({
@@ -34,6 +46,24 @@ const SupplierList = () => {
     phone: '',
     notes: ''
   });
+
+  // Define categories for catalog items
+  const categories = [
+    { id: 'timber', name: 'Timber' },
+    { id: 'hardware', name: 'Hardware' },
+    { id: 'fixtures', name: 'Fixtures' },
+    { id: 'glass', name: 'Glass' },
+    { id: 'labour', name: 'Labour' },
+    { id: 'other', name: 'Other' }
+  ];
+
+  // Add a simple handleSelectItem function
+  const handleSelectItem = (item) => {
+    // You can implement selection behavior here if needed
+    console.log('Item selected:', item);
+    // For now, we'll just show a notification
+    addNotification(`Selected item: ${item.name}`, 'info');
+  };
   
   // Query suppliers data
   const { 
@@ -62,6 +92,38 @@ const SupplierList = () => {
       },
       onError: (err) => {
         addNotification(`Error updating suppliers: ${err.message}`, 'error');
+      }
+    }
+  );
+
+  // Add this new mutation for saving catalog items
+  const saveCatalogItemMutation = useMutation(
+    (itemData) => {
+      const items = queryClient.getQueryData('catalog') || [];
+      
+      // If it's a new item, add it to the collection
+      if (!itemData.id) {
+        const newItem = {
+          ...itemData,
+          id: Date.now().toString(), // Generate a unique ID
+        };
+        return api.catalog.update([...items, newItem]);
+      }
+      
+      // If it's an existing item, update it in the collection
+      const updatedItems = items.map(item => 
+        item.id === itemData.id ? { ...item, ...itemData } : item
+      );
+      return api.catalog.update(updatedItems);
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('catalog');
+        setShowCatalogItemDialog(false);
+        addNotification('Catalog item saved successfully', 'success');
+      },
+      onError: (error) => {
+        addNotification(`Error saving catalog item: ${error.message}`, 'error');
       }
     }
   );
@@ -186,56 +248,84 @@ const SupplierList = () => {
   
   // Handle navigation for adding/editing catalog items
   const handleManageCatalogItem = (itemToEdit = null) => {
-    // Navigate to a dedicated page or open a modal for catalog item management
-    // For now, let's navigate to a placeholder route, assuming it exists
-    // You might need to create this route/page or implement a modal
-    navigate('/suppliers/catalog', { state: { itemToEdit } });
+    if (itemToEdit) {
+      // If editing existing item, populate the form
+      setCatalogItemForm({
+        id: itemToEdit.id || '',
+        name: itemToEdit.name || '',
+        description: itemToEdit.description || '',
+        category: itemToEdit.category || '',
+        supplier: itemToEdit.supplier || '',
+        cost: itemToEdit.cost || '',
+        leadTime: itemToEdit.leadTime || '',
+        unit: itemToEdit.unit || '',
+        hidden: itemToEdit.hidden || false
+      });
+    } else {
+      // If adding new item, reset the form
+      setCatalogItemForm({
+        id: '',
+        name: '',
+        description: '',
+        category: '',
+        supplier: '',
+        cost: '',
+        leadTime: '',
+        unit: '',
+        hidden: false
+      });
+    }
+    setShowCatalogItemDialog(true);
   };
 
-  // Placeholder for selecting an item (if needed elsewhere)
-  const handleSelectItem = (item) => {
-    console.log('Selected item:', item);
-    // Implement selection logic if required by other parts of the application
+  // Add this function to handle the form submission
+  const handleSaveCatalogItem = () => {
+    // Validation
+    if (!catalogItemForm.name.trim()) {
+      addNotification('Item name is required', 'error');
+      return;
+    }
+    
+    if (!catalogItemForm.category) {
+      addNotification('Category is required', 'error');
+      return;
+    }
+    
+    // Parse the cost to ensure it's a number
+    const formattedItem = {
+      ...catalogItemForm,
+      cost: catalogItemForm.cost === '' ? 0 : parseFloat(catalogItemForm.cost),
+      leadTime: catalogItemForm.leadTime === '' ? 0 : parseInt(catalogItemForm.leadTime, 10)
+    };
+    
+    saveCatalogItemMutation.mutate(formattedItem);
   };
 
-  // Render loading state
+  // Handle form input changes
+  const handleCatalogItemFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setCatalogItemForm({
+      ...catalogItemForm,
+      [name]: type === 'checkbox' ? checked : value
+    });
+  };
+
   if (isLoading) {
     return (
-      <PageLayout 
-        title="Suppliers & Catalog" 
-        actions={
-          <Button variant="primary" onClick={handleAddSupplier}>
-            <svg className="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Supplier
-          </Button>
-        }
-      >
-        <Loading message="Loading suppliers..." />
+      <PageLayout title="Suppliers & Catalog">
+        <Loading />
       </PageLayout>
     );
   }
   
-  // Render error state
   if (isError) {
     return (
-      <PageLayout 
-        title="Suppliers & Catalog"
-        actions={
-          <Button variant="primary" onClick={handleAddSupplier}>
-            <svg className="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Supplier
-          </Button>
-        }
-      >
-        <div className="error-message">
-          <p>Error loading suppliers: {error?.message || 'Unknown error'}</p>
+      <PageLayout title="Suppliers & Catalog">
+        <div className="error-state">
+          <h3>Error loading suppliers</h3>
+          <p>{error.message}</p>
           <Button 
-            className="mt-3" 
-            variant="secondary" 
+            variant="primary" 
             onClick={() => queryClient.invalidateQueries('suppliers')}
           >
             Retry
@@ -281,7 +371,7 @@ const SupplierList = () => {
             <span>View Catalog</span>
           </div>
           
-          <div onClick={() => navigate('/suppliers/catalog')} className="quick-action-btn">
+          <div onClick={() => handleManageCatalogItem()} className="quick-action-btn">
             <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
@@ -561,6 +651,132 @@ const SupplierList = () => {
             <p className="confirm-warning">
               This action cannot be undone. This will permanently delete the supplier and remove it from all associated catalog items.
             </p>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Add this catalog item dialog */}
+      {showCatalogItemDialog && (
+        <Dialog
+          title={catalogItemForm.id ? "Edit Catalog Item" : "Add Catalog Item"}
+          onClose={() => setShowCatalogItemDialog(false)}
+          footer={
+            <div className="dialog-footer">
+              <Button 
+                variant="secondary" 
+                onClick={() => setShowCatalogItemDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="primary" 
+                onClick={handleSaveCatalogItem}
+                isLoading={saveCatalogItemMutation.isLoading}
+              >
+                {catalogItemForm.id ? "Update Item" : "Save Item"}
+              </Button>
+            </div>
+          }
+        >
+          <div className="form-container">
+            <FormField
+              label="Item Name"
+              name="name"
+              value={catalogItemForm.name}
+              onChange={handleCatalogItemFormChange}
+              required
+              placeholder="Enter item name"
+            />
+            
+            <FormField
+              label="Description"
+              name="description"
+              type="textarea"
+              value={catalogItemForm.description}
+              onChange={handleCatalogItemFormChange}
+              placeholder="Enter item description"
+            />
+            
+            <div className="form-row">
+              <div className="form-column">
+                <label className="form-label">Category</label>
+                <select 
+                  name="category"
+                  value={catalogItemForm.category}
+                  onChange={handleCatalogItemFormChange}
+                  className="form-select"
+                >
+                  <option value="">Select a category</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="form-column">
+                <label className="form-label">Supplier</label>
+                <select 
+                  name="supplier"
+                  value={catalogItemForm.supplier}
+                  onChange={handleCatalogItemFormChange}
+                  className="form-select"
+                >
+                  <option value="">Select a supplier</option>
+                  {suppliers?.map(supplier => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <div className="form-row">
+              <FormField
+                label="Cost (£)"
+                name="cost"
+                type="number"
+                step="0.01"
+                min="0"
+                value={catalogItemForm.cost}
+                onChange={handleCatalogItemFormChange}
+                placeholder="0.00"
+              />
+              
+              <FormField
+                label="Lead Time (days)"
+                name="leadTime"
+                type="number"
+                min="0"
+                value={catalogItemForm.leadTime}
+                onChange={handleCatalogItemFormChange}
+                placeholder="0"
+              />
+            </div>
+            
+            <FormField
+              label="Unit"
+              name="unit"
+              value={catalogItemForm.unit}
+              onChange={handleCatalogItemFormChange}
+              placeholder="e.g. each, meter, hour"
+            />
+            
+            <div className="form-checkbox">
+              <input
+                type="checkbox"
+                id="hidden"
+                name="hidden"
+                checked={catalogItemForm.hidden}
+                onChange={handleCatalogItemFormChange}
+                className="checkbox"
+              />
+              <label htmlFor="hidden" className="checkbox-label">
+                Hide this item from lists and quotes
+              </label>
+            </div>
           </div>
         </Dialog>
       )}

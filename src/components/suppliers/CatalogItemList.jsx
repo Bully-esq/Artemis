@@ -242,7 +242,7 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
                       <div className="item-name-container">
                         <div>
                           <div className="item-name">
-                            {item.name?.endsWith('0') ? item.name.slice(0, -1) : item.name}
+                            {item.name}
                             {item.hidden && (
                               <span className="hidden-badge">
                                 Hidden
