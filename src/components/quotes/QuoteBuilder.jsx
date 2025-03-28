@@ -32,6 +32,7 @@ const QuoteBuilder = () => {
   const [showItemDialog, setShowItemDialog] = useState(false);
   const [showHiddenCostDialog, setShowHiddenCostDialog] = useState(false);
   const [newHiddenCost, setNewHiddenCost] = useState({ name: '', amount: 0 });
+  const [editingItem, setEditingItem] = useState(null);
   
   // Add these new state variables for the custom item feature
   const [showCustomItemForm, setShowCustomItemForm] = useState(false);
@@ -1059,6 +1060,21 @@ const QuoteBuilder = () => {
                   onChange={(e) => setGlobalMarkup(parseInt(e.target.value))}
                   className="form-range"
                 />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  style={{ marginTop: '5px' }}
+                  onClick={() => {
+                    const updatedItems = selectedItems.map(item => ({
+                      ...item,
+                      markup: globalMarkup
+                    }));
+                    setSelectedItems(updatedItems);
+                    addNotification(`Applied ${globalMarkup}% markup to all items`, 'success');
+                  }}
+                >
+                  Apply to All Items
+                </Button>
               </div>
               
               {/* Add Custom Item Section */}
@@ -1164,6 +1180,7 @@ const QuoteBuilder = () => {
                           <button
                             className="delete-button"
                             onClick={() => handleRemoveItem(index)}
+                            aria-label="Remove item"
                           >
                             <svg className="delete-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1171,6 +1188,7 @@ const QuoteBuilder = () => {
                           </button>
                         </div>
                         
+                        {/* Rest of the form fields */}
                         <div className="item-fields-grid">
                           <div className="form-field">
                             <label className="field-label">Quantity</label>
@@ -1222,7 +1240,7 @@ const QuoteBuilder = () => {
                           </div>
                         </div>
                         
-                        <div className="form-field">
+                        <div className="form-field" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
                           <label className="checkbox-label">
                             <input
                               type="checkbox"
@@ -1234,6 +1252,24 @@ const QuoteBuilder = () => {
                               Hide in quote
                             </span>
                           </label>
+                          
+                          <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => setEditingItem({ ...item, index })}
+                              style={{ marginLeft: 'auto' }}
+                            >
+                              Edit Item
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleRemoveItem(index)}
+                            >
+                              Remove Item
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1833,6 +1869,100 @@ const QuoteBuilder = () => {
             </div>
           </div>
         </div>
+      </Dialog>
+
+      {/* Edit Item Dialog */}
+      <Dialog
+        isOpen={!!editingItem}
+        onClose={() => setEditingItem(null)}
+        title="Edit Item"
+      >
+        {editingItem && (
+          <>
+            <div className="form-field">
+              <label className="form-label">
+                Item Name
+              </label>
+              <input
+                type="text"
+                value={editingItem.name}
+                onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
+                className="form-input"
+              />
+            </div>
+            
+            <div className="form-field">
+              <label className="form-label">
+                Description
+              </label>
+              <textarea
+                value={editingItem.description || ''}
+                onChange={(e) => setEditingItem({...editingItem, description: e.target.value})}
+                rows="3"
+                className="form-textarea"
+              />
+            </div>
+            
+            <div className="form-row" style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(2, 1fr)', 
+              gap: '1rem' 
+            }}>
+              <div className="form-field">
+                <label className="form-label">
+                  Cost (£)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editingItem.cost}
+                  onChange={(e) => setEditingItem({
+                    ...editingItem, 
+                    cost: e.target.value === '' ? '' : parseFloat(e.target.value) || 0
+                  })}
+                  className="form-input"
+                />
+              </div>
+              
+              <div className="form-field">
+                <label className="form-label">
+                  Category
+                </label>
+                <input
+                  type="text"
+                  value={editingItem.category || ''}
+                  onChange={(e) => setEditingItem({...editingItem, category: e.target.value})}
+                  className="form-input"
+                />
+              </div>
+            </div>
+            
+            <div className="dialog-actions">
+              <Button
+                variant="secondary"
+                onClick={() => setEditingItem(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (editingItem.index !== undefined) {
+                    const newItems = [...selectedItems];
+                    const { index, ...itemWithoutIndex } = editingItem;
+                    newItems[index] = itemWithoutIndex;
+                    setSelectedItems(newItems);
+                    setEditingItem(null);
+                    addNotification("Item updated successfully", "success");
+                  }
+                }}
+              >
+                Save Changes
+              </Button>
+            </div>
+          </>
+        )}
       </Dialog>
     </PageLayout>
   );

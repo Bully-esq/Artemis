@@ -23,6 +23,7 @@ const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
   const companySettings = safeSettings.company || {};
   const invoiceSettings = safeSettings.invoice || {};
   const cisSettings = safeSettings.cis || {};
+  const bankSettings = safeSettings.bank || {};
 
   // Format dates
   const invoiceDate = invoice.invoiceDate 
@@ -292,40 +293,40 @@ const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
       <div className="invoice-bank-details">
         <h3 className="bank-details-title">Bank Details</h3>
         <div className="bank-details-grid">
-          {settings.bank?.name && (
+          {bankSettings.name && (
             <div className="bank-detail">
               <span className="label">Bank:</span>
-              <span className="value">{settings.bank.name}</span>
+              <span className="value">{bankSettings.name}</span>
             </div>
           )}
-          {settings.bank?.accountName && (
+          {bankSettings.accountName && (
             <div className="bank-detail">
               <span className="label">Account Name:</span>
-              <span className="value">{settings.bank.accountName}</span>
+              <span className="value">{bankSettings.accountName}</span>
             </div>
           )}
-          {settings.bank?.accountNumber && (
+          {bankSettings.accountNumber && (
             <div className="bank-detail">
               <span className="label">Account Number:</span>
-              <span className="value">{settings.bank.accountNumber}</span>
+              <span className="value">{bankSettings.accountNumber}</span>
             </div>
           )}
-          {settings.bank?.sortCode && (
+          {bankSettings.sortCode && (
             <div className="bank-detail">
               <span className="label">Sort Code:</span>
-              <span className="value">{settings.bank.sortCode}</span>
+              <span className="value">{bankSettings.sortCode}</span>
             </div>
           )}
-          {settings.bank?.iban && (
+          {bankSettings.iban && (
             <div className="bank-detail">
               <span className="label">IBAN:</span>
-              <span className="value">{settings.bank.iban}</span>
+              <span className="value">{bankSettings.iban}</span>
             </div>
           )}
-          {settings.bank?.bic && (
+          {bankSettings.bic && (
             <div className="bank-detail">
               <span className="label">BIC/SWIFT:</span>
-              <span className="value">{settings.bank.bic}</span>
+              <span className="value">{bankSettings.bic}</span>
             </div>
           )}
         </div>

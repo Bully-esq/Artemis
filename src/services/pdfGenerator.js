@@ -42,19 +42,27 @@ class PDFGenerator {
     try {
       // Configure html2pdf options
       const html2pdfOptions = {
-        margin: pdfOptions.margin,
+        margin: 10,
         filename: pdfOptions.filename,
         image: { type: 'jpeg', quality: pdfOptions.quality },
         html2canvas: { 
           scale: 2,
           useCORS: true,
           logging: false,
-          letterRendering: true
+          letterRendering: true,
+          allowTaint: true,
+          foreignObjectRendering: true 
         },
         jsPDF: { 
           unit: 'mm', 
-          format: pdfOptions.size, 
-          orientation: pdfOptions.orientation 
+          format: 'a4', 
+          orientation: 'portrait' 
+        },
+        pagebreak: { 
+          mode: ['avoid-all', 'css', 'legacy'],
+          before: '.page-break',
+          avoid: ['tr', 'td', '.invoice-bank-details', '.cis-information', 
+                  '.quote-terms-section', '.exclusions-list', '.terms-section']
         }
       };
 
@@ -392,7 +400,7 @@ class PDFGenerator {
         </div>
         
         <!-- Items table -->
-        <table class="items-table">
+        <table class="items-table" style="page-break-inside: avoid;">
           <thead>
             <tr>
               <th>Item Description</th>
@@ -419,8 +427,9 @@ class PDFGenerator {
           </tbody>
         </table>
         
-        <!-- Terms section -->
-        <div class="terms-section">
+        <!-- Add a page break before the terms section if there are many items -->
+        ${quoteData.itemTotals.length > 10 ? '<div class="page-break"></div>' : ''}
+        <div class="terms-section" style="page-break-inside: avoid;">
           <h3>Terms and Conditions:</h3>
           
           <h4>Payment Terms:</h4>
@@ -609,6 +618,19 @@ class PDFGenerator {
           background-color: #f3f4f6;
           font-weight: 500;
         }
+        .page-break { 
+          page-break-before: always; 
+          break-before: page; 
+        }
+        .items-table {
+          page-break-inside: avoid;
+        }
+        tr {
+          page-break-inside: avoid;
+        }
+        thead {
+          display: table-header-group;
+        }
       </style>
       
       <div class="invoice-container">
@@ -654,7 +676,7 @@ class PDFGenerator {
         </div>
         
         <!-- Items table -->
-        <table class="items-table">
+        <table class="items-table" style="page-break-inside: avoid;">
           <thead>
             <tr>
               <th>Description</th>
@@ -726,7 +748,7 @@ class PDFGenerator {
         </table>
         
         <!-- Terms section -->
-        <div class="terms-section">
+        <div class="terms-section" style="page-break-inside: avoid;">
           <h3>Terms and Conditions:</h3>
           
           <h4>Payment Instructions:</h4>
@@ -791,7 +813,7 @@ class PDFGenerator {
         </table>
         
         <!-- Terms section -->
-        <div class="terms-section">
+        <div class="terms-section" style="page-break-inside: avoid;">
           <h3>Terms and Conditions:</h3>
           
           <h4>Payment Instructions:</h4>
