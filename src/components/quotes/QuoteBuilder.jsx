@@ -33,6 +33,17 @@ const QuoteBuilder = () => {
   const [showHiddenCostDialog, setShowHiddenCostDialog] = useState(false);
   const [newHiddenCost, setNewHiddenCost] = useState({ name: '', amount: 0 });
   
+  // Add these new state variables for the custom item feature
+  const [showCustomItemForm, setShowCustomItemForm] = useState(false);
+  const [customItem, setCustomItem] = useState({
+    name: '',
+    cost: '',
+    quantity: 1,
+    category: '',
+    description: '',
+    markup: 0
+  });
+  
   // Add debugging and more reliable dialog handling
   const [useAlternativeDialog, setUseAlternativeDialog] = useState(false);
   
@@ -304,6 +315,41 @@ const QuoteBuilder = () => {
     const newCosts = [...hiddenCosts];
     newCosts.splice(index, 1);
     setHiddenCosts(newCosts);
+  };
+  
+  // Add this new handler function for adding custom items
+  const handleAddCustomItem = () => {
+    if (!customItem.name.trim()) {
+      addNotification('Item name is required', 'error');
+      return;
+    }
+    
+    // Create new item with a unique ID
+    const newItem = {
+      ...customItem,
+      id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      cost: parseFloat(customItem.cost) || 0,
+      quantity: parseFloat(customItem.quantity) || 1,
+      markup: customItem.markup !== undefined ? customItem.markup : globalMarkup,
+      supplier: 'custom',
+      hideInQuote: false
+    };
+    
+    // Add to selected items
+    setSelectedItems([...selectedItems, newItem]);
+    
+    // Reset form for next use
+    setCustomItem({
+      name: '',
+      cost: '',
+      quantity: 1,
+      category: '',
+      description: '',
+      markup: globalMarkup
+    });
+    
+    // Show success notification
+    addNotification(`Added custom item: ${newItem.name}`, 'success');
   };
   
   // Save quote function with additional debugging and error handling
@@ -1013,6 +1059,75 @@ const QuoteBuilder = () => {
                   onChange={(e) => setGlobalMarkup(parseInt(e.target.value))}
                   className="form-range"
                 />
+              </div>
+              
+              {/* Add Custom Item Section */}
+              <div className="custom-item-form">
+                <div className="form-field">
+                  <Button 
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setShowCustomItemForm(!showCustomItemForm)}
+                    style={{ marginBottom: '10px' }}
+                  >
+                    {showCustomItemForm ? 'Hide Quick Add Form' : 'Quick Add Item'}
+                  </Button>
+                </div>
+                
+                {showCustomItemForm && (
+                  <div className="card" style={{ padding: '15px', marginBottom: '20px' }}>
+                    <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <FormField
+                        label="Item Name"
+                        value={customItem.name}
+                        onChange={(e) => setCustomItem({...customItem, name: e.target.value})}
+                        className="form-input"
+                      />
+                      <FormField
+                        label="Cost (£)"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={customItem.cost}
+                        onChange={(e) => setCustomItem({...customItem, cost: e.target.value === '' ? '' : parseFloat(e.target.value) || 0})}
+                        className="form-input"
+                      />
+                      <FormField
+                        label="Quantity"
+                        type="number"
+                        min="0.1"
+                        step="0.1"
+                        value={customItem.quantity}
+                        onChange={(e) => setCustomItem({...customItem, quantity: e.target.value === '' ? '' : parseFloat(e.target.value) || 1})}
+                        className="form-input"
+                      />
+                      <FormField
+                        label="Category (optional)"
+                        value={customItem.category}
+                        onChange={(e) => setCustomItem({...customItem, category: e.target.value})}
+                        className="form-input"
+                      />
+                      <div className="form-field" style={{ gridColumn: 'span 2' }}>
+                        <label className="form-label">Description (optional)</label>
+                        <textarea
+                          value={customItem.description}
+                          onChange={(e) => setCustomItem({...customItem, description: e.target.value})}
+                          className="form-textarea"
+                          rows="2"
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+                      <Button
+                        variant="primary"
+                        onClick={handleAddCustomItem}
+                        disabled={!customItem.name || customItem.cost === ''}
+                      >
+                        Add to Quote
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
               
               {selectedItems.length === 0 ? (
