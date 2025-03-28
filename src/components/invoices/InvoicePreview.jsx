@@ -103,18 +103,60 @@ const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
       
       <div className="invoice-info-grid">
         {/* Client information */}
-        <div className="client-info">
-          <h3 className="section-header">Bill To:</h3>
-          <div className="client-details">
-            <p className="client-name">{invoice.clientName || '[Client Name]'}</p>
-            {invoice.clientCompany && <p>{invoice.clientCompany}</p>}
-            {invoice.clientEmail && <p>{invoice.clientEmail}</p>}
-            {invoice.clientPhone && <p>{invoice.clientPhone}</p>}
+        <div className="client-info" style={{ textAlign: 'left !important', width: '100%' }}>
+          <h3 className="section-header" style={{ textAlign: 'left !important' }}>Bill To:</h3>
+          <div className="client-details" style={{ textAlign: 'left !important', display: 'block', width: '100%' }}>
+            <p className="client-name" style={{ textAlign: 'left !important' }}>
+              {invoice.clientName || '[Client Name]'}
+            </p>
+            
+            {invoice.clientCompany && (
+              <p className="client-company" style={{ textAlign: 'left !important' }}>
+                {invoice.clientCompany}
+              </p>
+            )}
+            
             {invoice.clientAddress && (
-              <div className="client-address">
-                {invoice.clientAddress}
+              <div 
+                className="client-address" 
+                style={{
+                  textAlign: 'left !important',
+                  marginBottom: '8px',
+                  lineHeight: '1.2',
+                  display: 'block',
+                  width: '100%',
+                  float: 'left'
+                }}
+              >
+                {invoice.clientAddress.split('\n').map((line, i) => (
+                  <span 
+                    key={i} 
+                    style={{
+                      display: 'block',
+                      marginBottom: '2px',
+                      padding: 0,
+                      textAlign: 'left !important',
+                      width: '100%'
+                    }}
+                  >
+                    {line}
+                  </span>
+                ))}
               </div>
             )}
+            
+            <div className="client-contact-info" style={{ textAlign: 'left !important' }}>
+              {invoice.clientEmail && (
+                <p className="client-email" style={{ textAlign: 'left !important' }}>
+                  Email: {invoice.clientEmail}
+                </p>
+              )}
+              {invoice.clientPhone && (
+                <p className="client-phone" style={{ textAlign: 'left !important' }}>
+                  Phone: {invoice.clientPhone}
+                </p>
+              )}
+            </div>
           </div>
         </div>
         

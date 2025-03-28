@@ -90,13 +90,46 @@
   margin-bottom: 0.5rem;
 }
 
+/* Enhanced client details styling */
+.client-info {
+  text-align: left;
+}
+
+.client-details {
+  margin-bottom: 20px;
+}
+
+.client-details p {
+  margin: 0 0 3px 0;
+  line-height: 1.4;
+}
+
 .client-name {
+  font-weight: 600;
+  margin-bottom: 5px !important;
+}
+
+.client-company {
   font-weight: 500;
+  margin-bottom: 5px !important;
 }
 
 .client-address {
-  margin-top: 0.5rem;
-  white-space: pre-line;
+  margin: 5px 0 8px 0;
+  text-align: left;
+}
+
+.address-line {
+  display: block;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.3 !important;
+}
+
+.client-contact-info {
+  margin-top: 8px;
+  border-top: 1px solid #eee;
+  padding-top: 6px;
 }
 
 .details-grid {

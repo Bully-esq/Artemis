@@ -86,10 +86,12 @@ const QuoteBuilder = () => {
     },
     {
       enabled: !!id,
-      retry: 1, // Only retry once to avoid infinite loop on real errors
+      retry: 1,
+      refetchOnMount: true,     // Add this to always refetch when component mounts
+      staleTime: 0,             // Add this to consider data always stale
       onSuccess: (data) => {
         try {
-          console.log("API returned quote data:", data); // Debug log
+          console.log("API returned quote data:", data);
           
           if (!data) {
             console.error("Quote data is null or undefined");
@@ -97,76 +99,60 @@ const QuoteBuilder = () => {
             return;
           }
           
-          // Don't need to restructure client data, our API layer handles that now
+          // Set quote details from the data
           setQuoteDetails({
-            // Default quote skeleton
             id: id,
             client: {
-              name: '',
-              company: '',
-              email: '',
-              phone: '',
-              address: ''
+              name: data.client?.name || data.clientName || '',
+              company: data.client?.company || data.clientCompany || '',
+              email: data.client?.email || '',
+              phone: data.client?.phone || '',
+              address: data.client?.address || ''
             },
-            date: new Date().toISOString().split('T')[0],
-            validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            paymentTerms: '1',
-            customTerms: '',
-            notes: '',
-            includeDrawingOption: false,
-            exclusions: [
+            date: data.date || new Date().toISOString().split('T')[0],
+            validUntil: data.validUntil || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            paymentTerms: data.paymentTerms || '1',
+            customTerms: data.customTerms || '',
+            notes: data.notes || '',
+            includeDrawingOption: !!data.includeDrawingOption,
+            exclusions: Array.isArray(data.exclusions) ? data.exclusions : [
               'Boarding or fixing the underside of the new staircase.',
               'Forming any under-stair cupboard or paneling.',
               'Making good to any plastered walls or ceilings.',
               'All components will arrive in their natural state, ready for fine sanding and finishing by others.'
-            ],
-            // Override with actual loaded data
-            ...data
+            ]
           });
           
-          // Make sure selectedItems is an array, even if it's null or undefined in data
+          // Process selected items
           const items = Array.isArray(data.selectedItems) ? data.selectedItems : [];
           console.log("Processing selected items:", items.length > 0 ? items : "Empty array");
+          setSelectedItems(items.map(item => ({
+            id: item.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            name: item.name || 'Unnamed Item',
+            cost: parseFloat(item.cost) || 0,
+            supplier: item.supplier || '',
+            quantity: parseFloat(item.quantity) || 1,
+            markup: parseInt(item.markup) || 0,
+            hideInQuote: !!item.hideInQuote,
+            description: item.description || '',
+            category: item.category || ''
+          })));
           
-          if (items.length > 0) {
-            // Map and validate each item to ensure all required properties exist
-            setSelectedItems(items.map(item => ({
-              // Ensure each item has all required properties with defaults
-              id: item.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
-              name: item.name || 'Unnamed Item',
-              cost: parseFloat(item.cost) || 0,
-              supplier: item.supplier || '',
-              quantity: parseFloat(item.quantity) || 1,
-              markup: parseInt(item.markup) || 0,
-              hideInQuote: !!item.hideInQuote,
-              description: item.description || '',
-              category: item.category || ''
-            })));
-          } else {
-            setSelectedItems([]);
-          }
-          
-          // Make sure hiddenCosts is an array, even if it's null or undefined in data
+          // Process hidden costs
           const costs = Array.isArray(data.hiddenCosts) ? data.hiddenCosts : [];
           console.log("Processing hidden costs:", costs.length > 0 ? costs : "Empty array");
+          setHiddenCosts(costs.map(cost => ({
+            id: cost.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            name: cost.name || 'Unnamed Cost',
+            amount: parseFloat(cost.amount) || 0
+          })));
           
-          if (costs.length > 0) {
-            // Map and validate each cost to ensure all required properties exist
-            setHiddenCosts(costs.map(cost => ({
-              id: cost.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
-              name: cost.name || 'Unnamed Cost',
-              amount: parseFloat(cost.amount) || 0
-            })));
-          } else {
-            setHiddenCosts([]);
-          }
-          
-          // Set global markup with fallback
+          // Set global markup
           if (typeof data.globalMarkup === 'number' && !isNaN(data.globalMarkup)) {
             setGlobalMarkup(data.globalMarkup);
           }
           
-          // Set distribution method with fallback
+          // Set distribution method
           if (data.distributionMethod && ['even', 'proportional'].includes(data.distributionMethod)) {
             setDistributionMethod(data.distributionMethod);
           }

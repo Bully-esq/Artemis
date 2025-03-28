@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Update this line to include useEffect
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useAppContext } from '../../context/AppContext';
@@ -16,12 +16,28 @@ const InvoiceList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   
-  // Fetch invoices
-  const { data: invoices, isLoading, isError, error } = useQuery('invoices', api.invoices.getAll, {
+  // Update the query configuration with refetch options
+  const { 
+    data: invoices, 
+    isLoading, 
+    isError, 
+    error, 
+    refetch 
+  } = useQuery('invoices', api.invoices.getAll, {
+    refetchOnMount: true,   // Always refetch when component mounts
+    staleTime: 0,           // Consider data always stale
+    cacheTime: 60000,       // Cache for 1 minute only
     onError: (err) => {
       addNotification(`Error loading invoices: ${err.message}`, 'error');
     }
   });
+  
+  // Add this effect to force refetch when component mounts
+  useEffect(() => {
+    // Force refetch when component mounts
+    console.log("InvoiceList mounted - refreshing data");
+    refetch();
+  }, [refetch]);
   
   // Filter invoices based on search and status
   const filteredInvoices = React.useMemo(() => {
