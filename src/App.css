@@ -353,6 +353,12 @@ p {
   align-items: center;
 }
 
+/* Title bar button alignment fix */
+.action-buttons .btn-sm {
+  position: relative;
+  top: -2px; /* Adjust this value to move the small button up as needed */
+}
+
 /* Cards */
 .card {
   background-color: var(--bg-white);
@@ -2323,7 +2329,7 @@ input, textarea, select {
 /* Improve the active tab styling */
 .settings-tabs .tab.active {
   color: var(--primary);
-  border-bottom: 2px solid var(--primary);
+  border-bottom-color: var(--primary);
   font-weight: 600;
 }
 
