@@ -211,71 +211,95 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
           <table className="catalog-table">
             <thead className="table-header">
               <tr>
-                <th scope="col" className="column-header">
+                <th scope="col" className="column-header" style={{ width: '40%', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
                   Name
                 </th>
-                <th scope="col" className="column-header">
+                <th scope="col" className="column-header" style={{ width: '15%', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
                   Category
                 </th>
-                <th scope="col" className="column-header">
+                <th scope="col" className="column-header" style={{ width: '20%', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
                   Supplier
                 </th>
-                <th scope="col" className="column-header">
+                <th scope="col" className="column-header" style={{ width: '10%', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
                   Cost
                 </th>
-                <th scope="col" className="column-header">
-                  Lead Time
-                </th>
-                <th scope="col" className="column-header column-actions">
+                <th scope="col" className="column-header column-actions" style={{ width: '15%', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="table-body">
-              {filteredItems.map((item) => {
+              {filteredItems.map((item, index) => {
                 const supplier = suppliers?.find(s => s.id === item.supplier) || { name: 'Unknown' };
                 const category = categories.find(c => c.id === item.category) || { name: 'Other' };
                 
                 return (
-                  <tr key={item.id} className={item.hidden ? 'row-hidden' : ''}>
-                    <td className="table-cell">
+                  <tr 
+                    key={item.id} 
+                    className={item.hidden ? 'row-hidden' : ''} 
+                    style={{ 
+                      borderBottom: '1px solid var(--border-light)',
+                      backgroundColor: index % 2 === 0 ? 'white' : 'var(--bg-light)' 
+                    }}
+                  >
+                    <td className="table-cell" style={{ padding: '12px 8px' }}>
                       <div className="item-name-container">
                         <div>
                           <div className="item-name">
                             {item.name}
                             {item.hidden && (
-                              <span className="hidden-badge">
+                              <span className="hidden-badge" style={{ 
+                                marginLeft: '8px', 
+                                fontSize: '0.75rem', 
+                                padding: '2px 6px', 
+                                backgroundColor: 'var(--color-warning-light)', 
+                                color: 'var(--color-warning)', 
+                                borderRadius: '4px' 
+                              }}>
                                 Hidden
                               </span>
                             )}
                           </div>
                           {item.description && (
-                            <div className="item-description">
+                            <div className="item-description" style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>
                               {item.description}
                             </div>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="table-cell">
-                      <span className="category-badge">
+                    <td className="table-cell" style={{ padding: '12px 8px' }}>
+                      <span className="category-badge" style={{ 
+                        display: 'inline-block',
+                        padding: '3px 8px', 
+                        backgroundColor: 'var(--color-primary-light)', 
+                        color: 'var(--color-primary)', 
+                        borderRadius: '4px',
+                        fontSize: '0.85rem'
+                      }}>
                         {category.name}
                       </span>
                     </td>
-                    <td className="table-cell">
+                    <td className="table-cell" style={{ padding: '12px 8px' }}>
                       {supplier.name}
                     </td>
-                    <td className="table-cell">
+                    <td className="table-cell" style={{ padding: '12px 8px' }}>
                       £{item.cost?.toFixed(2) || '0.00'}
                     </td>
-                    <td className="table-cell">
-                      {item.leadTime || 0} days
-                    </td>
-                    <td className="table-cell cell-actions">
-                      <div className="action-buttons-container">
+                    <td className="table-cell cell-actions" style={{ padding: '12px 8px' }}>
+                      <div className="action-buttons-container" style={{ display: 'flex', gap: '4px' }}>
                         <button
                           type="button"
                           className="btn-select"
+                          style={{ 
+                            padding: '4px 8px', 
+                            background: '#e6f7ff', 
+                            color: '#0073cf',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem'
+                          }}
                           onClick={() => onSelectItem && onSelectItem(item)}
                         >
                           Select
@@ -283,13 +307,36 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
                         <button
                           type="button"
                           className="btn-edit"
-                          onClick={() => setItemToEdit(item)}
+                          style={{ 
+                            padding: '4px 8px', 
+                            background: '#e6f7ff', 
+                            color: '#0073cf',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem'
+                          }}
+                          onClick={() => {
+                            // Directly call the parent component's onAddItem with the item to edit
+                            if (onAddItem) {
+                              onAddItem(item);
+                            }
+                          }}
                         >
                           Edit
                         </button>
                         <button
                           type="button"
                           className="btn-delete"
+                          style={{ 
+                            padding: '4px 8px', 
+                            background: '#ffebeb', 
+                            color: '#d9363e',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem'
+                          }}
                           onClick={() => setItemToDelete(item)}
                         >
                           Delete
