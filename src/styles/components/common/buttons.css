@@ -148,3 +148,129 @@
   background-color: #c53030; /* Darker red on hover */
   border-color: #c53030;
 }
+
+/* ------------ ActionButtons Component Styles ------------ */
+
+/* ActionButtons component container */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  position: relative;
+  top: -27px; /* Keep the overall container position */
+}
+
+/* Dropdown buttons and mobile menu button in ActionButtons */
+.action-buttons button.dropdown-toggle,
+.action-buttons .mobile-dropdown button {
+  position: relative;
+  top: -15px; /* Move just the dropdown buttons up by 15px */
+  margin-top: -5px; /* Additional adjustment to compensate for padding */
+}
+
+/* Make sure the dropdown toggle has appropriate styles */
+.dropdown-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  height: 32px; /* Explicit height setting */
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+/* Desktop/mobile button visibility */
+.desktop-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.mobile-dropdown {
+  display: none;
+  position: relative;
+  z-index: 1500;
+}
+
+/* Mobile actions overlay (modal style) */
+.mobile-actions-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.mobile-actions-menu {
+  background-color: white;
+  border-radius: 4px;
+  width: 90%;
+  max-width: 300px;
+  max-height: 80vh;
+  overflow: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-actions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+  padding: -15px;
+}
+
+.mobile-actions-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.mobile-actions-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  color: #666;
+}
+
+.mobile-actions-list {
+  padding: 8px 0;
+}
+
+.mobile-action-item {
+  display: block;
+  width: 100%;
+  padding: 12px 15px;
+  text-align: left;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s;
+}
+
+.mobile-action-item:hover {
+  background-color: #f7fafc;
+}
+
+/* Responsive breakpoint */
+@media (max-width: 768px) {
+  .desktop-buttons {
+    display: none;
+  }
+  
+  .mobile-dropdown {
+    display: block;
+    position: relative;
+    z-index: 1500;
+  }
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useAppContext } from '../../context/AppContext';
@@ -9,7 +9,7 @@ import html2pdf from 'html2pdf.js';
 
 // Components
 import PageLayout from '../common/PageLayout';
-import Button from '../common/Button';
+import Button, { ActionButtons } from '../common/Button';
 import Loading from '../common/Loading';
 import Tabs from '../common/Tabs';
 import Dialog from '../common/Dialog';
@@ -749,52 +749,36 @@ const QuoteBuilder = () => {
     }
   };
 
-  // Header action buttons
+  // Define the actions for the ActionButtons component
   const headerActions = (
-    <div className="action-buttons" style={{ position: 'relative', top: '-25px' }}>
-      <Button 
-        variant="primary" 
-        size="sm"
-        style={{ marginRight: '5px' }}
-        onClick={() => navigate('/quotes')}
-      >
-        Back to Quotes
-      </Button>
-      <Button 
-        variant="primary" 
-        size="sm"
-        style={{ marginRight: '5px' }}
-        type="button" // Explicitly set button type to prevent form submission
-        onClick={() => {
-          console.log("Save button clicked");
-          handleSaveQuote();
-        }}
-      >
-        Save Quote
-      </Button>
-      <Button 
-        variant="primary" 
-        size="sm"
-        style={{ marginRight: '5px' }}
-        onClick={handleEmailQuote}
-      >
-        Email Quote
-      </Button>
-      <Button 
-        variant="primary" 
-        size="sm"
-        onClick={safeExportPDF} // Use the safer export function here
-      >
-        Export PDF
-      </Button>
-      <Button 
-        variant="primary" 
-        size="sm"
-        onClick={handleGenerateInvoice}
-      >
-        Generate Invoice
-      </Button>
-    </div>
+    <ActionButtons 
+      actions={[
+        {
+          label: "Back to Quotes",
+          onClick: () => navigate('/quotes')
+        },
+        {
+          label: "Save Quote",
+          onClick: () => {
+            console.log("Save button clicked");
+            handleSaveQuote();
+          },
+          type: "button" // Explicitly set button type
+        },
+        {
+          label: "Email Quote",
+          onClick: handleEmailQuote
+        },
+        {
+          label: "Export PDF",
+          onClick: safeExportPDF
+        },
+        {
+          label: "Generate Invoice",
+          onClick: handleGenerateInvoice
+        }
+      ]}
+    />
   );
 
   // Add these new handler functions for moving items

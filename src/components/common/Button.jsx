@@ -1,5 +1,22 @@
-import React from 'react';
+import React, { useState, useEffect, useRef, useId } from 'react';
 import '../../styles/components/common/buttons.css'; // Updated import path
+
+// Add useMediaQuery custom hook
+const useMediaQuery = (query) => {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(query);
+    setMatches(mediaQuery.matches);
+    
+    const handler = (event) => setMatches(event.matches);
+    mediaQuery.addEventListener('change', handler);
+    
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, [query]);
+
+  return matches;
+};
 
 /**
  * Button component with different variants and sizes
@@ -104,6 +121,142 @@ const Button = ({
         </span>
       )}
     </button>
+  );
+};
+
+/**
+ * ActionButtons component - Provides a responsive action buttons container
+ * Shows regular buttons on desktop and a dropdown menu on mobile screens
+ * 
+ * @param {Object} props
+ * @param {Array} props.actions - Array of action objects with label, onClick, variant, and size
+ * @param {Object} props.style - Optional additional inline styles
+ * @param {string} props.className - Optional additional CSS classes
+ * @param {string} props.topOffset - Vertical offset for positioning, default is '-20px'
+ * @param {string} props.dropdownButtonHeight - Height for the dropdown button, default is '30px'
+ */
+export const ActionButtons = ({ actions }) => {
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  
+  // Generate a unique ID for the dropdown
+  const dropdownId = useId();
+  
+  // Determine if we should show desktop or mobile view
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  
+  return (
+    <div className="action-buttons">
+      {/* Desktop view - shows all buttons side by side */}
+      <div className="desktop-buttons">
+        {actions.map((action, index) => (
+          <React.Fragment key={index}>
+            {!action.items ? (
+              <Button
+                variant={action.variant || 'primary'}
+                onClick={action.onClick}
+                size={action.size || 'sm'}
+                type={action.type || 'button'}
+                style={{ position: 'relative', top: '15px' }} // Add inline style for better positioning
+              >
+                {action.label}
+              </Button>
+            ) : (
+              <div className="dropdown">
+                <button
+                  className="dropdown-toggle" // Apply our CSS class for styling
+                  onClick={() => {
+                    const dropdown = document.getElementById(dropdownId);
+                    if (dropdown) {
+                      dropdown.classList.toggle('show');
+                    }
+                  }}
+                  style={{ position: 'relative', top: '15px' }} // Add inline style for better positioning
+                >
+                  {action.label}
+                  <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <div id={dropdownId} className="dropdown-menu">
+                  {action.items.map((item, itemIndex) => (
+                    <button
+                      key={itemIndex}
+                      className="dropdown-item"
+                      onClick={() => {
+                        item.onClick();
+                        document.getElementById(dropdownId).classList.remove('show');
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+      
+      {/* Mobile view - shows a menu button that opens a modal */}
+      <div className="mobile-dropdown">
+        <button 
+          className="dropdown-toggle"
+          onClick={() => setIsMobileOpen(true)}
+        >
+          Actions
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
+        
+        {/* Mobile overlay */}
+        {isMobileOpen && (
+          <div className="mobile-actions-overlay">
+            <div className="mobile-actions-menu">
+              <div className="mobile-actions-header">
+                <h3>Actions</h3>
+                <button 
+                  className="mobile-actions-close"
+                  onClick={() => setIsMobileOpen(false)}
+                >
+                  &times;
+                </button>
+              </div>
+              <div className="mobile-actions-list">
+                {actions.map((action, index) => (
+                  <React.Fragment key={index}>
+                    {!action.items ? (
+                      <button
+                        className="mobile-action-item"
+                        onClick={() => {
+                          action.onClick();
+                          setIsMobileOpen(false);
+                        }}
+                      >
+                        {action.label}
+                      </button>
+                    ) : (
+                      action.items.map((item, itemIndex) => (
+                        <button
+                          key={`${index}-${itemIndex}`}
+                          className="mobile-action-item"
+                          onClick={() => {
+                            item.onClick();
+                            setIsMobileOpen(false);
+                          }}
+                        >
+                          {item.label}
+                        </button>
+                      ))
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
