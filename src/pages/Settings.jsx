@@ -6,63 +6,43 @@ import Tabs from '../components/common/Tabs';
 import FormField from '../components/common/FormField';
 import Button from '../components/common/Button';
 import Loading from '../components/common/Loading';
+import ToggleSwitch from '../components/common/ToggleSwitch'; 
 import { useAppContext } from '../context/AppContext';
 import api from '../services/api';
+import { deepMerge } from '../utils/deepMerge';
 
 const Settings = () => {
   const { settings, updateSettings, addNotification } = useAppContext();
   const [activeTab, setActiveTab] = useState('company');
   const [isLoading, setIsLoading] = useState(true);
-  const [localSettings, setLocalSettings] = useState({});
+  const [localSettings, setLocalSettings] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [logoPreview, setLogoPreview] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Prepare mutation for saving settings 
-  const saveSettingsMutation = useMutation(
-    (newSettings) => {
-      // Parse number values before saving
-      const processedSettings = {
-        ...newSettings,
-        quote: newSettings.quote ? {
-          ...newSettings.quote,
-          defaultMarkup: parseInt(newSettings.quote.defaultMarkup) || 0,
-          validityPeriod: parseInt(newSettings.quote.validityPeriod) || 30,
-        } : {},
-        invoice: newSettings.invoice ? {
-          ...newSettings.invoice,
-          defaultPaymentTerms: parseInt(newSettings.invoice.defaultPaymentTerms) || 0,
-        } : {},
-      };
-      return api.settings.save(processedSettings);
-    },
-    {
-      onSuccess: () => {
-        updateSettings(localSettings);
-        addNotification('Settings saved successfully', 'success');
-      },
-      onError: (error) => {
-        addNotification(`Error saving settings: ${error.message}`, 'error');
-      }
-    }
-  );
-
-  // Load settings when component mounts
-  useEffect(() => {
-    if (settings) {
-      setLocalSettings(settings);
-      setLogoPreview(settings.company?.logo || null);
-      setIsLoading(false);
-    }
-  }, [settings]);
-
-  // Handle input change
+  // Handle input change with better debugging
   const handleChange = (section, field, value) => {
-    setLocalSettings({
-      ...localSettings,
-      [section]: {
-        ...localSettings[section],
-        [field]: value
+    console.log(`Settings change: ${section}.${field} = ${JSON.stringify(value)}`);
+    
+    // Add more detailed check for vat.enabled case
+    if (section === 'vat' && field === 'enabled') {
+      console.log(`VAT toggle clicked - changing from ${localSettings?.vat?.enabled} to ${value}`);
+    }
+
+    setLocalSettings(prevSettings => {
+      // Make a deep copy of previous settings to avoid mutation issues
+      const newSettings = JSON.parse(JSON.stringify(prevSettings || {}));
+      
+      // Ensure the section exists
+      if (!newSettings[section]) {
+        newSettings[section] = {};
       }
+      
+      // Update the field with the new value
+      newSettings[section][field] = value;
+      
+      console.log(`New settings state for ${section}.${field}:`, newSettings[section]);
+      return newSettings;
     });
   };
 
@@ -86,14 +66,91 @@ const Settings = () => {
 
   // Handle save settings
   const handleSaveSettings = async () => {
+    if (localSettings === null) {
+      addNotification('Settings not loaded yet.', 'error');
+      return;
+    }
     try {
       await saveSettingsMutation.mutateAsync(localSettings);
     } catch (err) {
-      console.error('Error saving settings:', err);
+      console.error('Error initiating settings save:', err);
     }
   };
 
-  if (isLoading) {
+  // Prepare mutation for saving settings 
+  const saveSettingsMutation = useMutation(
+    (newSettings) => {
+      console.log("Saving settings:", newSettings);
+      // Parse number values before saving
+      const processedSettings = {
+        ...newSettings,
+        quote: newSettings.quote ? {
+          ...newSettings.quote,
+          defaultMarkup: parseFloat(newSettings.quote.defaultMarkup) || 0, // Use parseFloat for potential decimals
+          validityPeriod: parseInt(newSettings.quote.validityPeriod) || 30,
+        } : {},
+        invoice: newSettings.invoice ? {
+          ...newSettings.invoice,
+          defaultPaymentTerms: parseInt(newSettings.invoice.defaultPaymentTerms) || 0,
+        } : {},
+        // Add VAT parsing - ensure boolean conversion for enabled
+        vat: newSettings.vat ? {
+          ...newSettings.vat,
+          rate: parseFloat(newSettings.vat.rate) || 0, // Parse VAT rate
+          enabled: Boolean(newSettings.vat.enabled), // Ensure boolean
+          number: newSettings.vat.number || ''
+        } : { enabled: false, rate: 20, number: '' }, // Default VAT structure
+      };
+      console.log("Processed settings:", processedSettings);
+      return api.settings.save(processedSettings);
+    },
+    {
+      onSuccess: (data) => { // Pass saved data to updateSettings
+        console.log("Settings saved successfully:", data);
+        updateSettings(data); // Update context with the processed settings returned from API
+        addNotification('Settings saved successfully', 'success');
+      },
+      onError: (error) => {
+        console.error("Error saving settings:", error);
+        addNotification(`Error saving settings: ${error.message}`, 'error');
+      }
+    }
+  );
+
+  // Load settings only once when component mounts and settings are available
+  useEffect(() => {
+    // Only initialize if settings are loaded and we haven't initialized yet
+    if (settings && !isInitialized) {
+      // Define the default structure, including nested objects
+      const defaultStructure = {
+        company: { name: '', contactName: '', email: '', phone: '', website: '', address: '', logo: null },
+        quote: { defaultMarkup: 0, prefix: 'Q-', validityPeriod: 30, defaultTerms: '1' },
+        invoice: { prefix: 'INV-', defaultPaymentTerms: 30, notesTemplate: '', footer: '' },
+        bank: { name: '', accountName: '', accountNumber: '', sortCode: '', iban: '', bic: '' },
+        cis: { companyName: '', utr: '', niNumber: '' },
+        vat: { enabled: false, rate: 20, number: '' },
+      };
+
+      // Deep merge the loaded settings onto the default structure
+      const initialSettings = deepMerge(defaultStructure, settings);
+
+      setLocalSettings(initialSettings);
+      setLogoPreview(initialSettings.company?.logo || null);
+      setIsInitialized(true);
+      setIsLoading(false);
+    }
+    // If settings are not yet loaded, keep loading
+    else if (!settings) {
+      setIsLoading(true);
+    }
+    // If settings are loaded but we are already initialized, do nothing
+    else if (settings && isInitialized) {
+      setIsLoading(false);
+    }
+  }, [settings, isInitialized]);
+
+  // Show loading indicator if still loading OR if localSettings is null
+  if (isLoading || localSettings === null) {
     return <Loading fullScreen message="Loading settings..." />;
   }
 
@@ -112,7 +169,8 @@ const Settings = () => {
               { id: 'quote', label: 'Quote Settings' },
               { id: 'invoice', label: 'Invoice Settings' },
               { id: 'bank', label: 'Bank Details' },
-              { id: 'cis', label: 'CIS Settings' }
+              { id: 'cis', label: 'CIS Settings' },
+              { id: 'vat', label: 'VAT Settings' }
             ]}
             activeTab={activeTab}
             onChange={setActiveTab}
@@ -405,6 +463,80 @@ const Settings = () => {
                 value={localSettings.cis?.niNumber || ''}
                 onChange={(e) => handleChange('cis', 'niNumber', e.target.value)}
               />
+            </div>
+          )}
+
+          {/* VAT Settings */}
+          {activeTab === 'vat' && (
+            <div className="settings-section">
+              <div className="notification-box info">
+                <h3 className="notification-title">VAT Configuration</h3>
+                <p className="notification-text">
+                  Enable VAT to automatically apply it to quotes and invoices. 
+                  The VAT number will be displayed on relevant documents when enabled.
+                </p>
+              </div>
+
+              <div 
+                style={{ 
+                  border: '1px solid #ddd', 
+                  padding: '15px', 
+                  borderRadius: '5px',
+                  marginBottom: '20px' 
+                }}
+              >
+                <h3 style={{ marginTop: 0 }}>Current VAT Status:</h3>
+                <p>VAT is currently <strong>{localSettings?.vat?.enabled ? 'ENABLED' : 'DISABLED'}</strong></p>
+                <p>Click the toggle below to change this setting.</p>
+                
+                {/* Fallback direct button in case the toggle has issues */}
+                <Button
+                  variant={localSettings?.vat?.enabled ? "danger" : "primary"}
+                  onClick={() => {
+                    const newValue = !localSettings?.vat?.enabled;
+                    console.log(`Direct VAT toggle button clicked. Current: ${localSettings?.vat?.enabled}, New: ${newValue}`);
+                    handleChange('vat', 'enabled', newValue);
+                  }}
+                  style={{ marginTop: '10px' }}
+                >
+                  {localSettings?.vat?.enabled ? "Disable VAT" : "Enable VAT"}
+                </Button>
+              </div>
+
+              <ToggleSwitch
+                label="Enable VAT"
+                checked={Boolean(localSettings?.vat?.enabled)}
+                onChange={(isChecked) => {
+                  console.log(`VAT Toggle onChange fired with value: ${isChecked}`);
+                  handleChange('vat', 'enabled', isChecked);
+                }}
+                helpText="Apply VAT calculations and display VAT details on documents."
+                name="vat-enabled-toggle"
+              />
+
+              {/* Only show rate and number fields if VAT is enabled */}
+              {localSettings?.vat?.enabled && (
+                <>
+                  <FormField
+                    label="VAT Rate (%)"
+                    name="vat-rate"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={localSettings.vat?.rate ?? ''}
+                    onChange={(e) => handleChange('vat', 'rate', e.target.value)}
+                    helpText="Standard VAT rate to apply (e.g., 20 for 20%)"
+                  />
+
+                  <FormField
+                    label="VAT Registration Number"
+                    name="vat-number"
+                    value={localSettings.vat?.number || ''}
+                    onChange={(e) => handleChange('vat', 'number', e.target.value)}
+                    helpText="Your company's VAT registration number."
+                  />
+                </>
+              )}
             </div>
           )}
 

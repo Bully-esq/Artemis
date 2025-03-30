@@ -22,6 +22,7 @@ const QuotePreview = ({
   const safeSettings = settings || {};
   const companySettings = safeSettings.company || {};
   const quoteSettings = safeSettings.quote || {}; 
+  const vatSettings = safeSettings.vat || { enabled: false, rate: 20, number: '' };
   const year = new Date().getFullYear();
   const referenceNum = `${quoteSettings.prefix || 'Q-'}${year}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
   
@@ -86,6 +87,7 @@ const QuotePreview = ({
             {companySettings.email && <p>{companySettings.email}</p>}
             {companySettings.phone && <p>{companySettings.phone}</p>}
             {companySettings.website && <p>{companySettings.website}</p>}
+            {vatSettings.enabled && vatSettings.number && <p>VAT Registration: {vatSettings.number}</p>}
           </div>
         </div>
       </div>
@@ -133,6 +135,22 @@ const QuotePreview = ({
             </tr>
           ))}
           
+          {/* If VAT is enabled, show subtotal row */}
+          {quoteData.vatEnabled && (
+            <tr className="subtotal-row">
+              <td colSpan="3" className="text-right">Subtotal</td>
+              <td className="text-right">£{quoteData.visibleTotal.toFixed(2)}</td>
+            </tr>
+          )}
+          
+          {/* If VAT is enabled, show VAT row */}
+          {quoteData.vatEnabled && (
+            <tr className="vat-row">
+              <td colSpan="3" className="text-right">VAT ({quoteData.vatRate}%)</td>
+              <td className="text-right">£{quoteData.vatAmount.toFixed(2)}</td>
+            </tr>
+          )}
+          
           {/* Total row */}
           <tr className="total-row"> {/* Use existing class if suitable */}
             <td colSpan="3" className="text-right">Total</td>
@@ -175,6 +193,22 @@ const QuotePreview = ({
             <h3 className="sub-header">Additional Notes:</h3>
             <p className="notes-content">{quoteDetails.notes}</p> {/* Use existing class if suitable */}
           </>
+        )}
+      </div>
+      
+      {/* Footer with VAT registration number if VAT is enabled */}
+      <div className="quote-footer">
+        <p>{companySettings.name || 'Your Company'}</p>
+        {companySettings.address && <p>{companySettings.address}</p>}
+        <p>
+          {companySettings.phone && `${companySettings.phone} | `}
+          {companySettings.email && `${companySettings.email} | `}
+          {companySettings.website && companySettings.website}
+        </p>
+        
+        {/* Show VAT registration number if VAT is enabled */}
+        {vatSettings.enabled && vatSettings.number && (
+          <p className="vat-registration">VAT Registration Number: {vatSettings.number}</p>
         )}
       </div>
     </div>

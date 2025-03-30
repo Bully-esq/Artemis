@@ -29,6 +29,11 @@ const InvoiceBuilder = () => {
   const invoiceType = searchParams.get('type') || 'Deposit (50%)';
   const quoteTotal = searchParams.get('total') ? parseFloat(searchParams.get('total')) : 0;
 
+  // Extract VAT information from search parameters
+  const vatEnabled = searchParams.get('vatEnabled') === 'true';
+  const vatRate = searchParams.get('vatRate') ? parseFloat(searchParams.get('vatRate')) : 20;
+  const vatAmount = searchParams.get('vatAmount') ? parseFloat(searchParams.get('vatAmount')) : 0;
+
   // Update the useState section to use these parameters 
   const [invoiceDetails, setInvoiceDetails] = useState({
     invoiceNumber: '',
@@ -47,7 +52,13 @@ const InvoiceBuilder = () => {
     quoteTotal: quoteTotal,
     cisApplied: false,
     cisDeduction: 0,
-    lineItems: []
+    lineItems: [],
+    vatInfo: {
+      enabled: vatEnabled,
+      rate: vatRate,
+      amount: vatAmount,
+      includedInTotal: true // Flag indicating VAT is already in the total
+    }
   });
 
   const [activeTab, setActiveTab] = useState('create');

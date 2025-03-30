@@ -195,7 +195,14 @@ const QuoteBuilder = () => {
   );
   
   // Calculate quote data (totals, etc.)
-  const quoteData = calculateQuoteData(selectedItems, hiddenCosts, globalMarkup, distributionMethod);
+  const quoteData = calculateQuoteData(
+    selectedItems, 
+    hiddenCosts, 
+    globalMarkup, 
+    distributionMethod,
+    settings?.vat?.enabled, // Pass VAT enabled status
+    settings?.vat?.rate     // Pass VAT rate
+  );
   
   // Filter catalog items based on search and category
   const filteredCatalogItems = catalogItems.filter(item => {
@@ -725,8 +732,8 @@ const QuoteBuilder = () => {
       }
       
       // Navigate to invoice builder with the first invoice details
-      // Pass the amount and type for the first invoice
-      navigate(`/invoices/new?quoteId=${quoteDetails.id}&amount=${amounts[0]}&type=${encodeURIComponent(types[0])}&total=${quoteData.grandTotal}`);
+      // Also pass VAT information so we don't double-apply VAT
+      navigate(`/invoices/new?quoteId=${quoteDetails.id}&amount=${amounts[0]}&type=${encodeURIComponent(types[0])}&total=${quoteData.grandTotal}&vatEnabled=${quoteData.vatEnabled}&vatRate=${quoteData.vatRate}&vatAmount=${quoteData.vatAmount}`);
       
     } catch (error) {
       console.error('Error navigating to invoice builder:', error);
@@ -1490,6 +1497,30 @@ const QuoteBuilder = () => {
                         </td>
                       </tr>
                     ))
+                  )}
+                  
+                  {/* Subtotal row - only show when VAT is enabled */}
+                  {quoteData.vatEnabled && (
+                    <tr className="quote-table-subtotal">
+                      <td colSpan="3" className="text-right">
+                        Subtotal
+                      </td>
+                      <td className="text-right">
+                        {formatCurrency(quoteData.visibleTotal)}
+                      </td>
+                    </tr>
+                  )}
+                  
+                  {/* VAT row - only show when VAT is enabled */}
+                  {quoteData.vatEnabled && (
+                    <tr className="quote-table-vat">
+                      <td colSpan="3" className="text-right">
+                        VAT ({quoteData.vatRate}%)
+                      </td>
+                      <td className="text-right">
+                        {formatCurrency(quoteData.vatAmount)}
+                      </td>
+                    </tr>
                   )}
                   
                   {/* Total row */}

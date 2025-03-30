@@ -24,6 +24,12 @@ const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
   const invoiceSettings = safeSettings.invoice || {};
   const cisSettings = safeSettings.cis || {};
   const bankSettings = safeSettings.bank || {};
+  
+  // Get VAT info from the invoice or settings
+  const vatSettings = settings?.vat || { enabled: false, rate: 20, number: '' };
+  
+  // Check if VAT is already included in the invoice amount from the quote
+  const vatInfo = invoice.vatInfo || { enabled: false, rate: 20, amount: 0, includedInTotal: false };
 
   // Format dates
   const invoiceDate = invoice.invoiceDate 
@@ -58,6 +64,36 @@ const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
   // Determine if the invoice has CIS deductions
   const hasCisDeduction = invoice.cisApplied || 
     (hasLineItems && invoice.lineItems.some(item => item.type === 'cis'));
+
+  // If we have line items, we'll calculate the subtotal before VAT
+  const subtotal = hasLineItems 
+    ? invoice.lineItems
+        .filter(item => item.type !== 'cis')
+        .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
+    : (invoice.amount || 0);
+  
+  // Only calculate new VAT if VAT is enabled in settings and not already included in the total
+  const shouldCalculateNewVat = vatSettings.enabled && !hasCisDeduction && !vatInfo.includedInTotal;
+  
+  // Determine the VAT rate - use the one from the invoice if available, otherwise from settings
+  const vatRate = vatInfo.rate || vatSettings.rate || 20;
+  
+  // For the display, if VAT is included in the total, use the provided amount,
+  // otherwise calculate it as a percentage of the subtotal
+  const vatAmount = vatInfo.includedInTotal && vatInfo.enabled
+    ? vatInfo.amount 
+    : (shouldCalculateNewVat ? (subtotal * vatRate / 100) : 0);
+  
+  // The total with VAT - if already included in total, use the subtotal as is
+  const totalWithVat = vatInfo.includedInTotal && vatInfo.enabled
+    ? subtotal 
+    : (shouldCalculateNewVat ? (subtotal + vatAmount) : subtotal);
+
+  // This determines whether to show the VAT line item in the display
+  const shouldDisplayVat = (vatSettings.enabled && !hasCisDeduction) || (vatInfo.enabled && vatInfo.includedInTotal);
+  
+  // Use original invoice amount if VAT is not applied
+  const finalAmount = shouldDisplayVat ? totalWithVat : (invoice.amount || 0);
 
   // Wrapper classes for print mode
   const containerClass = printMode ? "invoice-preview print-mode" : "invoice-preview";
@@ -98,6 +134,7 @@ const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
             {companySettings.email && <p>{companySettings.email}</p>}
             {companySettings.phone && <p>{companySettings.phone}</p>}
             {companySettings.website && <p>{companySettings.website}</p>}
+            {vatSettings.enabled && vatSettings.number && <p>VAT Registration: {vatSettings.number}</p>}
           </div>
         </div>
       </div>
@@ -230,14 +267,21 @@ const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
                 }
                 
                 {/* If we have CIS deductions, show a subtotal of all non-CIS items */}
-                {hasCisDeduction && (
+                {(hasCisDeduction || shouldDisplayVat) && (
                   <tr className="subtotal-row">
                     <td className="text-right" colSpan="2">Subtotal</td>
                     <td className="text-right">
-                      £{invoice.lineItems
-                        .filter(item => item.type !== 'cis')
-                        .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
-                        .toFixed(2)}
+                      £{subtotal.toFixed(2)}
+                    </td>
+                  </tr>
+                )}
+                
+                {/* VAT row - only show when VAT is enabled and CIS is not applied */}
+                {shouldDisplayVat && (
+                  <tr className="vat-row">
+                    <td className="text-right" colSpan="2">VAT ({vatRate}%)</td>
+                    <td className="text-right">
+                      £{vatAmount.toFixed(2)}
                     </td>
                   </tr>
                 )}
@@ -273,16 +317,34 @@ const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
                 </td>
                 <td className="quantity-cell text-center">1</td>
                 <td className="amount-cell text-right">
-                  £{(invoice.amount || 0).toFixed(2)}
+                  £{subtotal.toFixed(2)}
                 </td>
               </tr>
             )}
             
-            {/* Total row */}
+            {/* VAT row for simple invoices - only show when VAT is enabled and CIS is not applied */}
+            {shouldDisplayVat && !hasLineItems && (
+              <>
+                <tr className="subtotal-row">
+                  <td className="text-right" colSpan="2">Subtotal</td>
+                  <td className="text-right">
+                    £{subtotal.toFixed(2)}
+                  </td>
+                </tr>
+                <tr className="vat-row">
+                  <td className="text-right" colSpan="2">VAT ({vatRate}%)</td>
+                  <td className="text-right">
+                    £{vatAmount.toFixed(2)}
+                  </td>
+                </tr>
+              </>
+            )}
+            
+            {/* Total row - show the final total with VAT included if applicable */}
             <tr className="total-row">
               <td className="total-label" colSpan="2">Total</td>
               <td className="total-value">
-                £{(invoice.amount || 0).toFixed(2)}
+                £{finalAmount.toFixed(2)}
               </td>
             </tr>
           </tbody>
@@ -369,11 +431,14 @@ const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
       )}
       
       {/* Footer */}
-      {invoiceSettings.footer && (
-        <div className="invoice-footer">
-          {invoiceSettings.footer}
-        </div>
-      )}
+      <div className="invoice-footer">
+        {invoiceSettings.footer && <p>{invoiceSettings.footer}</p>}
+        
+        {/* VAT Registration Number */}
+        {vatSettings.enabled && vatSettings.number && (
+          <p className="vat-registration">VAT Registration Number: {vatSettings.number}</p>
+        )}
+      </div>
     </div>
   );
 };

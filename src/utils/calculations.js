@@ -8,19 +8,28 @@
  * @param {Array} hiddenCosts - Array of hidden costs
  * @param {number} globalMarkup - The global markup percentage
  * @param {string} distributionMethod - Method for distributing hidden costs ('even' or 'proportional')
+ * @param {boolean} vatEnabled - Whether VAT is enabled
+ * @param {number} vatRate - VAT rate percentage
  * @returns {Object} Object containing all calculated values
  */
-export function calculateQuoteData(selectedItems = [], hiddenCosts = [], globalMarkup = 20, distributionMethod = 'even') {
+export function calculateQuoteData(
+  selectedItems = [], 
+  hiddenCosts = [], 
+  globalMarkup = 20, 
+  distributionMethod = 'even',
+  vatEnabled = false,
+  vatRate = 20
+) {
     // Get visible and hidden items
     const visibleItems = selectedItems.filter(item => !item.hideInQuote);
     const hiddenItems = selectedItems.filter(item => item.hideInQuote);
     
     // Calculate base costs
     const visibleBaseCost = visibleItems.reduce((sum, item) => 
-      sum + (item.cost * item.quantity), 0);
+      sum + (parseFloat(item.cost) || 0) * (parseFloat(item.quantity) || 0), 0);
     
     const hiddenItemsCost = hiddenItems.reduce((sum, item) => 
-      sum + (item.cost * item.quantity), 0);
+      sum + (parseFloat(item.cost) || 0) * (parseFloat(item.quantity) || 0), 0);
     
     // Calculate manual hidden costs
     const manualHiddenCosts = hiddenCosts.reduce((sum, cost) => sum + (parseFloat(cost.amount) || 0), 0);
@@ -30,10 +39,12 @@ export function calculateQuoteData(selectedItems = [], hiddenCosts = [], globalM
     
     // Calculate individual item totals and overall markup
     let totalMarkup = 0;
-    let grandTotal = 0;
+    let visibleTotal = 0;
     
     const itemTotals = visibleItems.map(item => {
-      const baseCost = item.cost * item.quantity;
+      const quantity = parseFloat(item.quantity) || 0;
+      const cost = parseFloat(item.cost) || 0;
+      const baseCost = cost * quantity;
       let hiddenCostShare = 0;
       
       // Distribute hidden costs according to selected method
@@ -47,24 +58,32 @@ export function calculateQuoteData(selectedItems = [], hiddenCosts = [], globalM
         }
       }
       
+      // Calculate markup - check if the item has a specific markup, otherwise use the global one
+      const markupPercent = (typeof item.markup === 'number' && !isNaN(item.markup)) 
+        ? item.markup 
+        : globalMarkup;
+      
       // Calculate costs with markup
       const costWithHidden = baseCost + hiddenCostShare;
-      const markupAmount = costWithHidden * (item.markup / 100);
+      const markupAmount = costWithHidden * (markupPercent / 100);
       const finalTotal = costWithHidden + markupAmount;
       
       // Calculate per-unit price for the quote
-      const unitPrice = item.quantity > 0 ? finalTotal / item.quantity : 0;
+      const unitPrice = quantity > 0 ? finalTotal / quantity : 0;
       
       // Add to totals
       totalMarkup += markupAmount;
-      grandTotal += finalTotal;
+      visibleTotal += finalTotal;
       
       // Return calculated values for this item
       return {
         ...item,
+        name: item.name || 'Unnamed Item',
+        quantity,
         baseCost,
         hiddenCostShare,
         costWithHidden,
+        markupPercentage: markupPercent,
         markupAmount,
         finalTotal,
         unitPrice
@@ -76,6 +95,12 @@ export function calculateQuoteData(selectedItems = [], hiddenCosts = [], globalM
     const profitPercentage = totalCostBeforeMarkup > 0 ? 
       (totalMarkup / totalCostBeforeMarkup) * 100 : 0;
     
+    // Calculate VAT if enabled
+    const vatAmount = vatEnabled ? (visibleTotal * (vatRate / 100)) : 0;
+    
+    // Add VAT to the grand total if enabled
+    const grandTotal = vatEnabled ? (visibleTotal + vatAmount) : visibleTotal;
+    
     // Return all calculated values
     return {
       visibleItems,
@@ -86,9 +111,14 @@ export function calculateQuoteData(selectedItems = [], hiddenCosts = [], globalM
       manualHiddenCosts,
       totalHiddenCost,
       totalMarkup,
+      visibleTotal,
+      vatEnabled,
+      vatRate,
+      vatAmount,
       grandTotal,
       profitPercentage,
-      itemTotals
+      itemTotals,
+      distributionMethod
     };
   }
   
@@ -108,7 +138,9 @@ export function calculateQuoteData(selectedItems = [], hiddenCosts = [], globalM
           quote.selectedItems || [], 
           quote.hiddenCosts || [], 
           quote.globalMarkup || 0, 
-          quote.distributionMethod || 'even'
+          quote.distributionMethod || 'even',
+          quote.vatEnabled,
+          quote.vatRate
         ).grandTotal);
     
     // Get payment terms
@@ -218,6 +250,34 @@ export function calculateQuoteData(selectedItems = [], hiddenCosts = [], globalM
       cisDeduction,
       cisRate,
       finalTotal
+    };
+  }
+  
+  /**
+   * Calculate VAT for an invoice (when CIS is not applied)
+   * @param {Object} invoice - The invoice object
+   * @param {boolean} vatEnabled - Whether VAT is enabled
+   * @param {number} vatRate - VAT rate percentage
+   * @returns {Object} Object with VAT calculation results
+   */
+  export function calculateVAT(invoice, vatEnabled = false, vatRate = 20) {
+    if (!invoice || !vatEnabled) {
+      return {
+        subtotal: invoice ? invoice.amount : 0,
+        vatAmount: 0,
+        total: invoice ? invoice.amount : 0
+      };
+    }
+    
+    const subtotal = parseFloat(invoice.amount) || 0;
+    const vatAmount = subtotal * (vatRate / 100);
+    const total = subtotal + vatAmount;
+    
+    return {
+      subtotal,
+      vatRate,
+      vatAmount,
+      total
     };
   }
   
