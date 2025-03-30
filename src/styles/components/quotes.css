@@ -53,3 +53,48 @@
 .btn-danger:hover {
   background-color: #c62828;
 }
+
+/* Item reordering styles */
+.item-actions {
+  display: flex;
+  align-items: center;
+}
+
+.reorder-buttons {
+  display: flex;
+  flex-direction: column;
+  margin-right: 10px;
+}
+
+.reorder-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: #4b5563;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reorder-button:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  color: #1d4ed8;
+}
+
+.reorder-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.reorder-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.item-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}

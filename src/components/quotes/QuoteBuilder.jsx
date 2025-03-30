@@ -16,6 +16,9 @@ import Dialog from '../common/Dialog';
 import FormField from '../common/FormField';
 import ContactSelector from '../contacts/ContactSelector';
 
+// Add this near the top of your file with the other imports
+import '../../styles/components/quotes.css';
+
 const QuoteBuilder = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -794,6 +797,25 @@ const QuoteBuilder = () => {
     </div>
   );
 
+  // Add these new handler functions for moving items
+  const handleMoveItemUp = (index) => {
+    if (index === 0) return; // Already at the top
+    
+    const newItems = [...selectedItems];
+    // Swap with the item above
+    [newItems[index-1], newItems[index]] = [newItems[index], newItems[index-1]];
+    setSelectedItems(newItems);
+  };
+
+  const handleMoveItemDown = (index) => {
+    if (index === selectedItems.length - 1) return; // Already at the bottom
+    
+    const newItems = [...selectedItems];
+    // Swap with the item below
+    [newItems[index], newItems[index+1]] = [newItems[index+1], newItems[index]];
+    setSelectedItems(newItems);
+  };
+
   return (
     <PageLayout title={id ? 'Edit Quote' : 'Create Quote'} actions={headerActions}>
       <div className="tabs-container">
@@ -1197,15 +1219,46 @@ const QuoteBuilder = () => {
                             <h3 className="item-name">{item.name}</h3>
                             <p className="item-supplier">{getSupplierName(item.supplier)}</p>
                           </div>
-                          <button
-                            className="delete-button"
-                            onClick={() => handleRemoveItem(index)}
-                            aria-label="Remove item"
-                          >
-                            <svg className="delete-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
+                          <div className="item-actions">
+                            {/* Add reorder buttons */}
+                            <div className="reorder-buttons">
+                              <button
+                                className="reorder-button"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent triggering item click
+                                  handleMoveItemUp(index);
+                                }}
+                                disabled={index === 0}
+                                aria-label="Move item up"
+                              >
+                                <svg className="reorder-icon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                </svg>
+                              </button>
+                              <button
+                                className="reorder-button"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent triggering item click
+                                  handleMoveItemDown(index);
+                                }}
+                                disabled={index === selectedItems.length - 1}
+                                aria-label="Move item down"
+                              >
+                                <svg className="reorder-icon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+                            </div>
+                            <button
+                              className="delete-button"
+                              onClick={() => handleRemoveItem(index)}
+                              aria-label="Remove item"
+                            >
+                              <svg className="delete-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                         
                         {/* Rest of the form fields */}
