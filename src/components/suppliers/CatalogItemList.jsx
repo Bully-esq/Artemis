@@ -14,7 +14,8 @@ import Dialog from '../common/Dialog';
  */
 const cleanItemName = (name) => {
   if (!name) return '';
-  return String(name).replace(/0+$/, '');
+  // Trim whitespace and then remove trailing zeros
+  return String(name).trim().replace(/0+$/, '');
 };
 
 /**
@@ -253,64 +254,45 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
               </tr>
             </thead>
             <tbody className="table-body">
-              {filteredItems.map((item, index) => {
-                const supplier = suppliers?.find(s => s.id === item.supplier) || { name: 'Unknown' };
-                const category = categories.find(c => c.id === item.category) || { name: 'Other' };
-                
+              {filteredItems.map((item) => {
+                // Find the category object based on item.category ID
+                const category = categories.find(cat => cat.id === item.category);
+                // Find the supplier object based on item.supplier ID
+                const supplier = suppliers?.find(sup => sup.id === item.supplier);
+
                 return (
                   <tr 
                     key={item.id} 
-                    className={item.hidden ? 'row-hidden' : ''} 
-                    style={{ 
-                      borderBottom: '1px solid #e0e0e0',
-                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9f9f9' 
-                    }}
+                    className="catalog-item-row" // Removed conditional 'selected' class based on undefined 'selectedItem'
+                    // onClick={() => onSelectItem && onSelectItem(item)} // Use onSelectItem prop if row click is desired
                   >
-                    <td className="table-cell" style={{ padding: '12px 8px' }}>
-                      <div className="item-name-container">
-                        <div>
-                          <div className="item-name">
-                            {cleanItemName(item.name)}
-                            {item.hidden && (
-                              <span className="hidden-badge" style={{ 
-                                marginLeft: '8px', 
-                                fontSize: '0.75rem', 
-                                padding: '2px 6px', 
-                                backgroundColor: '#fff3cd', 
-                                color: '#856404', 
-                                borderRadius: '4px' 
-                              }}>
-                                Hidden
-                              </span>
-                            )}
-                          </div>
-                          {item.description && (
-                            <div className="item-description" style={{ fontSize: '0.85rem', color: '#6c757d' }}>
-                              {item.description}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                    <td className="item-cell item-main-info">
+                      <span className="item-name">{cleanItemName(item.name)}</span>
+                      {item.description && <span className="item-description">{item.description}</span>}
                     </td>
-                    <td className="table-cell" style={{ padding: '12px 8px' }}>
-                      <span className="category-badge" style={{ 
-                        display: 'inline-block',
-                        padding: '3px 8px', 
-                        backgroundColor: '#e3f2fd', 
-                        color: '#0d47a1', 
-                        borderRadius: '4px',
-                        fontSize: '0.85rem'
-                      }}>
-                        {category.name}
-                      </span>
+                    <td className="item-cell item-category">
+                      {category ? (
+                        <span className="category-badge" style={{ 
+                          display: 'inline-block',
+                          padding: '3px 8px', 
+                          backgroundColor: '#e3f2fd', 
+                          color: '#0d47a1', 
+                          borderRadius: '4px',
+                          fontSize: '0.85rem'
+                        }}>
+                          {category.name} {/* Use found category name */}
+                        </span>
+                      ) : (
+                        <span className="category-badge-missing">Unknown</span>
+                      )}
                     </td>
-                    <td className="table-cell" style={{ padding: '12px 8px' }}>
-                      {supplier.name}
+                    <td className="item-cell item-supplier">
+                      {supplier ? supplier.name : 'Unknown'} {/* Use found supplier name */}
                     </td>
-                    <td className="table-cell" style={{ padding: '12px 8px' }}>
+                    <td className="item-cell item-cost">
                       £{item.cost?.toFixed(2) || '0.00'}
                     </td>
-                    <td className="table-cell cell-actions" style={{ padding: '12px 8px' }}>
+                    <td className="item-cell item-actions">
                       <div className="action-buttons-container" style={{ display: 'flex', gap: '4px' }}>
                         <button
                           type="button"
@@ -324,10 +306,13 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
                             cursor: 'pointer',
                             fontSize: '0.85rem'
                           }}
-                          onClick={() => onSelectItem && onSelectItem({
-                            ...item,
-                            name: cleanItemName(item.name) // Clean name when selecting item
-                          })}
+                          onClick={(e) => { // Prevent row click if button is clicked
+                            e.stopPropagation(); 
+                            onSelectItem && onSelectItem({
+                              ...item,
+                              name: cleanItemName(item.name)
+                            });
+                          }}
                         >
                           Select
                         </button>

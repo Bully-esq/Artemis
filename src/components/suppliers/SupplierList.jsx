@@ -103,7 +103,8 @@ const SupplierList = () => {
    */
   const cleanItemName = (name) => {
     if (!name) return '';
-    return String(name).replace(/0+$/, '');
+    // Trim whitespace and then remove trailing zeros
+    return String(name).trim().replace(/0+$/, '');
   };
 
   // Replace your saveCatalogItemMutation with this enhanced version
@@ -114,7 +115,7 @@ const SupplierList = () => {
       // Apply name cleanup to ensure no trailing zeros
       const cleanedItemData = {
         ...itemData,
-        name: cleanItemName(itemData.name)
+        name: cleanItemName(itemData.name) // Ensure cleaning happens here too
       };
       
       // If it's a new item, add it to the collection
@@ -268,7 +269,7 @@ const SupplierList = () => {
       // If editing existing item, populate the form
       setCatalogItemForm({
         id: itemToEdit.id || '',
-        name: cleanItemName(itemToEdit.name) || '',
+        name: cleanItemName(itemToEdit.name) || '', // Ensure cleaning happens here
         description: itemToEdit.description || '',
         category: itemToEdit.category || '',
         supplier: itemToEdit.supplier || '',
@@ -310,7 +311,7 @@ const SupplierList = () => {
     // Parse the cost to ensure it's a number and clean the name
     const formattedItem = {
       ...catalogItemForm,
-      name: cleanItemName(catalogItemForm.name), // Use the clean function here
+      name: cleanItemName(catalogItemForm.name), // Ensure cleaning happens here
       cost: catalogItemForm.cost === '' ? 0 : parseFloat(catalogItemForm.cost),
       leadTime: catalogItemForm.leadTime === '' ? 0 : parseInt(catalogItemForm.leadTime, 10)
     };
