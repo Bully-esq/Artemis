@@ -110,20 +110,45 @@ a.btn-list-item {
   white-space: nowrap;
 }
 
-/* View/Edit buttons */
-button.btn-list-item--secondary,
-.btn.btn-list-item--secondary,
-a.btn-list-item--secondary {
-  background-color: #0073cf;
-  color: #ffffff;
+/* View/Edit buttons - with increased specificity and !important to override any conflicts */
+button.btn.btn-list-item.btn-list-item--secondary,
+.btn.btn-list-item.btn-list-item--secondary,
+a.btn.btn-list-item.btn-list-item--secondary {
+  background-color: #0073cf !important;
+  color: #ffffff !important;
+  border-color: #0073cf !important;
 }
 
-/* Invoice/Primary buttons */
+/* Add hover state for better UX */
+button.btn.btn-list-item.btn-list-item--secondary:hover,
+.btn.btn-list-item.btn-list-item--secondary:hover,
+a.btn.btn-list-item.btn-list-item--secondary:hover {
+  background-color: #0061b0 !important;
+  border-color: #0061b0 !important;
+}
+
+/* Invoice/Primary buttons - Add !important to ensure color is applied */
 button.btn-list-item--primary,
 .btn.btn-list-item--primary,
-a.btn-list-item--primary {
-  background-color: #0073cf; /* Explicit blue color */
-  color: white;
+a.btn-list-item--primary,
+button.btn.btn-list-item.btn-list-item--primary,
+.btn.btn-list-item.btn-list-item--primary,
+a.btn.btn-list-item.btn-list-item--primary {
+  background-color: #0073cf !important; /* Explicit blue color */
+  color: white !important;
+  border-color: #0073cf !important;
+}
+
+/* Hover state for primary buttons */
+button.btn-list-item--primary:hover,
+.btn.btn-list-item--primary:hover,
+a.btn-list-item--primary:hover,
+button.btn.btn-list-item.btn-list-item--primary:hover,
+.btn.btn-list-item.btn-list-item--primary:hover,
+a.btn.btn-list-item.btn-list-item--primary:hover {
+  background-color: #0061b0 !important;
+  border-color: #0061b0 !important;
+  color: white !important;
 }
 
 /* Delete buttons */

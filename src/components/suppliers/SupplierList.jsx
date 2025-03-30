@@ -466,13 +466,13 @@ const SupplierList = () => {
                         <p className="item-detail">{supplier.phone || ''}</p>
                         <div className="action-buttons">
                           <button
-                            className="action-button edit"
+                            className="btn btn-list-item btn-list-item--secondary"
                             onClick={() => handleEditSupplier(supplier)}
                           >
                             Edit
                           </button>
                           <button
-                            className="action-button delete"
+                            className="btn btn-list-item btn-list-item--danger"
                             onClick={() => handleDeleteClick(supplier)}
                           >
                             Delete
