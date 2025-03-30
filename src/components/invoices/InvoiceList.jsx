@@ -261,7 +261,7 @@ const InvoiceList = () => {
                     <p className="item-title">
                       {invoice.invoiceNumber || `INV-${invoice.id.substring(0, 8)}`}
                       {invoice.clientName && (
-                        <span className="client-name">{invoice.clientName}</span>
+                        <span className="client-name"> {invoice.clientName}</span>
                       )}
                     </p>
                     <p className="item-subtitle">
