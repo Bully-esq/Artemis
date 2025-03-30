@@ -14,6 +14,7 @@ import Loading from '../common/Loading';
 import Tabs from '../common/Tabs';
 import Dialog from '../common/Dialog';
 import FormField from '../common/FormField';
+import ContactSelector from '../contacts/ContactSelector';
 
 const QuoteBuilder = () => {
   const { id } = useParams();
@@ -33,6 +34,10 @@ const QuoteBuilder = () => {
   const [showHiddenCostDialog, setShowHiddenCostDialog] = useState(false);
   const [newHiddenCost, setNewHiddenCost] = useState({ name: '', amount: 0 });
   const [editingItem, setEditingItem] = useState(null);
+  
+  // Add these new state variables for contact selection
+  const [showContactSelector, setShowContactSelector] = useState(false);
+  const [contactSearchTerm, setContactSearchTerm] = useState('');
   
   // Add these new state variables for the custom item feature
   const [showCustomItemForm, setShowCustomItemForm] = useState(false);
@@ -775,7 +780,6 @@ const QuoteBuilder = () => {
       <Button 
         variant="primary" 
         size="sm"
-        style={{ marginRight: '5px' }}
         onClick={safeExportPDF} // Use the safer export function here
       >
         Export PDF
@@ -830,6 +834,15 @@ const QuoteBuilder = () => {
                   value={quoteDetails.client.name}
                   onChange={(e) => handleClientChange('name', e.target.value)}
                 />
+                
+                <Button 
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setShowContactSelector(true)}
+                  style={{ marginBottom: '12px' }}
+                >
+                  Select Existing Contact
+                </Button>
                 
                 <FormField
                   label="Company Name"
@@ -1994,6 +2007,45 @@ const QuoteBuilder = () => {
             </div>
           </>
         )}
+      </Dialog>
+      
+      {/* Contact Selector Dialog */}
+      <Dialog
+        isOpen={showContactSelector}
+        onClose={() => setShowContactSelector(false)}
+        title="Select Contact"
+        size="md"
+      >
+        <div className="form-field">
+          <label className="form-label">
+            Search Contacts
+          </label>
+          <input
+            type="text"
+            value={contactSearchTerm}
+            onChange={(e) => setContactSearchTerm(e.target.value)}
+            placeholder="Search by name, company, email..."
+            className="form-input"
+          />
+        </div>
+        
+        <ContactSelector 
+          searchTerm={contactSearchTerm} 
+          onContactSelect={(contact) => {
+            setQuoteDetails({
+              ...quoteDetails,
+              client: {
+                name: contact.customerType === 'company' ? contact.company : `${contact.firstName} ${contact.lastName}`.trim(),
+                company: contact.company || '',
+                email: contact.email || '',
+                phone: contact.phone || '',
+                address: contact.address || ''
+              }
+            });
+            setShowContactSelector(false);
+            addNotification(`Contact "${contact.customerType === 'company' ? contact.company : `${contact.firstName} ${contact.lastName}`.trim()}" selected`, 'success');
+          }}
+        />
       </Dialog>
     </PageLayout>
   );

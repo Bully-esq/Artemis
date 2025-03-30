@@ -374,6 +374,94 @@ export const ping = async () => {
   }
 };
 
+// Activities API - for tracking interactions with contacts
+export const activitiesApi = {
+  getByContactId: async (contactId) => {
+    try {
+      const response = await apiClient.get(`/activities/contact/${contactId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching activities for contact ${contactId}:`, error);
+      
+      // For demo purposes, return mock data if server fails
+      console.log('Returning mock activities data for development');
+      return mockActivities.filter(activity => activity.contactId === contactId);
+    }
+  },
+  
+  create: async (activity) => {
+    try {
+      const newActivity = {
+        id: Date.now().toString(),
+        timestamp: activity.timestamp || new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        ...activity
+      };
+      
+      const response = await apiClient.post('/activities', { activity: newActivity });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating activity:', error);
+      
+      // For demo/development, add to mock data and return
+      console.log('Adding to mock activities for development');
+      const newActivity = {
+        id: Date.now().toString(),
+        timestamp: activity.timestamp || new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        ...activity
+      };
+      mockActivities.unshift(newActivity);
+      return newActivity;
+    }
+  },
+  
+  delete: async (id) => {
+    try {
+      const response = await apiClient.delete(`/activities/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting activity ${id}:`, error);
+      
+      // For demo/development, remove from mock data
+      console.log('Removing from mock activities for development');
+      mockActivities = mockActivities.filter(a => a.id !== id);
+      return { success: true };
+    }
+  }
+};
+
+// Mock activities data for development
+const mockActivities = [
+  {
+    id: '1',
+    contactId: '1',
+    type: 'note',
+    title: 'Initial contact',
+    description: 'First conversation about potential project needs',
+    timestamp: '2025-03-25T10:30:00Z',
+    createdAt: '2025-03-25T10:30:00Z'
+  },
+  {
+    id: '2',
+    contactId: '1',
+    type: 'email',
+    title: 'Follow-up email',
+    description: 'Sent project proposal and pricing information',
+    timestamp: '2025-03-27T14:45:00Z',
+    createdAt: '2025-03-27T14:45:00Z'
+  },
+  {
+    id: '3',
+    contactId: '1',
+    type: 'meeting',
+    title: 'Project kickoff meeting',
+    description: 'Discussed project timeline and deliverables',
+    timestamp: '2025-03-29T09:00:00Z',
+    createdAt: '2025-03-29T09:00:00Z'
+  }
+];
+
 export default {
   quotes: quotesApi,
   invoices: invoicesApi,
@@ -381,5 +469,6 @@ export default {
   suppliers: suppliersApi,
   catalog,
   settings: settingsApi,
+  activities: activitiesApi,
   ping
 };
