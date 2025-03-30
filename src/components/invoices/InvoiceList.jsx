@@ -73,18 +73,18 @@ const InvoiceList = () => {
     return status === 'paid' ? 'status-badge status-badge-success' : 'status-badge status-badge-warning';
   };
 
-  // Action buttons for the page header - styled with invoice-action-button class
+  // Action buttons for the page header - Use the standard Button component
   const actionButtons = (
-    <button 
-      className="invoice-action-button"
+    <Button 
+      variant="primary" 
+      size="sm" // Use 'sm' size consistent with Quotes page if desired
       onClick={() => navigate('/invoices/new')}
-      style={{ marginTop: '14px' }} // Add this line to push it down a bit
     >
-      <svg className="icon icon-plus" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4 mr-1 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"> {/* Use consistent icon classes if possible */}
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
       </svg>
       New Invoice
-    </button>
+    </Button>
   );
   
   if (isLoading) {
@@ -164,18 +164,50 @@ const InvoiceList = () => {
             <button
               className={`filter-button ${statusFilter === 'all' ? 'active' : ''}`}
               onClick={() => setStatusFilter('all')}
+              style={{
+                backgroundColor: statusFilter === 'all' ? '#0073cf' : '#f0f4f8',
+                color: statusFilter === 'all' ? 'white' : '#4a5568',
+                padding: '8px 16px',
+                marginRight: '10px',
+                borderRadius: '4px',
+                border: 'none',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
             >
               All
             </button>
             <button
               className={`filter-button ${statusFilter === 'pending' ? 'active' : ''}`}
               onClick={() => setStatusFilter('pending')}
+              style={{
+                backgroundColor: statusFilter === 'pending' ? '#0073cf' : '#f0f4f8',
+                color: statusFilter === 'pending' ? 'white' : '#4a5568',
+                padding: '8px 16px',
+                marginRight: '10px',
+                borderRadius: '4px',
+                border: 'none',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
             >
               Pending
             </button>
             <button
               className={`filter-button ${statusFilter === 'paid' ? 'active' : ''}`}
               onClick={() => setStatusFilter('paid')}
+              style={{
+                backgroundColor: statusFilter === 'paid' ? '#0073cf' : '#f0f4f8',
+                color: statusFilter === 'paid' ? 'white' : '#4a5568',
+                padding: '8px 16px',
+                borderRadius: '4px',
+                border: 'none',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
             >
               Paid
             </button>
@@ -238,25 +270,25 @@ const InvoiceList = () => {
                       {invoice.invoiceDate ? `Date: ${new Date(invoice.invoiceDate).toLocaleDateString()}` : ''}
                     </p>
                   </div>
-                  <div className="item-actions" style={{ paddingRight: '8px' }}> {/* Add right padding */}
+                  <div className="item-actions">
                     <p className="invoice-amount">
                       {formatCurrency(invoice.amount)}
                     </p>
-                    <div className="action-buttons" style={{ marginLeft: '16px' }}> {/* Add margin to action buttons */}
-                      <span className={getStatusBadgeClass(invoice.status)}>
+                    {/* Combine status and buttons */}
+                    <div className="status-button-container">
+                      <span className={`${getStatusBadgeClass(invoice.status)}`}>
                         {invoice.status === 'paid' ? 'Paid' : 'Pending'}
                       </span>
-                      <div className="button-group" style={{ marginLeft: '12px' }}> {/* Add margin between status badge and button */}
-                        <button
-                          className="view-button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/invoices/${invoice.id}`);
-                          }}
-                        >
-                          View
-                        </button>
-                      </div>
+                      {/* Use Button component with new classes */}
+                      <Button
+                        className="btn-list-item btn-list-item--secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/invoices/${invoice.id}`);
+                        }}
+                      >
+                        View
+                      </Button>
                     </div>
                   </div>
                 </div>

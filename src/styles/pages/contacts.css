@@ -1,0 +1,151 @@
+/* Contact layout classes */
+.contact-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.contact-list-panel {
+  width: 100%;
+}
+
+.contact-details-panel {
+  width: 100%;
+}
+
+.scrollable-list {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* Card components */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.item-count {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* Filter components */
+.filter-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.search-container {
+  width: 100%;
+}
+
+.checkbox-filters {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.checkbox-text {
+  margin-left: 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Item components */
+.item-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.item-title {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.item-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+.item-actions {
+  text-align: right;
+}
+
+.item-detail {
+  font-weight: 500;
+}
+
+.item-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.action-button {
+  background: none;
+  border: none;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.action-button.edit {
+  color: var(--primary);
+}
+
+.action-button.edit:hover {
+  color: var(--primary-hover);
+}
+
+.action-button.delete {
+  color: var(--danger);
+}
+
+.action-button.delete:hover {
+  color: var(--danger-hover);
+}
+
+/* Responsive layout */
+@media (min-width: 768px) {
+  .filter-container {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .search-container {
+    width: 33.333%;
+  }
+  
+  .contact-layout {
+    flex-direction: row;
+  }
+  
+  .contact-list-panel {
+    width: 33.333%;
+  }
+  
+  .contact-details-panel {
+    width: 66.667%;
+  }
+}

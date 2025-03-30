@@ -6,6 +6,7 @@ import Button from '../common/Button';
 import FormField from '../common/FormField';
 import Loading from '../common/Loading';
 import Dialog from '../common/Dialog';
+import '../../styles/components/suppliers/catalogItemList.css'; // Updated import path
 
 /**
  * Clean trailing zeros from item names
@@ -263,7 +264,7 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
                 return (
                   <tr 
                     key={item.id} 
-                    className="catalog-item-row" // Removed conditional 'selected' class based on undefined 'selectedItem'
+                    className="catalog-item-row" // This class enables the alternating row colors
                     // onClick={() => onSelectItem && onSelectItem(item)} // Use onSelectItem prop if row click is desired
                   >
                     <td className="item-cell item-main-info">

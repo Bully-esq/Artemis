@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMutation } from 'react-query';
-import '../App.css';
+import '../styles/index.css';
 import PageLayout from '../components/common/PageLayout';
 import Tabs from '../components/common/Tabs';
 import FormField from '../components/common/FormField';

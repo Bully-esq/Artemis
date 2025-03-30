@@ -6,7 +6,7 @@ import api from '../../services/api';
 import pdfGenerator from '../../services/pdfGenerator';
 import { formatDate } from '../../utils/formatters';
 import html2pdf from 'html2pdf.js'; // Add html2pdf import
-import '../../App.css'; // Add this import
+import '../../styles/index.css'; // Updated to use modular CSS structure
 
 // Components
 import Button from '../common/Button';

@@ -1,7 +1,7 @@
-// App.js - With CSS import
+// App.js - With modular CSS import
 
 import React from 'react';
-import './App.css';  // Add CSS import
+import './styles/index.css';  // Updated to use our modular CSS structure
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { ReactQueryDevtools } from 'react-query/devtools';

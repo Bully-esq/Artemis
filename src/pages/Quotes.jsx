@@ -144,7 +144,6 @@ const Quotes = () => {
     <Button 
       variant="primary" 
       size="sm"
-      style={{ position: 'relative', top: '-11px' }} // Using standard CSS instead of Tailwind
       onClick={handleCreateQuote}
     >
       <svg className="w-4 h-4 mr-1 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -322,28 +321,27 @@ const Quotes = () => {
                       <p className="font-medium">
                         {quote.date ? formatDate(quote.date) : 'No date'}
                       </p>
-                      <div className="flex items-center space-x-2 mt-1">
+                      <div className="action-buttons-container">
                         <StatusBadge status={status} />
-                        <div className="flex space-x-1">
-                          <button
-                            className="text-blue-600 hover:text-blue-800"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCreateInvoice(quote.id);
-                            }}
-                          >
-                            Invoice
-                          </button>
-                          <button
-                            className="text-red-600 hover:text-red-800"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClick(quote);
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </div>
+                        {/* Use Button components with new classes */}
+                        <Button
+                          className="btn-list-item btn-list-item--primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCreateInvoice(quote.id);
+                          }}
+                        >
+                          Invoice
+                        </Button>
+                        <Button
+                          className="btn-list-item btn-list-item--danger"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(quote);
+                          }}
+                        >
+                          Delete
+                        </Button>
                       </div>
                     </div>
                   </div>

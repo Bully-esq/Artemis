@@ -1,0 +1,11 @@
+/* Catalog item table styles - Traditional CSS */
+
+/* Alternating row colors for the catalog table */
+.catalog-item-row:nth-child(odd) {
+  background-color: #f9f9f9; /* Light grey for odd rows */
+}
+
+.catalog-item-row:hover {
+  background-color: #f0f0f0;
+  transition: background-color 0.15s ease;
+}

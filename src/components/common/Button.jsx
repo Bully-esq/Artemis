@@ -1,5 +1,5 @@
 import React from 'react';
-import './Button.css'; // Import the CSS file
+import '../../styles/components/common/buttons.css'; // Updated import path
 
 /**
  * Button component with different variants and sizes

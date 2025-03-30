@@ -1,5 +1,5 @@
 import React from 'react';
-import './ToggleSwitch.css';
+import '../../styles/components/common/toggleSwitch.css';
 
 const ToggleSwitch = ({ label, checked, onChange, helpText, name }) => {
   // Create direct click handler to bypass potential event issues

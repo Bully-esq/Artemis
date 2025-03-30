@@ -1,0 +1,135 @@
+/* List item components and shared styles */
+
+/* Container for status badge and action buttons */
+.status-button-container {
+  display: flex;
+  align-items: center;
+  margin-left: 16px;
+}
+
+.status-button-container .status-badge {
+  margin-right: 8px;
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge-success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-badge-warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-badge-danger {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-badge-info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+/* Filter buttons - to replace inline styles */
+.filter-button {
+  padding: 8px 16px;
+  margin-right: 10px;
+  border-radius: 4px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: #f0f4f8;
+  color: #4a5568;
+}
+
+.filter-button:last-child {
+  margin-right: 0;
+}
+
+.filter-button.active {
+  background-color: #0073cf;
+  color: white;
+}
+
+/* Layout for filter groups */
+.filter-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Action buttons container in list items */
+.action-buttons-container {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.action-buttons-container .status-badge {
+  margin-right: 8px;
+}
+
+/* Status badge variants for quotes */
+.status-badge-active {
+  background-color: #cce5ff;
+  color: #004085;
+}
+
+.status-badge-expiring {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-badge-expired {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Improved button styling for list items with higher specificity */
+button.btn-list-item,
+.btn.btn-list-item,
+a.btn-list-item {
+  padding: 0.2rem 0.4rem !important; /* Force override with !important */
+  font-size: 0.75rem !important;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  margin-left: 4px;
+  display: inline-block;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* View/Edit buttons */
+button.btn-list-item--secondary,
+.btn.btn-list-item--secondary,
+a.btn-list-item--secondary {
+  background-color: #0073cf;
+  color: #ffffff;
+}
+
+/* Invoice/Primary buttons */
+button.btn-list-item--primary,
+.btn.btn-list-item--primary,
+a.btn-list-item--primary {
+  background-color: #0073cf; /* Explicit blue color */
+  color: white;
+}
+
+/* Delete buttons */
+button.btn-list-item--danger,
+.btn.btn-list-item--danger,
+a.btn-list-item--danger {
+  background-color: #e53e3e; /* Explicit red color */
+  color: white;
+}

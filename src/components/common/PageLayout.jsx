@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import './PageLayout.css';
+import '../../styles/components/common/pageLayout.css';
 
 /**
  * Main page layout component with sidebar navigation
