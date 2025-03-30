@@ -183,33 +183,6 @@ const Contacts = () => {
         <p className="text-gray-600">Manage your clients and business relationships</p>
       </div>
 
-      {/* Quick Actions - Same styling as Dashboard */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-        <div className="quick-actions">
-          <div onClick={() => setShowCreateDialog(true)} className="quick-action-btn">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <span>New Contact</span>
-          </div>
-          
-          <div onClick={() => navigate('/invoices/new')} className="quick-action-btn">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            <span>Create Invoice</span>
-          </div>
-          
-          <div onClick={() => navigate('/quotes/new')} className="quick-action-btn">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span>Create Quote</span>
-          </div>
-        </div>
-      </div>
-
       {/* Search and Filters - in a card like Dashboard */}
       <div className="card mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -294,57 +267,46 @@ const Contacts = () => {
                 onClick={() => handleViewContact(contact.id)}
               >
                 <div className="flex justify-between items-center">
-                  <div>
+                  {/* Simplified Contact Info */}
+                  <div className="flex-grow">
                     {contact.customerType === 'company' ? (
-                      <>
-                        <p className="font-medium text-gray-900">{contact.company}</p>
-                        <p className="text-sm text-gray-500">
-                          {contact.firstName} {contact.lastName}
-                          {(contact.firstName || contact.lastName) && contact.email && ' • '}
-                          {contact.email}
-                        </p>
-                      </>
+                      <p className="font-medium text-gray-900">{contact.company}</p>
                     ) : (
-                      <>
-                        <p className="font-medium text-gray-900">
-                          {contact.firstName} {contact.lastName}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {contact.company}
-                          {contact.company && contact.email && ' • '}
-                          {contact.email}
-                        </p>
-                      </>
+                      <p className="font-medium text-gray-900">
+                        {contact.firstName} {contact.lastName}
+                      </p>
                     )}
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">
-                      {contact.phone || 'No phone'}
+                    <p className="text-sm text-gray-500">
+                      {contact.phone || contact.email || (contact.customerType === 'company' ? 
+                        `${contact.firstName} ${contact.lastName}` : contact.company)}
                     </p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <span className={`status-badge ${contact.customerType === 'company' ? 'status-badge-info' : 'status-badge-success'}`}>
-                        {contact.customerType === 'company' ? 'Company' : 'Individual'}
-                      </span>
-                      <div className="flex space-x-1">
-                        <button
-                          className="text-blue-600 hover:text-blue-800"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditContact(contact.id);
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="text-red-600 hover:text-red-800"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteContact(contact);
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
+                  </div>
+                  
+                  {/* Status Badge and Action Buttons */}
+                  <div className="status-button-container">
+                    <span className={`status-badge ${contact.customerType === 'company' ? 'status-badge-info' : 'status-badge-success'}`}>
+                      {contact.customerType === 'company' ? 'Company' : 'Individual'}
+                    </span>
+                    
+                    <div className="action-buttons-container">
+                      <button
+                        className="btn-list-item btn-list-item--secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditContact(contact.id);
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn-list-item btn-list-item--danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteContact(contact);
+                        }}
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
                 </div>

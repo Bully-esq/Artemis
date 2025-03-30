@@ -118,14 +118,16 @@ const ContactDetails = () => {
     <PageLayout
       title="Contact Details"
       actions={
-        <div className="action-buttons">
-          <Button 
-            variant="secondary" 
-            onClick={() => navigate('/contacts')}
-          >
-            Back to Contacts
-          </Button>
-        </div>
+        <Button 
+          variant="primary" 
+          size="sm"
+          onClick={() => navigate('/contacts')}
+        >
+          <svg className="w-4 h-4 mr-1 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back to Contacts
+        </Button>
       }
     >
       <div className="contact-layout">
@@ -150,6 +152,7 @@ const ContactDetails = () => {
                 <Button 
                   variant="primary"
                   size="sm"
+                  className="btn-list-item btn-list-item--primary"
                   onClick={() => navigate(`/contacts/edit/${contact.id}`)}
                 >
                   <svg className="button-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -161,6 +164,7 @@ const ContactDetails = () => {
                 <Button 
                   variant="danger"
                   size="sm"
+                  className="btn-list-item btn-list-item--danger"
                   onClick={() => setDeleteDialogOpen(true)}
                 >
                   <svg className="button-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -203,7 +207,7 @@ const ContactDetails = () => {
               {/* Action buttons */}
               <div className="contact-actions">
                 <Button
-                  variant="secondary"
+                  className="btn-list-item btn-list-item--secondary"
                   onClick={() => navigate(`/quotes/new?contactId=${contact.id}`)}
                 >
                   <svg className="button-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -213,7 +217,7 @@ const ContactDetails = () => {
                 </Button>
                 
                 <Button
-                  variant="secondary"
+                  className="btn-list-item btn-list-item--secondary"
                   onClick={() => navigate(`/invoices/new?contactId=${contact.id}`)}
                 >
                   <svg className="button-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -223,8 +227,7 @@ const ContactDetails = () => {
                 </Button>
                 
                 <Button
-                  variant="secondary"
-                  className="full-width-btn"
+                  className="btn-list-item btn-list-item--secondary"
                   onClick={() => setExportDialogOpen(true)}
                 >
                   <svg className="button-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">

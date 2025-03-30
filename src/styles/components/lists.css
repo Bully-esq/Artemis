@@ -105,56 +105,29 @@ a.btn-list-item {
   border-radius: 4px;
   border: 1px solid transparent;
   margin-left: 4px;
-  display: inline-block;
-  text-align: center;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
   white-space: nowrap;
+  min-width: 60px !important;
 }
 
-/* View/Edit buttons - with increased specificity and !important to override any conflicts */
-button.btn.btn-list-item.btn-list-item--secondary,
-.btn.btn-list-item.btn-list-item--secondary,
-a.btn.btn-list-item.btn-list-item--secondary {
-  background-color: #0073cf !important;
-  color: #ffffff !important;
-  border-color: #0073cf !important;
+/* Fix for button icons */
+.button-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
 }
 
-/* Add hover state for better UX */
-button.btn.btn-list-item.btn-list-item--secondary:hover,
-.btn.btn-list-item.btn-list-item--secondary:hover,
-a.btn.btn-list-item.btn-list-item--secondary:hover {
-  background-color: #0061b0 !important;
-  border-color: #0061b0 !important;
+/* Action row for buttons */
+.action-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
 }
 
-/* Invoice/Primary buttons - Add !important to ensure color is applied */
-button.btn-list-item--primary,
-.btn.btn-list-item--primary,
-a.btn-list-item--primary,
-button.btn.btn-list-item.btn-list-item--primary,
-.btn.btn-list-item.btn-list-item--primary,
-a.btn.btn-list-item.btn-list-item--primary {
-  background-color: #0073cf !important; /* Explicit blue color */
-  color: white !important;
-  border-color: #0073cf !important;
-}
-
-/* Hover state for primary buttons */
-button.btn-list-item--primary:hover,
-.btn.btn-list-item--primary:hover,
-a.btn-list-item--primary:hover,
-button.btn.btn-list-item.btn-list-item--primary:hover,
-.btn.btn-list-item.btn-list-item--primary:hover,
-a.btn.btn-list-item.btn-list-item--primary:hover {
-  background-color: #0061b0 !important;
-  border-color: #0061b0 !important;
-  color: white !important;
-}
-
-/* Delete buttons */
-button.btn-list-item--danger,
-.btn.btn-list-item--danger,
-a.btn-list-item--danger {
-  background-color: #e53e3e; /* Explicit red color */
-  color: white;
+.action-row button,
+.action-row .btn {
+  flex: 1 1 0% !important;
 }

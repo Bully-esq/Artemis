@@ -263,149 +263,97 @@ const ContactList = () => {
         </div>
       </div>
       
-      {/* Two-column layout with traditional CSS */}
-      <div className="contact-layout">
-        {/* Contact List Panel - Left Column */}
-        <div className="contact-list-panel">
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">All Contacts</h2>
-              <div>
-                <span className="item-count">
-                  {sortedContacts.length} contacts
-                </span>
-              </div>
-            </div>
-            
-            {/* Contact List styled like Dashboard's recent-items */}
-            {sortedContacts.length === 0 ? (
-              <div className="empty-state">
-                <svg className="empty-state-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                </svg>
-                <h3 className="empty-state-title">
-                  {searchTerm || !filterCompanies || !filterIndividuals ? 
-                    'No contacts match your search criteria' : 
-                    'You haven\'t added any contacts yet'}
-                </h3>
-                <p className="empty-state-description">
-                  {searchTerm || !filterCompanies || !filterIndividuals ? 
-                    'Try adjusting your search or filters to find what you\'re looking for.' : 
-                    'Get started by adding your first contact.'}
-                </p>
-                {!searchTerm && filterCompanies && filterIndividuals && (
-                  <Button variant="primary" onClick={() => setShowAddContactDialog(true)}>
-                    Add Your First Contact
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="recent-items scrollable-list">
-                {sortedContacts.map((contact) => (
-                  <div
-                    key={contact.id}
-                    className="recent-item"
-                    onClick={() => handleContactClick(contact)}
-                  >
-                    <div className="item-content">
-                      <div>
-                        <p className="item-title">
-                          {getContactDisplayName(contact)}
-                        </p>
-                        <p className="item-subtitle">
-                          {contact.customerType === 'individual' && contact.company ? contact.company : ''}
-                          {contact.customerType === 'individual' && contact.company && contact.email && ' • '}
-                          {contact.email || ''}
-                        </p>
-                      </div>
-                      <div className="item-actions">
-                        <p className="item-detail">
-                          {contact.phone || ''}
-                        </p>
-                        <div className="item-badges">
-                          <span className={`status-badge ${
-                            contact.customerType === 'company' 
-                              ? 'status-badge-info' 
-                              : 'status-badge-success'
-                          }`}>
-                            {contact.customerType === 'company' ? 'Company' : 'Individual'}
-                          </span>
-                          <div className="action-buttons">
-                            <button
-                              className="action-button edit"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditContact(contact);
-                              }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="action-button delete"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteContact(contact);
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+      {/* Full-width Contact List */}
+      <div className="card">
+        <div className="card-header">
+          <h2 className="card-title">All Contacts</h2>
+          <div>
+            <span className="item-count">
+              {sortedContacts.length} contacts
+            </span>
           </div>
         </div>
         
-        {/* Details Panel - Right Column */}
-        <div className="contact-details-panel">
-          <div className="card mb-6">
-            <h2 className="card-title">Contact Details</h2>
-            
-            <div className="empty-state">
-              <svg className="empty-state-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-              </svg>
-              <h3 className="empty-state-title">Select a contact to view details</h3>
-              <p className="empty-state-description">
-                Click on any contact from the list to view their details, or add a new contact.
-              </p>
+        {/* Contact List styled like Dashboard's recent-items */}
+        {sortedContacts.length === 0 ? (
+          <div className="empty-state">
+            <svg className="empty-state-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            <h3 className="empty-state-title">
+              {searchTerm || !filterCompanies || !filterIndividuals ? 
+                'No contacts match your search criteria' : 
+                'You haven\'t added any contacts yet'}
+            </h3>
+            <p className="empty-state-description">
+              {searchTerm || !filterCompanies || !filterIndividuals ? 
+                'Try adjusting your search or filters to find what you\'re looking for.' : 
+                'Get started by adding your first contact.'}
+            </p>
+            {!searchTerm && filterCompanies && filterIndividuals && (
               <Button variant="primary" onClick={() => setShowAddContactDialog(true)}>
-                Add New Contact
+                Add Your First Contact
               </Button>
-            </div>
+            )}
           </div>
-          
-          {/* Quick Actions as cards in a grid - styled with traditional CSS */}
-          <div className="action-card-grid">
-            <div className="action-card" onClick={handleCreateQuote}>
-              <svg className="action-card-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h3 className="action-card-title">Create Quote</h3>
-              <p className="action-card-description">Generate a new quote for a selected contact</p>
-            </div>
-            
-            <div className="action-card" onClick={handleCreateInvoice}>
-              <svg className="action-card-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              <h3 className="action-card-title">Create Invoice</h3>
-              <p className="action-card-description">Generate a new invoice for a selected contact</p>
-            </div>
-            
-            <div className="action-card">
-              <svg className="action-card-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-              </svg>
-              <h3 className="action-card-title">Export Data</h3>
-              <p className="action-card-description">Export contact data for portability</p>
-            </div>
+        ) : (
+          <div className="recent-items">
+            {sortedContacts.map((contact) => (
+              <div
+                key={contact.id}
+                className="recent-item"
+                onClick={() => handleContactClick(contact)}
+              >
+                <div className="item-content">
+                  <div>
+                    <p className="item-title">
+                      {getContactDisplayName(contact)}
+                    </p>
+                    <p className="item-subtitle">
+                      {contact.customerType === 'individual' && contact.company ? contact.company : ''}
+                      {contact.customerType === 'individual' && contact.company && contact.email && ' • '}
+                      {contact.email || ''}
+                    </p>
+                  </div>
+                  <div className="item-actions">
+                    <p className="item-detail">
+                      {contact.phone || ''}
+                    </p>
+                    <div className="item-badges">
+                      <span className={`status-badge ${
+                        contact.customerType === 'company' 
+                          ? 'status-badge-info' 
+                          : 'status-badge-success'
+                      }`}>
+                        {contact.customerType === 'company' ? 'Company' : 'Individual'}
+                      </span>
+                      <div className="action-buttons-container">
+                        <button
+                          className="btn btn-list-item btn-list-item--secondary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditContact(contact);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-list-item btn-list-item--danger"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteContact(contact);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        )}
       </div>
       
       {/* Add/Edit Contact Dialog */}
