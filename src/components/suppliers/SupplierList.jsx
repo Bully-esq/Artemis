@@ -96,15 +96,31 @@ const SupplierList = () => {
     }
   );
 
-  // Add this new mutation for saving catalog items
+  /**
+   * Clean trailing zeros from item names
+   * @param {string} name The item name to clean
+   * @returns {string} Clean name without trailing zeros
+   */
+  const cleanItemName = (name) => {
+    if (!name) return '';
+    return String(name).replace(/0+$/, '');
+  };
+
+  // Replace your saveCatalogItemMutation with this enhanced version
   const saveCatalogItemMutation = useMutation(
     (itemData) => {
       const items = queryClient.getQueryData('catalog') || [];
       
+      // Apply name cleanup to ensure no trailing zeros
+      const cleanedItemData = {
+        ...itemData,
+        name: cleanItemName(itemData.name)
+      };
+      
       // If it's a new item, add it to the collection
-      if (!itemData.id) {
+      if (!cleanedItemData.id) {
         const newItem = {
-          ...itemData,
+          ...cleanedItemData,
           id: Date.now().toString(), // Generate a unique ID
         };
         return api.catalog.update([...items, newItem]);
@@ -112,7 +128,7 @@ const SupplierList = () => {
       
       // If it's an existing item, update it in the collection
       const updatedItems = items.map(item => 
-        item.id === itemData.id ? { ...item, ...itemData } : item
+        item.id === cleanedItemData.id ? { ...item, ...cleanedItemData } : item
       );
       return api.catalog.update(updatedItems);
     },
@@ -252,7 +268,7 @@ const SupplierList = () => {
       // If editing existing item, populate the form
       setCatalogItemForm({
         id: itemToEdit.id || '',
-        name: itemToEdit.name || '',
+        name: cleanItemName(itemToEdit.name) || '',
         description: itemToEdit.description || '',
         category: itemToEdit.category || '',
         supplier: itemToEdit.supplier || '',
@@ -291,12 +307,16 @@ const SupplierList = () => {
       return;
     }
     
-    // Parse the cost to ensure it's a number
+    // Parse the cost to ensure it's a number and clean the name
     const formattedItem = {
       ...catalogItemForm,
+      name: cleanItemName(catalogItemForm.name), // Use the clean function here
       cost: catalogItemForm.cost === '' ? 0 : parseFloat(catalogItemForm.cost),
       leadTime: catalogItemForm.leadTime === '' ? 0 : parseInt(catalogItemForm.leadTime, 10)
     };
+    
+    // Log the cleaned name for debugging
+    console.log(`Saving catalog item with cleaned name: "${formattedItem.name}"`);
     
     saveCatalogItemMutation.mutate(formattedItem);
   };

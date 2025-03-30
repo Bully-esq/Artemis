@@ -8,6 +8,16 @@ import Loading from '../common/Loading';
 import Dialog from '../common/Dialog';
 
 /**
+ * Clean trailing zeros from item names
+ * @param {string} name The item name to clean
+ * @returns {string} Clean name without trailing zeros
+ */
+const cleanItemName = (name) => {
+  if (!name) return '';
+  return String(name).replace(/0+$/, '');
+};
+
+/**
  * Catalog Item List component
  * Displays the catalog items with filtering and management options
  */
@@ -62,6 +72,20 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
     { id: 'other', name: 'Other' }
   ];
   
+  // Add this effect to debug and log item names
+  useEffect(() => {
+    if (items && items.length > 0) {
+      console.log('Checking item names:');
+      items.forEach(item => {
+        const before = item.name;
+        const after = cleanItemName(item.name);
+        if (before !== after) {
+          console.log(`Found item with trailing zeros: "${before}" -> "${after}"`);
+        }
+      });
+    }
+  }, [items]);
+  
   // Filter items based on search and filters
   const filteredItems = React.useMemo(() => {
     if (!items) return [];
@@ -69,7 +93,7 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
     return items.filter(item => {
       // Filter by search term
       const matchesSearch = searchTerm === '' ||
-        (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.name && cleanItemName(item.name).toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()));
       
       // Filter by category
@@ -211,19 +235,19 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
           <table className="catalog-table">
             <thead className="table-header">
               <tr>
-                <th scope="col" className="column-header" style={{ width: '40%', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                <th scope="col" className="column-header" style={{ width: '40%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
                   Name
                 </th>
-                <th scope="col" className="column-header" style={{ width: '15%', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                <th scope="col" className="column-header" style={{ width: '15%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
                   Category
                 </th>
-                <th scope="col" className="column-header" style={{ width: '20%', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                <th scope="col" className="column-header" style={{ width: '20%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
                   Supplier
                 </th>
-                <th scope="col" className="column-header" style={{ width: '10%', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                <th scope="col" className="column-header" style={{ width: '10%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
                   Cost
                 </th>
-                <th scope="col" className="column-header column-actions" style={{ width: '15%', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                <th scope="col" className="column-header column-actions" style={{ width: '15%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
                   Actions
                 </th>
               </tr>
@@ -238,22 +262,22 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
                     key={item.id} 
                     className={item.hidden ? 'row-hidden' : ''} 
                     style={{ 
-                      borderBottom: '1px solid var(--border-light)',
-                      backgroundColor: index % 2 === 0 ? 'white' : 'var(--bg-light)' 
+                      borderBottom: '1px solid #e0e0e0',
+                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9f9f9' 
                     }}
                   >
                     <td className="table-cell" style={{ padding: '12px 8px' }}>
                       <div className="item-name-container">
                         <div>
                           <div className="item-name">
-                            {item.name}
+                            {cleanItemName(item.name)}
                             {item.hidden && (
                               <span className="hidden-badge" style={{ 
                                 marginLeft: '8px', 
                                 fontSize: '0.75rem', 
                                 padding: '2px 6px', 
-                                backgroundColor: 'var(--color-warning-light)', 
-                                color: 'var(--color-warning)', 
+                                backgroundColor: '#fff3cd', 
+                                color: '#856404', 
                                 borderRadius: '4px' 
                               }}>
                                 Hidden
@@ -261,7 +285,7 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
                             )}
                           </div>
                           {item.description && (
-                            <div className="item-description" style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>
+                            <div className="item-description" style={{ fontSize: '0.85rem', color: '#6c757d' }}>
                               {item.description}
                             </div>
                           )}
@@ -272,8 +296,8 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
                       <span className="category-badge" style={{ 
                         display: 'inline-block',
                         padding: '3px 8px', 
-                        backgroundColor: 'var(--color-primary-light)', 
-                        color: 'var(--color-primary)', 
+                        backgroundColor: '#e3f2fd', 
+                        color: '#0d47a1', 
                         borderRadius: '4px',
                         fontSize: '0.85rem'
                       }}>
@@ -300,7 +324,10 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
                             cursor: 'pointer',
                             fontSize: '0.85rem'
                           }}
-                          onClick={() => onSelectItem && onSelectItem(item)}
+                          onClick={() => onSelectItem && onSelectItem({
+                            ...item,
+                            name: cleanItemName(item.name) // Clean name when selecting item
+                          })}
                         >
                           Select
                         </button>
@@ -318,8 +345,12 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
                           }}
                           onClick={() => {
                             // Directly call the parent component's onAddItem with the item to edit
+                            // Make sure to clean the name before editing
                             if (onAddItem) {
-                              onAddItem(item);
+                              onAddItem({
+                                ...item,
+                                name: cleanItemName(item.name)
+                              });
                             }
                           }}
                         >

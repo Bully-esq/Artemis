@@ -243,53 +243,110 @@ export const suppliersApi = {
   }
 };
 
-// Catalog API
-export const catalogApi = {
+// Catalog API - refactored for simplicity and reliability
+const catalog = {
   getAll: async () => {
-    const response = await apiClient.get('/catalog');
-    // Clean up item names by removing trailing zeros
-    if (response.data && Array.isArray(response.data)) {
-      response.data = response.data.map(item => ({
-        ...item,
-        name: item.name?.endsWith('0') ? item.name.slice(0, -1) : item.name
-      }));
+    try {
+      // Fetch data from the server endpoint
+      console.log('Fetching catalog items from server');
+      const response = await apiClient.get('/catalog');
+      const items = response.data;
+      
+      // If there's no data from server, return empty array
+      if (!items || !Array.isArray(items)) {
+        console.log('No catalog data received from server or invalid format, returning empty array');
+        return [];
+      }
+      
+      console.log(`Received ${items.length} catalog items from server`);
+      
+      // Return raw items - cleaning will happen in the component
+      return items; 
+    } catch (error) {
+      console.error('Error fetching catalog from server:', error);
+      // Optionally, you could try falling back to localStorage here if needed
+      // For now, just return empty array on error
+      return [];
     }
-    return response.data;
+  },
+  
+  getById: async (id) => {
+    try {
+      // Fetch specific item from server (assuming an endpoint exists, e.g., /api/catalog/:id)
+      // If not, this might need to fetch all and filter, or rely on localStorage/cache
+      // For now, keeping the localStorage logic as the server endpoint isn't shown for getById
+      const rawData = localStorage.getItem('catalog'); // Keep localStorage for getById for now
+      if (!rawData) return null;
+      
+      const items = JSON.parse(rawData);
+      const item = items.find(item => item.id === id);
+      
+      // Clean the item name before returning
+      return item ? {
+        ...item,
+        name: item.name ? String(item.name).replace(/0+$/, '') : ''
+      } : null;
+    } catch (error) {
+      console.error(`Error in catalog.getById(${id}):`, error);
+      return null;
+    }
   },
   
   update: async (items) => {
-    // Function to clean up item names by removing trailing zeros
-    const cleanItemName = (name) => {
-      if (!name) return name;
-      // Remove any trailing zeros (can have multiple)
-      while (name.endsWith('0')) {
-        name = name.slice(0, -1);
+    try {
+      // Ensure items is an array
+      if (!Array.isArray(items)) {
+        console.error('Invalid catalog items format for update:', items);
+        throw new Error('Items must be an array');
       }
-      return name;
-    };
-    
-    // If items is an array, clean up each item's name
-    if (Array.isArray(items)) {
-      items = items.map(item => ({
+      
+      // Clean all item names before sending to server - KEEP this cleaning step here
+      // as the component saving might not be the one displaying.
+      const cleanedItems = items.map(item => ({
         ...item,
-        name: cleanItemName(item.name)
+        name: item.name ? String(item.name).replace(/0+$/, '') : ''
       }));
-    } 
-    // If items is a single item, clean up its name
-    else if (items && typeof items === 'object') {
-      items = {
-        ...items,
-        name: cleanItemName(items.name)
-      };
+      
+      // Send update request to the server
+      console.log(`Updating ${cleanedItems.length} catalog items on server`);
+      const response = await apiClient.put('/catalog', { items: cleanedItems });
+      
+      // Optionally update localStorage as well for consistency or offline use
+      // Consider cleaning items before saving to localStorage too if needed elsewhere
+      localStorage.setItem('catalog', JSON.stringify(cleanedItems)); 
+      console.log(`Updated catalog on server and in localStorage`);
+      
+      return response.data; // Return server response
+    } catch (error) {
+      console.error('Error updating catalog on server:', error);
+      throw error;
     }
-    
-    const response = await apiClient.put('/catalog', { items });
-    return response.data;
   },
   
   delete: async (id) => {
-    const response = await apiClient.delete(`/catalog/${id}`);
-    return response.data;
+    try {
+      if (!id) {
+        throw new Error('No ID provided for deletion');
+      }
+      
+      // Send delete request to the server
+      console.log(`Deleting catalog item with ID: ${id} on server`);
+      const response = await apiClient.delete(`/catalog/${id}`);
+      
+      // Optionally update localStorage after successful server deletion
+      const rawData = localStorage.getItem('catalog');
+      if (rawData) {
+        const items = JSON.parse(rawData);
+        const updatedItems = items.filter(item => item.id !== id);
+        localStorage.setItem('catalog', JSON.stringify(updatedItems));
+        console.log(`Deleted catalog item with ID: ${id} from localStorage`);
+      }
+      
+      return response.data; // Return server response
+    } catch (error) {
+      console.error(`Error deleting catalog item on server (${id}):`, error);
+      throw error;
+    }
   }
 };
 
@@ -322,7 +379,7 @@ export default {
   invoices: invoicesApi,
   contacts: contactsApi,
   suppliers: suppliersApi,
-  catalog: catalogApi,
+  catalog,
   settings: settingsApi,
   ping
 };
