@@ -32,7 +32,7 @@ const QuoteBuilder = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedItems, setSelectedItems] = useState([]);
   const [hiddenCosts, setHiddenCosts] = useState([]);
-  const [globalMarkup, setGlobalMarkup] = useState(20);
+  const [globalMarkup, setGlobalMarkup] = useState(settings?.quote?.defaultMarkup !== undefined ? settings?.quote?.defaultMarkup : 30);
   const [distributionMethod, setDistributionMethod] = useState('even');
   const [showItemDialog, setShowItemDialog] = useState(false);
   const [showHiddenCostDialog, setShowHiddenCostDialog] = useState(false);
@@ -2169,9 +2169,7 @@ const QuoteBuilder = () => {
             setQuoteDetails({
               ...quoteDetails,
               client: {
-                name: contact.customerType === 'company' 
-                  ? `${contact.firstName} ${contact.lastName}`.trim() 
-                  : `${contact.firstName} ${contact.lastName}`.trim(),
+                name: `${contact.firstName} ${contact.lastName}`.trim(),
                 company: contact.company || '',
                 email: contact.email || '',
                 phone: contact.phone || '',
