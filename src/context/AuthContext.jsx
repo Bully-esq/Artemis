@@ -1,8 +1,8 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
-import apiClient from '../services/api';
+import { apiClient } from '../services/api';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://192.168.1.74:3000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
 const AuthContext = createContext();
 
@@ -109,6 +109,10 @@ export const AuthProvider = ({ children }) => {
       
       const { token: authToken, user: userData } = response.data;
       
+      if (!authToken) {
+        throw new Error('No token received from server');
+      }
+      
       // Save token to localStorage
       localStorage.setItem('token', authToken);
       
@@ -116,6 +120,14 @@ export const AuthProvider = ({ children }) => {
       setToken(authToken);
       setUser(userData);
       setIsAuthenticated(true);
+      
+      // Apply token to axios globally
+      axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      if (apiClient && apiClient.defaults) {
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      }
+      
+      console.log('Authentication completed, token applied to headers');
       
       return response.data;
     } catch (err) {
@@ -125,71 +137,20 @@ export const AuthProvider = ({ children }) => {
       // Extract meaningful error messages
       if (err.response) {
         // Response from server with error
-        errorMessage = err.response.data?.error || err.response.data?.message || `Login failed (${err.response.status})`;
-        console.log('Error response:', err.response.data);
-      } else if (err.request) {
-        // Request made but no response
-        errorMessage = 'No response from server. Please check your network connection.';
-      } else {
-        // Error setting up request
-        errorMessage = err.message || 'Login request failed';
+        errorMessage = err.response.data?.error || err.response.data?.message || 'Login failed';
       }
       
+      // Set the error state
       setError(errorMessage);
-      throw err;
-    } finally {
+      
+      // Make sure to reset states
       setLoading(false);
-    }
-  };
-
-  // Register function
-  const register = async (userData) => {
-    try {
-      setLoading(true);
-      setError(null);
+      setIsAuthenticated(false);
       
-      console.log('Registering user:', { 
-        email: userData.email,
-        name: userData.name,
-        password: '********'
-      });
-      
-      const response = await axios.post(`${API_URL}/auth/register`, userData);
-      
-      console.log('Registration successful:', response.data);
-      
-      // Extract user data and token
-      const { token: authToken, user: newUser } = response.data;
-      
-      // Save token to localStorage
-      localStorage.setItem('token', authToken);
-      
-      // Update state
-      setToken(authToken);
-      setUser(newUser);
-      setIsAuthenticated(true);
-      
-      return response.data;
-    } catch (err) {
-      console.error('Registration error:', err);
-      let errorMessage = 'Registration failed';
-      
-      // Extract meaningful error messages
-      if (err.response) {
-        // Response from server with error
-        errorMessage = err.response.data?.error || err.response.data?.message || `Registration failed (${err.response.status})`;
-        console.log('Error response:', err.response.data);
-      } else if (err.request) {
-        // Request made but no response
-        errorMessage = 'No response from server. Please check your network connection.';
-      } else {
-        // Error setting up request
-        errorMessage = err.message || 'Registration request failed';
-      }
-      
-      setError(errorMessage);
+      // Rethrow the error so it can be caught by the component
       throw err;
     } finally {
+      // Ensure loading state is reset even in success case
       setLoading(false);
     }
   };
@@ -198,45 +159,13 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
-    setUser(null);
     setIsAuthenticated(false);
-    
-    // Clear token from both axios instances
-    delete axios.defaults.headers.common['Authorization'];
-    
-    if (apiClient && apiClient.defaults) {
-      delete apiClient.defaults.headers.common['Authorization'];
-    }
+    setUser(null);
   };
 
-  // Clear any auth errors
-  const clearError = () => setError(null);
-
-  // Check if token is valid
-  const checkTokenValidity = async () => {
-    if (!token) return false;
-    
-    try {
-      await axios.get(`${API_URL}/auth/verify`);
-      return true;
-    } catch (err) {
-      logout();
-      return false;
-    }
-  };
-
-  const value = {
-    user,
-    token,
-    isAuthenticated,
-    loading,
-    error,
-    login,
-    register,
-    logout,
-    clearError,
-    checkTokenValidity
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}; 
+  return (
+    <AuthContext.Provider value={{ user, token, loading, error, isAuthenticated, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};

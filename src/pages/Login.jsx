@@ -93,7 +93,7 @@ const Login = () => {
     }
     
     console.log('Attempting login with:', formData);
-    console.log('Target API URL:', `${process.env.REACT_APP_API_URL || 'http://192.168.1.74:3000/api'}/auth/login`);
+    console.log('Target API URL:', `${process.env.REACT_APP_API_URL || 'http://localhost:3000/api'}/auth/login`);
     
     try {
       // Attempt login

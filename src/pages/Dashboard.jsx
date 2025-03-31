@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery, useQueryClient } from 'react-query';
 
 // Components
 import PageLayout from '../components/common/PageLayout';
@@ -9,27 +9,87 @@ import Loading from '../components/common/Loading';
 
 // Contexts and Hooks
 import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 
 // Services
-import api from '../services/api';
+import api, { apiClient } from '../services/api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { addNotification } = useAppContext();
+  const { isAuthenticated, token } = useAuth();
   const [period, setPeriod] = useState('month'); // 'week', 'month', 'year'
+  const [retryCount, setRetryCount] = useState(0);
+  const queryClient = useQueryClient();
+
+  // Effect to reapply token to API requests if needed
+  useEffect(() => {
+    if (token) {
+      // Ensure token is applied to all subsequent requests
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      console.log("Dashboard: Reapplied auth token to API client");
+    }
+  }, [token]);
+
+  // Retry logic for API requests
+  useEffect(() => {
+    if (retryCount > 0 && isAuthenticated && token) {
+      // Force a refetch of data
+      setTimeout(() => {
+        console.log("Retrying API requests after applying token...");
+        // Invalidate queries to trigger refetch
+        queryClient.invalidateQueries('quotes');
+        queryClient.invalidateQueries('invoices');
+      }, 500);
+    }
+  }, [retryCount, isAuthenticated, token, queryClient]);
 
   // Fetch data with React Query
-  const { data: quotes, isLoading: quotesLoading } = useQuery('quotes', api.quotes.getAll, {
-    onError: (error) => {
-      addNotification(`Error fetching quotes: ${error.message}`, 'error');
+  const { data: quotes, isLoading: quotesLoading, error: quotesError } = useQuery(
+    'quotes', 
+    api.quotes.getAll, 
+    {
+      onError: (error) => {
+        console.error("Error fetching quotes:", error);
+        if (error.response?.status === 401 && retryCount < 2) {
+          console.log("Authentication error fetching quotes, retrying...");
+          setRetryCount(prev => prev + 1);
+        } else {
+          addNotification(`Error fetching quotes: ${error.message}`, 'error');
+        }
+      },
+      retry: 2,
+      retryDelay: 1000,
+      enabled: isAuthenticated
     }
-  });
+  );
 
-  const { data: invoices, isLoading: invoicesLoading } = useQuery('invoices', api.invoices.getAll, {
-    onError: (error) => {
-      addNotification(`Error fetching invoices: ${error.message}`, 'error');
+  const { data: invoices, isLoading: invoicesLoading, error: invoicesError } = useQuery(
+    'invoices', 
+    api.invoices.getAll, 
+    {
+      onError: (error) => {
+        console.error("Error fetching invoices:", error);
+        if (error.response?.status === 401 && retryCount < 2) {
+          console.log("Authentication error fetching invoices, retrying...");
+          setRetryCount(prev => prev + 1);
+        } else {
+          addNotification(`Error fetching invoices: ${error.message}`, 'error');
+        }
+      },
+      retry: 2,
+      retryDelay: 1000,
+      enabled: isAuthenticated
     }
-  });
+  );
+
+  // If not authenticated, redirect to login
+  useEffect(() => {
+    if (!isAuthenticated) {
+      console.log("Dashboard: Not authenticated, redirecting to login");
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate]);
 
   // Calculate dashboard metrics
   const calculateMetrics = () => {

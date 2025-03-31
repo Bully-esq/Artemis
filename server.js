@@ -7,13 +7,24 @@ const Database = require('better-sqlite3');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const rateLimit = require('express-rate-limit');
 
 // Create Express application
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Enable trust proxy to handle Cloudflare correctly
+app.set('trust proxy', true);
+
+// Verify JWT_SECRET is set
+if (!process.env.JWT_SECRET) {
+  console.error('ERROR: JWT_SECRET environment variable is not set!');
+  console.error('Please set JWT_SECRET in your .env file');
+  process.exit(1);
+}
+
 // JWT Secret for signing tokens
-const JWT_SECRET = process.env.JWT_SECRET || 'artemis-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
 const TOKEN_EXPIRY = '24h';
 
 // Database connection
@@ -21,15 +32,64 @@ let db;
 
 // Middleware
 app.use(cors({
-  origin: '*',
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5000', 'https://app.uncharted.social'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Serve static files (if needed)
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Security headers
+app.use((req, res, next) => {
+  // Security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // Content Security Policy - can be adjusted as needed
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://app.uncharted.social;");
+  
+  next();
+});
+
+// Redirect to HTTPS for the production domain (Cloudflare compatible)
+app.use((req, res, next) => {
+  // Cloudflare sends the 'cf-visitor' header with the scheme
+  const cfVisitor = req.headers['cf-visitor'] ? JSON.parse(req.headers['cf-visitor']) : {};
+  
+  // Check various headers that might indicate the request protocol
+  const isNotSecure = 
+    (cfVisitor.scheme === 'http') || 
+    (req.headers['x-forwarded-proto'] === 'http') ||
+    (!req.secure && req.hostname === 'app.uncharted.social');
+  
+  if (isNotSecure) {
+    return res.redirect(`https://${req.hostname}${req.url}`);
+  }
+  next();
+});
+
+// Configure rate limiting
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 login attempts per window
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  // Trust Cloudflare's forwarded IP
+  trustProxy: true,
+  // Use CF-Connecting-IP header if available
+  keyGenerator: (req) => {
+    return req.headers['cf-connecting-ip'] || req.ip;
+  },
+  message: { 
+    error: 'Too many login attempts from this IP, please try again after 15 minutes' 
+  }
+});
 
 // Authentication middleware
 const auth = (req, res, next) => {
@@ -228,7 +288,7 @@ async function initDatabase() {
     const adminExists = db.prepare('SELECT id FROM users WHERE email = ? AND deleted = 0').get('admin@example.com');
     
     if (!adminExists) {
-      const hashedPassword = bcrypt.hashSync('admin123', 10);
+      const hashedPassword = bcrypt.hashSync('Artemis#Admin2023!', 10);
       const now = new Date().toISOString();
       
       db.prepare(`
@@ -281,6 +341,13 @@ app.get('/api/ping', (req, res) => {
 
 // Register new user
 app.post('/api/auth/register', async (req, res) => {
+  // Registration is disabled
+  return res.status(403).json({ 
+    success: false, 
+    error: 'Registration is currently disabled by the administrator' 
+  });
+  
+  /* Original registration code commented out
   try {
     const { email, password, name } = req.body;
     
@@ -339,14 +406,20 @@ app.post('/api/auth/register', async (req, res) => {
     console.error('Error registering user:', error);
     res.status(500).json({ error: 'Failed to register user' });
   }
+  */
 });
 
 // Login user
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     
+    // Get client IP, respecting Cloudflare headers
+    const clientIP = req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.ip;
+    
     if (!email || !password) {
+      // Log invalid attempt
+      console.log(`[${new Date().toISOString()}] SECURITY: Login attempt with missing credentials from IP: ${clientIP}`);
       return res.status(400).json({ error: 'Email and password are required' });
     }
     
@@ -356,6 +429,8 @@ app.post('/api/auth/login', async (req, res) => {
     );
     
     if (!user) {
+      // Log invalid user attempt
+      console.log(`[${new Date().toISOString()}] SECURITY: Login attempt for non-existent user: ${email} from IP: ${clientIP}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
@@ -363,8 +438,13 @@ app.post('/api/auth/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     
     if (!isMatch) {
+      // Log failed password attempt
+      console.log(`[${new Date().toISOString()}] SECURITY: Failed password attempt for user: ${email} from IP: ${clientIP}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+    
+    // Log successful login
+    console.log(`[${new Date().toISOString()}] User logged in: ${email} from IP: ${clientIP}`);
     
     // Update last login time
     const now = new Date().toISOString();

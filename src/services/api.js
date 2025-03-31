@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://192.168.1.74:3000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
 // Create axios instance
 export const apiClient = axios.create({
@@ -15,6 +15,21 @@ const token = localStorage.getItem('token');
 if (token) {
   apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 }
+
+// Add a request interceptor to ensure token is applied to all requests
+apiClient.interceptors.request.use(
+  config => {
+    // Check if token exists in localStorage before each request
+    const currentToken = localStorage.getItem('token');
+    if (currentToken) {
+      config.headers.Authorization = `Bearer ${currentToken}`;
+    }
+    return config;
+  },
+  error => {
+    return Promise.reject(error);
+  }
+);
 
 // Add a local storage wrapper for offline storage
 const db = {
