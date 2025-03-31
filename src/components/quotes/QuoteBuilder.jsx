@@ -2169,7 +2169,9 @@ const QuoteBuilder = () => {
             setQuoteDetails({
               ...quoteDetails,
               client: {
-                name: contact.customerType === 'company' ? contact.company : `${contact.firstName} ${contact.lastName}`.trim                ,
+                name: contact.customerType === 'company' 
+                  ? `${contact.firstName} ${contact.lastName}`.trim() 
+                  : `${contact.firstName} ${contact.lastName}`.trim(),
                 company: contact.company || '',
                 email: contact.email || '',
                 phone: contact.phone || '',
