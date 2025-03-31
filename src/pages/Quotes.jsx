@@ -10,6 +10,7 @@ import PageLayout from '../components/common/PageLayout';
 import Button from '../components/common/Button';
 import Loading from '../components/common/Loading';
 import Dialog from '../components/common/Dialog';
+import ActionButtonContainer from '../components/common/ActionButtonContainer';
 
 const Quotes = () => {
   const navigate = useNavigate();
@@ -143,7 +144,6 @@ const Quotes = () => {
   const pageActions = (
     <Button 
       variant="primary" 
-      size="sm"
       onClick={handleCreateQuote}
     >
       <svg className="w-4 h-4 mr-1 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -184,7 +184,20 @@ const Quotes = () => {
   }
 
   return (
-    <PageLayout title="Quotes" actions={pageActions}>
+    <PageLayout title="Quotes">
+      {/* Add ActionButtonContainer below the header */}
+      <ActionButtonContainer>
+        <Button 
+          variant="primary" 
+          onClick={handleCreateQuote}
+        >
+          <svg className="w-4 h-4 mr-1 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          New Quote
+        </Button>
+      </ActionButtonContainer>
+
       {/* Page Header - Styled like Dashboard */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-2">Quote Management</h1>

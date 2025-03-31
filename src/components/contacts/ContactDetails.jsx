@@ -12,6 +12,7 @@ import Loading from '../common/Loading';
 import Dialog from '../common/Dialog';
 import Tabs from '../common/Tabs';
 import { TabPanel } from '../common/Tabs';
+import ActionButtonContainer from '../common/ActionButtonContainer';
 
 const ContactDetails = () => {
   const { id } = useParams();
@@ -238,12 +239,11 @@ const ContactDetails = () => {
   };
   
   return (
-    <PageLayout
-      title="Contact Details"
-      actions={
+    <PageLayout title="Contact Details">
+      {/* Add ActionButtonContainer below the header */}
+      <ActionButtonContainer>
         <Button 
-          variant="primary" 
-          size="sm"
+          variant="primary"
           onClick={() => navigate('/contacts')}
         >
           <svg className="w-4 h-4 mr-1 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -251,8 +251,8 @@ const ContactDetails = () => {
           </svg>
           Back to Contacts
         </Button>
-      }
-    >
+      </ActionButtonContainer>
+      
       <div className="contact-layout">
         {/* Left column */}
         <div className="contact-sidebar">

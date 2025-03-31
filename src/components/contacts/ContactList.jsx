@@ -13,6 +13,7 @@ import Dialog from '../common/Dialog';
 import FormField from '../common/FormField';
 import Loading from '../common/Loading';
 import ContactForm from '../contacts/ContactForm';
+import ActionButtonContainer from '../common/ActionButtonContainer';
 
 const ContactList = () => {
   const navigate = useNavigate();
@@ -167,7 +168,10 @@ const ContactList = () => {
   // Loading state
   if (isLoading) {
     return (
-      <PageLayout title="Contacts" actions={pageActions}>
+      <PageLayout title="Contacts">
+        <ActionButtonContainer>
+          {pageActions}
+        </ActionButtonContainer>
         <Loading message="Loading contacts..." />
       </PageLayout>
     );
@@ -176,7 +180,10 @@ const ContactList = () => {
   // Error state
   if (isError) {
     return (
-      <PageLayout title="Contacts" actions={pageActions}>
+      <PageLayout title="Contacts">
+        <ActionButtonContainer>
+          {pageActions}
+        </ActionButtonContainer>
         <div className="error-message">
           <p>Error loading contacts: {error.message}</p>
           <Button 
@@ -192,7 +199,11 @@ const ContactList = () => {
   }
   
   return (
-    <PageLayout title="Contacts" actions={pageActions}>
+    <PageLayout title="Contacts">
+      <ActionButtonContainer>
+        {pageActions}
+      </ActionButtonContainer>
+
       {/* Page Header - Styled like Dashboard */}
       <div className="page-header">
         <h1 className="page-title">Contact Management</h1>
@@ -327,7 +338,7 @@ const ContactList = () => {
                       }`}>
                         {contact.customerType === 'company' ? 'Company' : 'Individual'}
                       </span>
-                      <div className="action-buttons-container">
+                      <ActionButtonContainer>
                         <button
                           className="btn btn-list-item btn-list-item--secondary"
                           onClick={(e) => {
@@ -346,7 +357,7 @@ const ContactList = () => {
                         >
                           Delete
                         </button>
-                      </div>
+                      </ActionButtonContainer>
                     </div>
                   </div>
                 </div>

@@ -8,6 +8,7 @@ import Button from '../../components/common/Button';
 import Loading from '../../components/common/Loading';
 import Dialog from '../../components/common/Dialog';
 import FormField from '../../components/common/FormField';
+import ActionButtonContainer from '../../components/common/ActionButtonContainer';
 
 // API and Hooks
 import { useAppContext } from '../../context/AppContext';
@@ -134,7 +135,10 @@ const QuoteList = () => {
   // Handle loading state
   if (isLoading) {
     return (
-      <PageLayout title="Quotes" actions={actions}>
+      <PageLayout title="Quotes">
+        <ActionButtonContainer>
+          {actions}
+        </ActionButtonContainer>
         <Loading message="Loading quotes..." />
       </PageLayout>
     );
@@ -143,7 +147,10 @@ const QuoteList = () => {
   // Handle error state
   if (isError) {
     return (
-      <PageLayout title="Quotes" actions={actions}>
+      <PageLayout title="Quotes">
+        <ActionButtonContainer>
+          {actions}
+        </ActionButtonContainer>
         <div className="bg-red-50 p-4 rounded-md">
           <h3 className="text-red-800 font-medium">Error loading quotes</h3>
           <p className="text-red-700">{error.message}</p>
@@ -160,7 +167,11 @@ const QuoteList = () => {
   }
   
   return (
-    <PageLayout title="Quotes" actions={actions}>
+    <PageLayout title="Quotes">
+      <ActionButtonContainer>
+        {actions}
+      </ActionButtonContainer>
+
       {/* Search and filter section */}
       <div className="mb-6">
         <FormField

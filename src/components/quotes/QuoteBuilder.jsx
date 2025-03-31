@@ -15,6 +15,7 @@ import Tabs from '../common/Tabs';
 import Dialog from '../common/Dialog';
 import FormField from '../common/FormField';
 import ContactSelector from '../contacts/ContactSelector';
+import ActionButtonContainer from '../common/ActionButtonContainer';
 
 // Add this near the top of your file with the other imports
 import '../../styles/components/quotes.css';
@@ -801,7 +802,41 @@ const QuoteBuilder = () => {
   };
 
   return (
-    <PageLayout title={id ? 'Edit Quote' : 'Create Quote'} actions={headerActions}>
+    <PageLayout title={id ? 'Edit Quote' : 'Create Quote'}>
+      {/* Add ActionButtonContainer below the header */}
+      <ActionButtonContainer>
+        <Button
+          variant="primary"
+          onClick={() => navigate('/quotes')}
+        >
+          Back to Quotes
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleSaveQuote}
+        >
+          Save Quote
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleEmailQuote}
+        >
+          Email Quote
+        </Button>
+        <Button
+          variant="primary"
+          onClick={safeExportPDF}
+        >
+          Export PDF
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleGenerateInvoice}
+        >
+          Generate Invoice
+        </Button>
+      </ActionButtonContainer>
+      
       <div className="tabs-container">
         <div className="card">
           <div className="card-body">
@@ -2072,7 +2107,7 @@ const QuoteBuilder = () => {
             setQuoteDetails({
               ...quoteDetails,
               client: {
-                name: contact.customerType === 'company' ? contact.company : `${contact.firstName} ${contact.lastName}`.trim(),
+                name: contact.customerType === 'company' ? contact.company : `${contact.firstName} ${contact.lastName}`.trim                ,
                 company: contact.company || '',
                 email: contact.email || '',
                 phone: contact.phone || '',

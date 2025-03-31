@@ -11,7 +11,8 @@ import Dialog from '../common/Dialog';
 import FormField from '../common/FormField';
 import Loading from '../common/Loading';
 import Tabs from '../common/Tabs';
-import CatalogItemList from './CatalogItemList'; // Import CatalogItemList
+import CatalogItemList from './CatalogItemList';
+import ActionButtonContainer from '../common/ActionButtonContainer';
 
 const SupplierList = () => {
   const navigate = useNavigate();
@@ -357,21 +358,20 @@ const SupplierList = () => {
   }
   
   return (
-    <PageLayout 
-      title="Suppliers & Catalog" 
-      actions={
+    <PageLayout title="Suppliers & Catalog">
+      {/* Add ActionButtonContainer below the header */}
+      <ActionButtonContainer>
         <Button 
-          variant="primary" 
-          size="sm" 
+          variant="primary"
           onClick={handleAddSupplier} 
         >
-          <svg className="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24"> {/* Consider standardizing icon classes like w-4 h-4 */}
+          <svg className="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Add Supplier
         </Button>
-      }
-    >
+      </ActionButtonContainer>
+      
       {/* Page Header - Styled like Dashboard */}
       <div className="page-header">
         <h1 className="page-title">Supplier Management</h1>

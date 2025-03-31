@@ -8,6 +8,7 @@ import api from '../../services/api';
 import PageLayout from '../../components/common/PageLayout';
 import Button from '../../components/common/Button';
 import Loading from '../../components/common/Loading';
+import ActionButtonContainer from '../../components/common/ActionButtonContainer';
 
 
 const InvoiceList = () => {
@@ -89,7 +90,10 @@ const InvoiceList = () => {
   
   if (isLoading) {
     return (
-      <PageLayout title="Invoices" actions={actionButtons}>
+      <PageLayout title="Invoices">
+        <ActionButtonContainer>
+          {actionButtons}
+        </ActionButtonContainer>
         <Loading message="Loading invoices..." />
       </PageLayout>
     );
@@ -97,7 +101,10 @@ const InvoiceList = () => {
   
   if (isError) {
     return (
-      <PageLayout title="Invoices" actions={actionButtons}>
+      <PageLayout title="Invoices">
+        <ActionButtonContainer>
+          {actionButtons}
+        </ActionButtonContainer>
         <div className="error-container">
           <p className="error-message">Error loading invoices: {error?.message}</p>
           <Button 
@@ -113,7 +120,11 @@ const InvoiceList = () => {
   }
   
   return (
-    <PageLayout title="Invoices" actions={actionButtons}>
+    <PageLayout title="Invoices">
+      <ActionButtonContainer>
+        {actionButtons}
+      </ActionButtonContainer>
+
       {/* Page Header - Styled like Dashboard */}
       <div className="page-header">
         <h1 className="page-title">Invoice Management</h1>

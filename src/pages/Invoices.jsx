@@ -9,6 +9,7 @@ import Button from '../components/common/Button';
 import Loading from '../components/common/Loading';
 import Dialog from '../components/common/Dialog';
 import FormField from '../components/common/FormField';
+import ActionButtonContainer from '../components/common/ActionButtonContainer';
 
 // Import services & utilities
 import api from '../services/api';
@@ -130,7 +131,7 @@ const Invoices = () => {
   // Loading state
   if (isLoadingInvoices) {
     return (
-      <PageLayout title="Invoices" actions={actionButtons}>
+      <PageLayout title="Invoices">
         <Loading message="Loading invoices..." />
       </PageLayout>
     );
@@ -139,7 +140,7 @@ const Invoices = () => {
   // Error state
   if (invoicesError) {
     return (
-      <PageLayout title="Invoices" actions={actionButtons}>
+      <PageLayout title="Invoices">
         <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded shadow">
           <h3 className="text-red-800 font-medium">Error loading invoices</h3>
           <p className="text-red-700">Please try refreshing the page</p>
@@ -156,7 +157,20 @@ const Invoices = () => {
   }
 
   return (
-    <PageLayout title="Invoices" actions={actionButtons}>
+    <PageLayout title="Invoices">
+      {/* Add ActionButtonContainer below the header */}
+      <ActionButtonContainer>
+        <Button 
+          variant="primary"
+          onClick={() => setShowQuoteSelector(true)}
+        >
+          <svg className="w-5 h-5 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          New Invoice
+        </Button>
+      </ActionButtonContainer>
+
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-2">Invoice Management</h1>
         <p className="text-gray-600">Create and manage invoices for your clients</p>

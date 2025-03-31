@@ -13,6 +13,7 @@ import Loading from '../components/common/Loading';
 import Dialog from '../components/common/Dialog';
 import FormField from '../components/common/FormField';
 import ContactForm from '../components/contacts/ContactForm';
+import ActionButtonContainer from '../components/common/ActionButtonContainer';
 
 const Contacts = () => {
   const navigate = useNavigate();
@@ -143,8 +144,10 @@ const Contacts = () => {
     return (
       <PageLayout 
         title="Contacts"
-        actions={actionButtons}
       >
+        <ActionButtonContainer>
+          {actionButtons}
+        </ActionButtonContainer>
         <Loading message="Loading contacts..." />
       </PageLayout>
     );
@@ -155,8 +158,10 @@ const Contacts = () => {
     return (
       <PageLayout 
         title="Contacts"
-        actions={actionButtons}
       >
+        <ActionButtonContainer>
+          {actionButtons}
+        </ActionButtonContainer>
         <div className="bg-red-50 p-4 rounded-md">
           <h3 className="text-red-800 font-medium">Error loading contacts</h3>
           <p className="text-red-700">{error?.message || 'Unknown error'}</p>
@@ -175,8 +180,32 @@ const Contacts = () => {
   return (
     <PageLayout 
       title="Contacts"
-      actions={actionButtons}
     >
+      {/* Add ActionButtonContainer below the header */}
+      <ActionButtonContainer>
+        <Button
+          variant="primary"
+          onClick={() => setShowCreateDialog(true)}
+        >
+          <span className="flex items-center">
+            <svg 
+              className="w-5 h-5 mr-2" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6" 
+              />
+            </svg>
+            New Contact
+          </span>
+        </Button>
+      </ActionButtonContainer>
+
       {/* Page Header - Styled like Dashboard */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-2">Contact Management</h1>
