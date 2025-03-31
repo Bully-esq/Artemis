@@ -3,12 +3,18 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL || 'http://192.168.1.74:3000/api';
 
 // Create axios instance
-const apiClient = axios.create({
+export const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
   }
 });
+
+// Set auth token if it exists in localStorage
+const token = localStorage.getItem('token');
+if (token) {
+  apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+}
 
 // Add a local storage wrapper for offline storage
 const db = {
@@ -55,6 +61,12 @@ apiClient.interceptors.response.use(
       // Dispatch network status event
       window.dispatchEvent(new CustomEvent('network-disconnected'));
     }
+    
+    // Handle unauthorized (401) errors by dispatching an event that can be caught by the auth context
+    if (error.response && error.response.status === 401) {
+      window.dispatchEvent(new CustomEvent('auth-failed'));
+    }
+    
     return Promise.reject(error);
   }
 );
@@ -462,6 +474,7 @@ const mockActivities = [
   }
 ];
 
+// Export default API objects
 export default {
   quotes: quotesApi,
   invoices: invoicesApi,
@@ -470,5 +483,6 @@ export default {
   catalog,
   settings: settingsApi,
   activities: activitiesApi,
-  ping
+  ping,
+  client: apiClient  // Also export apiClient via the default export
 };

@@ -357,37 +357,37 @@ const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
         <div className="bank-details-grid">
           {bankSettings.name && (
             <div className="bank-detail">
-              <span className="label">Bank:</span>
+              <span className="label"><b>Bank: </b></span>
               <span className="value">{bankSettings.name}</span>
             </div>
           )}
           {bankSettings.accountName && (
             <div className="bank-detail">
-              <span className="label">Account Name:</span>
+              <span className="label"><b>Account Name: </b></span>
               <span className="value">{bankSettings.accountName}</span>
             </div>
           )}
           {bankSettings.accountNumber && (
             <div className="bank-detail">
-              <span className="label">Account Number:</span>
+              <span className="label"><b>Account Number: </b></span>
               <span className="value">{bankSettings.accountNumber}</span>
             </div>
           )}
           {bankSettings.sortCode && (
             <div className="bank-detail">
-              <span className="label">Sort Code:</span>
+              <span className="label"><b>Sort Code: </b></span>
               <span className="value">{bankSettings.sortCode}</span>
             </div>
           )}
           {bankSettings.iban && (
             <div className="bank-detail">
-              <span className="label">IBAN:</span>
+              <span className="label"><b>IBAN: </b></span>
               <span className="value">{bankSettings.iban}</span>
             </div>
           )}
           {bankSettings.bic && (
             <div className="bank-detail">
-              <span className="label">BIC/SWIFT:</span>
+              <span className="label"><b>BIC/SWIFT: </b></span>
               <span className="value">{bankSettings.bic}</span>
             </div>
           )}

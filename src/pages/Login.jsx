@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import FormField from '../components/common/FormField';
 import Button from '../components/common/Button';
 
@@ -72,16 +73,32 @@ const Login = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Form submitted', e.target);
+    
+    // Inspect the Button event handling
+    console.log('Login form event details:', {
+      defaultPrevented: e.defaultPrevented,
+      target: e.target.tagName,
+      currentTarget: e.currentTarget.tagName,
+      type: e.type
+    });
     
     // Clear any previous auth errors
     if (error) clearError();
     
     // Validate form
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      console.log('Form validation failed', formErrors);
+      return;
+    }
+    
+    console.log('Attempting login with:', formData);
+    console.log('Target API URL:', `${process.env.REACT_APP_API_URL || 'http://192.168.1.74:3000/api'}/auth/login`);
     
     try {
       // Attempt login
       await login(formData.email, formData.password);
+      console.log('Login successful, should redirect to:', from);
       
       // Save email in localStorage if "Remember me" is checked
       if (rememberMe) {
@@ -93,7 +110,7 @@ const Login = () => {
       // Redirect happens automatically via the useEffect
     } catch (err) {
       // Auth errors are handled by the context
-      console.error('Login failed:', err);
+      console.error('Login failed in component:', err.message);
     }
   };
 
@@ -193,6 +210,13 @@ const Login = () => {
               </Button>
             </div>
           </form>
+
+          {/* Registration link */}
+          <div className="mt-6 text-center text-sm">
+            <p className="text-gray-600">
+              Don't have an account? <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">Register now</Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>

@@ -17,6 +17,8 @@ import Dialog from '../common/Dialog';
 import InvoicePreview from './InvoicePreview';
 import PaymentSchedule from './PaymentSchedule'; // Import PaymentSchedule component
 import ContactSelector from '../contacts/ContactSelector'; // Update import path for ContactSelector
+import PageLayout from '../common/PageLayout';
+import { ActionButtonContainer } from '../common/ActionButtonContainer';  // If this exists
 
 const InvoiceBuilder = () => {
   const { id } = useParams();
@@ -234,7 +236,10 @@ const InvoiceBuilder = () => {
   // Generate PDF
   const handleExportPDF = async () => {
     try {
-      // Get the invoice preview element
+      // First save the invoice
+      await handleSaveInvoice();
+      
+      // Then proceed with PDF generation
       const invoicePreviewElement = document.querySelector('.invoice-preview');
       
       if (!invoicePreviewElement) {
@@ -242,7 +247,7 @@ const InvoiceBuilder = () => {
       }
       
       // Add notification
-      addNotification('Generating PDF...', 'info');
+      addNotification('Invoice saved. Generating PDF...', 'info');
       
       // Configure options
       const options = {
@@ -675,6 +680,9 @@ const InvoiceBuilder = () => {
   // Create a safer export PDF function that ensures preview is visible
   const safeExportPDF = async () => {
     try {
+      // First save the invoice
+      await handleSaveInvoice();
+      
       // Get the invoice preview element
       const invoicePreviewElement = document.querySelector('.invoice-preview');
       
@@ -683,7 +691,7 @@ const InvoiceBuilder = () => {
       }
       
       // Add notification
-      addNotification('Generating PDF...', 'info');
+      addNotification('Invoice saved. Generating PDF...', 'info');
       
       // Configure options
       const options = {
@@ -742,7 +750,10 @@ const InvoiceBuilder = () => {
   // Add function to export PDF and open email client
   const handleExportAndOpenEmail = async () => {
     try {
-      // First export the PDF
+      // First save the invoice
+      await handleSaveInvoice();
+      
+      // Then export PDF and open email client
       const exported = await safeExportPDF();
       
       if (exported) {
@@ -766,33 +777,150 @@ const InvoiceBuilder = () => {
     }));
   };
 
+  // Add this function after your component's state declarations but before useEffect
+  const calculateQuoteTotal = (quote) => {
+    // If we already have a stored value, use that
+    if (invoiceDetails.quoteTotal && invoiceDetails.quoteTotal > 0) {
+      return invoiceDetails.quoteTotal;
+    }
+    
+    // If grandTotal exists on the quote, use it
+    if (typeof quote.grandTotal === 'number' && quote.grandTotal > 0) {
+      return quote.grandTotal;
+    }
+    
+    // If total exists on the quote, use it
+    if (typeof quote.total === 'number' && quote.total > 0) {
+      return quote.total;
+    }
+    
+    // Try to parse the search param as a number
+    if (quoteTotal) {
+      const parsedTotal = parseFloat(quoteTotal);
+      if (!isNaN(parsedTotal) && parsedTotal > 0) {
+        return parsedTotal;
+      }
+    }
+    
+    // If we have line items, calculate the total
+    if (Array.isArray(quote.lineItems) && quote.lineItems.length > 0) {
+      return quote.lineItems.reduce((total, item) => {
+        const itemCost = parseFloat(item.cost || 0);
+        const itemQuantity = parseFloat(item.quantity || 1);
+        return total + (itemCost * itemQuantity);
+      }, 0);
+    }
+    
+    // If we have selectedItems (from QuoteBuilder), calculate from those
+    if (Array.isArray(quote.selectedItems) && quote.selectedItems.length > 0) {
+      return quote.selectedItems.reduce((total, item) => {
+        const itemCost = parseFloat(item.cost || 0);
+        const itemQuantity = parseFloat(item.quantity || 1);
+        return total + (itemCost * itemQuantity);
+      }, 0);
+    }
+    
+    // Fallback to default
+    return 0;
+  };
+
   if (isLoadingInvoice || (quoteId && isLoadingQuote)) {
     return <Loading message="Loading data..." />;
   }
   
   return (
-    <div className="main-content">
-      <div className="page-header">
-        <h1 className="page-title">Invoice Management</h1>
+    <PageLayout title={id ? 'Edit Invoice' : 'Create Invoice'}>
+      {/* Add ActionButtonContainer below the header */}
+      <div className="action-button-container">
+        <div className="action-buttons">
+          <Link to="/quotes" className="btn btn-primary">
+            <span className="btn-icon">←</span>
+            Quotes
+          </Link>
+          
+          <Button
+            variant="primary"
+            onClick={handleSaveInvoice}
+          >
+            <span className="btn-icon">💾</span>
+            Save Invoice
+          </Button>
+          
+          <Button
+            variant="primary"
+            onClick={handleExportPDF}
+          >
+            <span className="btn-icon">📄</span>
+            Export PDF
+          </Button>
+          
+          <Button
+            variant="primary"
+            onClick={handleEmailInvoice}
+          >
+            <span className="btn-icon">✉️</span>
+            Email Invoice
+          </Button>
+          
+          <Button
+            variant="primary"
+            onClick={handleMarkAsPaid}
+            disabled={invoiceDetails.status === 'paid'}
+          >
+            <span className="btn-icon">✓</span>
+            Paid
+          </Button>
+          
+          <Button
+            variant="primary"
+            onClick={handleApplyCIS}
+            disabled={invoiceDetails.cisApplied}
+          >
+            <span className="btn-icon">🔧</span>
+            Apply CIS
+          </Button>
+          
+          <Button
+            variant="danger"
+            onClick={handleDeleteInvoice}
+          >
+            <span className="btn-icon">🗑</span>
+            Delete Invoice
+          </Button>
+          
+          <Button
+            variant="primary"
+            onClick={() => navigate('/settings')}
+          >
+            <span className="btn-icon">⚙️</span>
+            Settings
+          </Button>
+        </div>
       </div>
       
       <div className="tabs-container">
-        <Tabs
-          tabs={[
-            { id: 'create', label: 'Create Invoice' },
-            { id: 'list', label: 'Invoice List' }
-          ]}
-          activeTab={activeTab}
-          onChange={(tab) => {
-            if (tab === 'list') {
-              navigate('/invoices');
-            } else {
-              setActiveTab(tab);
-            }
-          }}
-          variant="underline"
-          className="invoice-tabs"
-        />
+        <div className="card">
+          <div className="card-body">
+            <div className="tabs-with-actions">
+              <Tabs
+                tabs={[
+                  { id: 'create', label: 'Create Invoice' },
+                  { id: 'list', label: 'Invoice List' }
+                ]}
+                activeTab={activeTab}
+                onChange={(tab) => {
+                  if (tab === 'list') {
+                    navigate('/invoices');
+                  } else {
+                    setActiveTab(tab);
+                  }
+                }}
+                variant="underline"
+                className="invoice-tabs"
+              />
+            </div>
+          </div>
+        </div>
       </div>
       
       <div className="invoice-layout">
@@ -924,30 +1052,9 @@ const InvoiceBuilder = () => {
                   />
                 </div>
                 
-                {/* Amount */}
-                <div className="form-field">
-                  <label className="form-label">Amount (£)</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    step="0.01"
-                    min="0"
-                    value={Number(invoiceDetails.amount || 0).toFixed(2)}
-                    onChange={(e) => setInvoiceDetails({...invoiceDetails, amount: parseFloat(e.target.value) || 0})}
-                    required
-                  />
-                </div>
-                
-                <div className="form-actions">
-                  <Button
-                    type="button"
-                    variant="green"
-                    onClick={handleSaveInvoice}
-                  >
-                    Generate Invoice
-                  </Button>
-                  
-                  {invoiceDetails.quoteId && invoiceDetails.quoteTotal > 0 && (
+                {/* Move the Create All Invoices button to a more appropriate location */}
+                {invoiceDetails.quoteId && invoiceDetails.quoteTotal > 0 && (
+                  <div className="form-actions">
                     <Button
                       type="button"
                       variant="primary"
@@ -956,8 +1063,8 @@ const InvoiceBuilder = () => {
                     >
                       Create All Invoices
                     </Button>
-                  )}
-                </div>
+                  </div>
+                )}
               </form>
               
               {/* Quick Add Item */}
@@ -1051,76 +1158,6 @@ const InvoiceBuilder = () => {
         
         {/* Right column - Preview */}
         <div className="invoice-preview-panel">
-          {/* Action buttons */}
-          <div className="card action-card">
-            <div className="card-body">
-              <div className="action-buttons">
-                <Link to="/quotes" className="btn btn-primary">
-                  <span className="btn-icon">←</span>
-                  Quotes
-                </Link>
-                
-                <Button
-                  variant="primary"
-                  onClick={handleSaveInvoice}
-                >
-                  <span className="btn-icon">💾</span>
-                  Save Invoice
-                </Button>
-                
-                <Button
-                  variant="primary"
-                  onClick={handleExportPDF}
-                >
-                  <span className="btn-icon">📄</span>
-                  Export PDF
-                </Button>
-                
-                <Button
-                  variant="primary"
-                  onClick={handleEmailInvoice}
-                >
-                  <span className="btn-icon">✉️</span>
-                  Email Invoice
-                </Button>
-                
-                <Button
-                  variant="primary"
-                  onClick={handleMarkAsPaid}
-                  disabled={invoiceDetails.status === 'paid'}
-                >
-                  <span className="btn-icon">✓</span>
-                  Paid
-                </Button>
-                
-                <Button
-                  variant="primary"
-                  onClick={handleApplyCIS}
-                  disabled={invoiceDetails.cisApplied}
-                >
-                  <span className="btn-icon">🔧</span>
-                  Apply CIS
-                </Button>
-                
-                <Button
-                  variant="danger"
-                  onClick={handleDeleteInvoice}
-                >
-                  <span className="btn-icon">🗑</span>
-                  Delete Invoice
-                </Button>
-                
-                <Button
-                  variant="primary"
-                  onClick={() => navigate('/settings')}
-                >
-                  <span className="btn-icon">⚙️</span>
-                  Settings
-                </Button>
-              </div>
-            </div>
-          </div>
-          
           {/* Invoice Preview */}
           <div className="card">
             <div className="card-header">
@@ -1142,40 +1179,41 @@ const InvoiceBuilder = () => {
             </div>
             <div className="card-body">
               {quote ? (
-                <div className="connected-quote-details">
-                  <div className="quote-info-grid">
-                    <div className="quote-info-item">
-                      <span className="info-label">Client:</span>
-                      <span className="info-value">{quote.client?.name || quote.clientName || 'Unnamed Client'}</span>
-                    </div>
-                    {(quote.client?.company || quote.clientCompany) && (
-                      <div className="quote-info-item">
-                        <span className="info-label">Company:</span>
-                        <span className="info-value">{quote.client?.company || quote.clientCompany}</span>
+                <>
+                  <div className="connected-quote-details">
+                    <div className="quote-info-grid" style={{ marginBottom: '20px' }}>
+                      <div className="quote-info-row">
+                        <strong>Client:</strong>
+                        <span>{quote.client?.name || quote.clientName || 'Unnamed Client'}</span>
                       </div>
-                    )}
-                    <div className="quote-info-item">
-                      <span className="info-label">Quote ID:</span>
-                      <span className="info-value">{quote.id}</span>
+                      {(quote.client?.company || quote.clientCompany) && (
+                        <div className="quote-info-row">
+                          <strong>Company:</strong>
+                          <span>{quote.client?.company || quote.clientCompany}</span>
+                        </div>
+                      )}
+                      <div className="quote-info-row">
+                        <strong>Quote ID:</strong>
+                        <span>{quote.id}</span>
+                      </div>
+                      <div className="quote-info-row">
+                        <strong>Total:</strong>
+                        <span>£{calculateQuoteTotal(quote).toFixed(2)}</span>
+                      </div>
                     </div>
-                    <div className="quote-info-item">
-                      <span className="info-label">Total:</span>
-                      <span className="info-value">
-                        £{(quote.grandTotal || quoteTotal || 0).toFixed(2)}
-                      </span>
+                    
+                    <div className="quote-actions" style={{ marginTop: '20px' }}>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => navigate(`/quotes/${quote.id}`)}
+                        className="view-quote-btn"
+                      >
+                        View Quote
+                      </Button>
                     </div>
                   </div>
-                  
-                  <div className="quote-actions">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => navigate(`/quotes/${quote.id}`)}
-                    >
-                      View Quote
-                    </Button>
-                  </div>
-                </div>
+                </>
               ) : (
                 <p>
                   {quoteId ? 'Loading quote information...' : 'No quote connected. Please go back to quotes page and select a quote to invoice.'}
@@ -1191,27 +1229,72 @@ const InvoiceBuilder = () => {
             </div>
             <div className="card-body">
               {quote ? (
-                <PaymentSchedule 
-                  quote={quote} 
-                  onInvoiceCreate={handleCreateInvoiceForStage} 
-                />
+                <div className="payment-schedule-container">
+                  <table className="payment-schedule-table">
+                    <thead>
+                      <tr>
+                        <th>Stage</th>
+                        <th>Amount</th>
+                        <th>Due When</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Always show standard payment stages based on quote total */}
+                      <tr className="payment-schedule-row">
+                        <td className="stage-column">Deposit (50%)</td>
+                        <td className="amount-column">£{(calculateQuoteTotal(quote) * 0.5).toFixed(2)}</td>
+                        <td className="due-column">On Acceptance</td>
+                        <td className="status-column">
+                          <span className="status-badge pending">Pending</span>
+                        </td>
+                        <td className="actions-column">
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleCreateInvoiceForStage({
+                              stage: 'Deposit (50%)',
+                              amount: calculateQuoteTotal(quote) * 0.5,
+                              dueWhen: 'On Acceptance',
+                              description: 'Initial deposit payment'
+                            })}
+                            className="create-invoice-btn"
+                          >
+                            Create Invoice
+                          </Button>
+                        </td>
+                      </tr>
+                      <tr className="payment-schedule-row">
+                        <td className="stage-column">Final Payment (50%)</td>
+                        <td className="amount-column">£{(calculateQuoteTotal(quote) * 0.5).toFixed(2)}</td>
+                        <td className="due-column">On Completion</td>
+                        <td className="status-column">
+                          <span className="status-badge pending">Pending</span>
+                        </td>
+                        <td className="actions-column">
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleCreateInvoiceForStage({
+                              stage: 'Final Payment (50%)',
+                              amount: calculateQuoteTotal(quote) * 0.5,
+                              dueWhen: 'On Completion',
+                              description: 'Final payment'
+                            })}
+                            className="create-invoice-btn"
+                          >
+                            Create Invoice
+                          </Button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               ) : (
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Stage</th>
-                      <th>Amount</th>
-                      <th>Due When</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td colSpan="5">No payment schedule available</td>
-                    </tr>
-                  </tbody>
-                </table>
+                <p className="no-schedule-message">
+                  {quoteId ? 'Loading payment schedule...' : 'No payment schedule available'}
+                </p>
               )}
             </div>
           </div>
@@ -1301,7 +1384,7 @@ const InvoiceBuilder = () => {
           }}
         />
       </Dialog>
-    </div>
+    </PageLayout>
   );
 };
 

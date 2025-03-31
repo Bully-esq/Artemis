@@ -2166,18 +2166,18 @@ const QuoteBuilder = () => {
         <ContactSelector 
           searchTerm={contactSearchTerm} 
           onContactSelect={(contact) => {
-            setQuoteDetails({
-              ...quoteDetails,
-              client: {
-                name: `${contact.firstName} ${contact.lastName}`.trim(),
-                company: contact.company || '',
-                email: contact.email || '',
-                phone: contact.phone || '',
-                address: contact.address || ''
-              }
-            });
+            setQuoteDetails(prev => ({
+              ...prev,
+              clientName: contact.customerType === 'individual' 
+                ? `${contact.firstName} ${contact.lastName}`.trim()
+                : `${contact.firstName || ''} ${contact.lastName || ''}`.trim(),
+              clientCompany: contact.company || '',
+              clientEmail: contact.email || '',
+              clientPhone: contact.phone || '',
+              clientAddress: contact.address || ''
+            }));
             setShowContactSelector(false);
-            addNotification(`Contact "${contact.customerType === 'company' ? contact.company : `${contact.firstName} ${contact.lastName}`.trim()}" selected`, 'success');
+            addNotification(`Contact selected: ${contact.firstName} ${contact.lastName}`, 'success');
           }}
         />
       </Dialog>

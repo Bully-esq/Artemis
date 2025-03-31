@@ -362,3 +362,93 @@
 .remove-item-btn:hover {
   background-color: rgba(239, 68, 68, 0.1);
 }
+
+.payment-schedule-container {
+  margin: 1rem 0;
+}
+
+.payment-schedule-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.payment-schedule-table th {
+  background-color: #f8f9fa;
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #444;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.payment-schedule-table td {
+  padding: 16px;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: middle;
+}
+
+.payment-schedule-row {
+  transition: background-color 0.2s;
+}
+
+.payment-schedule-row:hover {
+  background-color: #f8f9fa;
+}
+
+.stage-column {
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.amount-column {
+  font-family: monospace;
+  font-size: 1.1em;
+  color: #2c3e50;
+}
+
+.due-column {
+  color: #666;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.status-badge.pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.paid {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.actions-column {
+  text-align: right;
+}
+
+.create-invoice-btn {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.create-invoice-btn:hover {
+  background-color: #2563eb;
+}
+
+.no-schedule-message {
+  text-align: center;
+  color: #666;
+  padding: 2rem;
+  font-style: italic;
+}

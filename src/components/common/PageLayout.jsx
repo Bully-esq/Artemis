@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import '../../styles/components/common/pageLayout.css';
 
 /**
@@ -12,6 +13,8 @@ import '../../styles/components/common/pageLayout.css';
  */
 const PageLayout = ({ title, children, actions }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Navigation items
@@ -21,9 +24,16 @@ const PageLayout = ({ title, children, actions }) => {
     { name: 'Invoices', href: '/invoices', icon: 'document' },
     { name: 'Contacts', href: '/contacts', icon: 'users' },
     { name: 'Suppliers', href: '/suppliers', icon: 'truck' },
+    { name: 'Users', href: '/users', icon: 'user-group' },
     { name: 'Settings', href: '/settings', icon: 'cog' },
   ];
   
+  // Handle logout
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   // Check if a navigation item is active
   const isActive = (href) => {
     if (href === '/') {
@@ -120,6 +130,29 @@ const PageLayout = ({ title, children, actions }) => {
                 ))}
               </nav>
             </div>
+            
+            {/* Mobile sidebar footer with logout */}
+            <div className="sidebar-footer">
+              <div className="user-info">
+                <div className="user-avatar">
+                  <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div className="user-details">
+                  <span className="user-name">{user?.name || 'User'}</span>
+                </div>
+              </div>
+              <button 
+                onClick={handleLogout}
+                className="logout-button"
+              >
+                <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>Logout</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -156,9 +189,18 @@ const PageLayout = ({ title, children, actions }) => {
                 </svg>
               </div>
               <div className="user-details">
-                <span className="user-name">Admin User</span>
+                <span className="user-name">{user?.name || 'User'}</span>
               </div>
             </div>
+            <button 
+              onClick={handleLogout}
+              className="logout-button"
+            >
+              <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>Logout</span>
+            </button>
           </div>
         </div>
       </div>

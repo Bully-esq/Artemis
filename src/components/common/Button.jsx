@@ -90,10 +90,8 @@ const Button = ({
   
   // Enhanced click handler with debugging
   const handleClick = (e) => {
-    // Prevent default for form buttons unless specified
-    if (rest.type === 'submit' && !rest.preventDefaultOff) {
-      e.preventDefault();
-    }
+    // Don't prevent default for form submission buttons
+    // This allows the form's onSubmit handler to be called
     
     console.log(`Button clicked: ${variant} ${children}`);
     
