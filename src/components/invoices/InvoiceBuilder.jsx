@@ -16,6 +16,7 @@ import Tabs from '../common/Tabs';
 import Dialog from '../common/Dialog';
 import InvoicePreview from './InvoicePreview';
 import PaymentSchedule from './PaymentSchedule'; // Import PaymentSchedule component
+import ContactSelector from '../contacts/ContactSelector'; // Update import path for ContactSelector
 
 const InvoiceBuilder = () => {
   const { id } = useParams();
@@ -33,6 +34,11 @@ const InvoiceBuilder = () => {
   const vatEnabled = searchParams.get('vatEnabled') === 'true';
   const vatRate = searchParams.get('vatRate') ? parseFloat(searchParams.get('vatRate')) : 20;
   const vatAmount = searchParams.get('vatAmount') ? parseFloat(searchParams.get('vatAmount')) : 0;
+
+  // For quick add line items
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemAmount, setNewItemAmount] = useState('');
+  const [newItemQuantity, setNewItemQuantity] = useState(1);
 
   // Update the useState section to use these parameters 
   const [invoiceDetails, setInvoiceDetails] = useState({
@@ -64,6 +70,10 @@ const InvoiceBuilder = () => {
   const [activeTab, setActiveTab] = useState('create');
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   
+  // Add these new state variables for contact selection
+  const [showContactSelector, setShowContactSelector] = useState(false);
+  const [contactSearchTerm, setContactSearchTerm] = useState('');
+
   // Fetch invoice if we have an ID
   const { data: invoice, isLoading: isLoadingInvoice } = useQuery(
     ['invoice', id],
@@ -427,6 +437,46 @@ const InvoiceBuilder = () => {
     addNotification(`Payment stage selected: ${stage.description} (Labor items included)`, 'info');
   };
 
+  // Handle adding new items to the invoice
+  const handleAddItem = () => {
+    if (!newItemName || !newItemAmount) {
+      addNotification('Please fill in both item name and amount', 'warning');
+      return;
+    }
+
+    const newItem = {
+      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      description: newItemName,
+      amount: parseFloat(newItemAmount),
+      quantity: parseInt(newItemQuantity) || 1
+    };
+
+    setInvoiceDetails(prev => ({
+      ...prev,
+      lineItems: [...(prev.lineItems || []), newItem],
+      amount: prev.amount + (newItem.amount * newItem.quantity)
+    }));
+
+    // Clear the form
+    setNewItemName('');
+    setNewItemAmount('');
+    setNewItemQuantity(1);
+  };
+
+  // Handle removing items from the invoice
+  const handleRemoveItem = (itemId) => {
+    setInvoiceDetails(prev => {
+      const item = prev.lineItems.find(i => i.id === itemId);
+      const itemTotal = (parseFloat(item.amount) || 0) * (parseFloat(item.quantity) || 1);
+      
+      return {
+        ...prev,
+        lineItems: prev.lineItems.filter(i => i.id !== itemId),
+        amount: prev.amount - itemTotal
+      };
+    });
+  };
+
   // Handle Apply CIS
   const handleApplyCIS = async () => {
     console.log("Starting CIS application...");
@@ -705,6 +755,17 @@ const InvoiceBuilder = () => {
     }
   };
 
+  // Handle client details change
+  const handleClientChange = (field, value) => {
+    setInvoiceDetails(prev => ({
+      ...prev,
+      client: {
+        ...prev.client,
+        [field]: value
+      }
+    }));
+  };
+
   if (isLoadingInvoice || (quoteId && isLoadingQuote)) {
     return <Loading message="Loading data..." />;
   }
@@ -740,6 +801,64 @@ const InvoiceBuilder = () => {
           <div className="card">
             <div className="card-body">
               <form onSubmit={handleSubmit}>
+                {/* Client Details Section */}
+                <div className="card mb-4">
+                  <div className="card-body">
+                    <h3 className="card-subtitle">Client Details</h3><br></br>
+                    <div className="form-row client-name-row">
+                      <div className="client-name-field">
+                        <FormField
+                          label="Client Name"
+                          value={invoiceDetails.clientName}
+                          onChange={(e) => setInvoiceDetails({...invoiceDetails, clientName: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <Button 
+                        variant="primary"
+                        type="button"
+                        size="sm"
+                        onClick={() => setShowContactSelector(true)}
+                        className="select-contact-btn"
+                      >
+                        Select Contact
+                      </Button>
+                    </div>
+                    
+                    <div className="form-row">
+                      <FormField
+                        label="Company"
+                        value={invoiceDetails.clientCompany}
+                        onChange={(e) => setInvoiceDetails({...invoiceDetails, clientCompany: e.target.value})}
+                      />
+                    </div>
+                    
+                    <div className="form-row">
+                      <FormField
+                        label="Email"
+                        type="email"
+                        value={invoiceDetails.clientEmail}
+                        onChange={(e) => setInvoiceDetails({...invoiceDetails, clientEmail: e.target.value})}
+                      />
+                      <FormField
+                        label="Phone"
+                        value={invoiceDetails.clientPhone}
+                        onChange={(e) => setInvoiceDetails({...invoiceDetails, clientPhone: e.target.value})}
+                      />
+                    </div>
+                    
+                    <div className="form-field">
+                      <FormField
+                        label="Address"
+                        type="textarea"
+                        value={invoiceDetails.clientAddress}
+                        onChange={(e) => setInvoiceDetails({...invoiceDetails, clientAddress: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
                 {/* Invoice Type */}
                 <div className="form-field">
                   <label className="form-label">Invoice Type</label>
@@ -833,13 +952,99 @@ const InvoiceBuilder = () => {
                       type="button"
                       variant="primary"
                       onClick={handleCreateSeries}
-                      style={{ marginLeft: '10px' }}
+                      className="create-series-btn"
                     >
                       Create All Invoices
                     </Button>
                   )}
                 </div>
               </form>
+              
+              {/* Quick Add Item */}
+              <div className="quick-add-item">
+                <h3 className="quick-add-title">Quick Add Item</h3>
+                <div className="form-field">
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Item Name"
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                  />
+                </div>
+                <div className="form-row">
+                  <div className="form-field">
+                    <input
+                      type="number"
+                      className="form-input"
+                      placeholder="Amount (£)"
+                      step="0.01"
+                      min="0"
+                      value={newItemAmount}
+                      onChange={(e) => setNewItemAmount(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-field">
+                    <input
+                      type="number"
+                      className="form-input"
+                      placeholder="Quantity"
+                      min="1"
+                      value={newItemQuantity}
+                      onChange={(e) => setNewItemQuantity(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={handleAddItem}
+                >
+                  Add Item
+                </Button>
+              </div>
+              
+              {/* Line Items Table */}
+              {invoiceDetails.lineItems && invoiceDetails.lineItems.length > 0 && (
+                <div className="line-items-table-container">
+                  <h3 className="quick-add-title">Invoice Items</h3>
+                  <table className="line-items-table">
+                    <thead>
+                      <tr>
+                        <th>Description</th>
+                        <th>Qty</th>
+                        <th>Amount</th>
+                        <th>Total</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invoiceDetails.lineItems.map((item) => (
+                        <tr key={item.id} className={item.type === 'cis' ? 'cis-deduction-row' : (item.isLabour ? 'labour-row' : '')}>
+                          <td>{item.description}</td>
+                          <td>{item.quantity || 1}</td>
+                          <td>£{Math.abs(parseFloat(item.amount) || 0).toFixed(2)}</td>
+                          <td>£{Math.abs((parseFloat(item.amount) || 0) * (parseFloat(item.quantity) || 1)).toFixed(2)}</td>
+                          <td>
+                            {item.type !== 'cis' && (
+                              <button 
+                                className="remove-item-btn"
+                                onClick={() => handleRemoveItem(item.id)}
+                                type="button"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="total-row">
+                        <td colSpan="3" className="text-right"><strong>Total</strong></td>
+                        <td colSpan="2"><strong>£{invoiceDetails.amount.toFixed(2)}</strong></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1058,6 +1263,45 @@ const InvoiceBuilder = () => {
             </div>
           </div>
         </div>
+      </Dialog>
+
+      {/* Contact Selector Dialog */}
+      <Dialog
+        isOpen={showContactSelector}
+        onClose={() => setShowContactSelector(false)}
+        title="Select Contact"
+        size="md"
+      >
+        <div className="form-field">
+          <label className="form-label">
+            Search Contacts
+          </label>
+          <input
+            type="text"
+            value={contactSearchTerm}
+            onChange={(e) => setContactSearchTerm(e.target.value)}
+            placeholder="Search by name, company, email..."
+            className="form-input"
+          />
+        </div>
+        
+        <ContactSelector 
+          searchTerm={contactSearchTerm} 
+          onContactSelect={(contact) => {
+            setInvoiceDetails(prev => ({
+              ...prev,
+              client: {
+                name: contact.customerType === 'company' ? contact.company : `${contact.firstName} ${contact.lastName}`.trim(),
+                company: contact.company || '',
+                email: contact.email || '',
+                phone: contact.phone || '',
+                address: contact.address || ''
+              }
+            }));
+            setShowContactSelector(false);
+            addNotification(`Contact "${contact.customerType === 'company' ? contact.company : `${contact.firstName} ${contact.lastName}`.trim()}" selected`, 'success');
+          }}
+        />
       </Dialog>
     </div>
   );

@@ -20,6 +20,7 @@
 @import './components/activity.css';
 @import './components/common/toggleSwitch.css';
 @import './components/suppliers/catalogItemList.css';
+@import './components/invoices/invoice-builder.css';
 
 /* Import page-specific styles */
 @import './pages/dashboard.css';

@@ -1,0 +1,23 @@
+/* Client Details Section */
+.client-name-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.client-name-field {
+  flex: 1;
+}
+
+.select-contact-btn {
+  margin-bottom: 25px;
+}
+
+/* Quick Add Item Section */
+.quick-add-item .form-row .form-field {
+  width: 50%;
+}
+
+.create-series-btn {
+  margin-left: 10px;
+} 

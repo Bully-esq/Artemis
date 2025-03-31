@@ -295,3 +295,70 @@
     width: 60%;
   }
 }
+
+/* Quick Add Item */
+.quick-add-item {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.quick-add-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.line-items-table-container {
+  margin-top: 1.5rem;
+}
+
+.line-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.line-items-table th,
+.line-items-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.line-items-table th {
+  font-weight: 600;
+  background-color: var(--bg-light);
+}
+
+.line-items-table .text-right {
+  text-align: right;
+}
+
+.line-items-table .labour-row {
+  background-color: rgba(79, 209, 197, 0.1);
+}
+
+.line-items-table .cis-deduction-row {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.line-items-table .total-row {
+  background-color: var(--bg-light);
+  font-weight: 600;
+}
+
+.remove-item-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.remove-item-btn:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+}
