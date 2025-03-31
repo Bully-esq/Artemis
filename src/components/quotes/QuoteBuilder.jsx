@@ -484,35 +484,48 @@ const QuoteBuilder = () => {
       // Add notification
       addNotification('Generating PDF...', 'info');
       
+      // Add PDF export class
+      quotePreviewElement.classList.add('pdf-export-mode');
+      
       // Configure options
       const options = {
         filename: `Quote_${quoteDetails.client.name || 'Untitled'}_${new Date().toISOString().split('T')[0]}.pdf`,
-        margin: [15, 15, 15, 15],
+        margin: [10, 10, 10, 10], // Reduced margins [top, right, bottom, left]
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: true }, // Added logging
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          logging: true
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait'
+        }
       };
       
-      // Generate PDF using html2pdf - force a more explicit promise pattern
-      return new Promise((resolve, reject) => {
-        html2pdf()
+      // Generate PDF
+      try {
+        await html2pdf()
           .from(quotePreviewElement)
           .set(options)
-          .save()
-          .then(() => {
-            addNotification('PDF exported successfully!', 'success');
-            resolve(true);
-          })
-          .catch(err => {
-            console.error('PDF generation error in promise:', err);
-            addNotification(`Error generating PDF: ${err.message}`, 'error');
-            reject(err);
-          });
-      });
+          .save();
+        
+        addNotification('PDF exported successfully!', 'success');
+      } finally {
+        // Always remove the PDF export class, even if there's an error
+        quotePreviewElement.classList.remove('pdf-export-mode');
+      }
+      
     } catch (error) {
       console.error('PDF generation error:', error);
       addNotification(`Error generating PDF: ${error.message}`, 'error');
-      return Promise.reject(error);
+      
+      // Make sure we remove the class if there's an error
+      const quotePreviewElement = document.querySelector('.quote-preview');
+      if (quotePreviewElement) {
+        quotePreviewElement.classList.remove('pdf-export-mode');
+      }
     }
   };
 
@@ -862,7 +875,7 @@ const QuoteBuilder = () => {
           {/* Client Information Card */}
           <div className="card">
             <div className="card-body">
-              <h2 className="card-title">Client Information</h2>
+              <h2 className="card-title">Client Information</h2><br></br>
               
               <div className="form-row" style={{ 
                 display: 'grid', 
@@ -918,8 +931,7 @@ const QuoteBuilder = () => {
           {/* Quote Settings Card */}
           <div className="card">
             <div className="card-body">
-              <h2 className="card-title">Quote Settings</h2>
-              
+              <h2 className="card-title">Quote Settings</h2><br></br>              
               <div className="form-row" style={{ 
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
@@ -1688,70 +1700,120 @@ const QuoteBuilder = () => {
           onClose={() => setShowItemDialog(false)}
           title="Add Item to Quote"
         >
-          <div className="form-field">
-            <label className="form-label">
-              Search
-            </label>
-            <input
-              type="text"
-              value={itemSearchTerm}
-              onChange={(e) => setItemSearchTerm(e.target.value)}
-              placeholder="Search by name or description..."
-              className="form-input"
-            />
-          </div>
-          
-          <div className="form-field">
-            <label className="form-label">
-              Category
-            </label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="form-select"
-            >
-              <option value="all">All Categories</option>
-              {Array.from(new Set(catalogItems.map(item => item.category)))
-                .filter(Boolean)
-                .sort()
-                .map(category => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-            </select>
-          </div>
-          
-          <div className="catalog-items-list">
-            {filteredCatalogItems.length === 0 ? (
-              <div className="empty-message">
-                No items match your search criteria
-              </div>
-            ) : (
-              <div className="catalog-items">
-                {filteredCatalogItems.map(item => (
-                  <div
-                    key={item.id}
-                    className="catalog-item"
-                    onClick={() => handleAddItem(item)}
-                  >
-                    <div className="catalog-item-content">
-                      <div>
-                        <h3 className="catalog-item-name">{item.name}</h3>
-                        <p className="catalog-item-supplier">{getSupplierName(item.supplier)}</p>
-                        {item.description && (
-                          <p className="catalog-item-description">{item.description}</p>
-                        )}
-                      </div>
-                      <div className="catalog-item-price">
-                        <p className="price-value">{formatCurrency(item.cost)}</p>
-                        {item.category && (
-                          <p className="category-label">{item.category}</p>
-                        )}
+          <div style={{ 
+            width: '900px', // Increased fixed width
+            maxWidth: '95vw',
+            padding: '0 16px',
+            boxSizing: 'border-box'
+          }}>
+            <div className="form-field">
+              <label className="form-label">
+                Search
+              </label>
+              <input
+                type="text"
+                value={itemSearchTerm}
+                onChange={(e) => setItemSearchTerm(e.target.value)}
+                placeholder="Search by name or description..."
+                className="form-input"
+              />
+            </div>
+            
+            <div className="form-field">
+              <label className="form-label">
+                Category
+              </label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="form-select"
+              >
+                <option value="all">All Categories</option>
+                {Array.from(new Set(catalogItems.map(item => item.category)))
+                  .filter(Boolean)
+                  .sort()
+                  .map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+              </select>
+            </div>
+            
+            <div className="catalog-items-list" style={{ 
+              height: '60vh',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              margin: '0 -16px',
+              padding: '0 16px'
+            }}>
+              {filteredCatalogItems.length === 0 ? (
+                <div className="empty-message">
+                  No items match your search criteria
+                </div>
+              ) : (
+                <div className="catalog-items">
+                  {filteredCatalogItems.map(item => (
+                    <div
+                      key={item.id}
+                      className="catalog-item"
+                      onClick={() => handleAddItem(item)}
+                      style={{
+                        padding: '16px',
+                        marginBottom: '8px'
+                      }}
+                    >
+                      <div className="catalog-item-content" style={{ 
+                        minHeight: '80px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: '24px' // Increased gap between content and price
+                      }}>
+                        <div style={{ 
+                          flex: '1 1 auto',
+                          minWidth: 0,
+                          maxWidth: 'calc(100% - 150px)' // Reserve space for price
+                        }}>
+                          <h3 className="catalog-item-name" style={{ 
+                            fontSize: '16px',
+                            fontWeight: '500',
+                            marginBottom: '8px',
+                            whiteSpace: 'normal', // Allow text to wrap
+                            overflow: 'visible'
+                          }}>{item.name}</h3>
+                          <p className="catalog-item-supplier" style={{
+                            marginBottom: '8px'
+                          }}>{getSupplierName(item.supplier)}</p>
+                          {item.description && (
+                            <p className="catalog-item-description" style={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 3, // Show up to 3 lines
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              lineHeight: '1.4'
+                            }}>{item.description}</p>
+                          )}
+                        </div>
+                        <div className="catalog-item-price" style={{ 
+                          flex: '0 0 120px', // Fixed width for price section
+                          textAlign: 'right'
+                        }}>
+                          <p className="price-value" style={{
+                            fontSize: '16px',
+                            fontWeight: '500',
+                            marginBottom: '8px'
+                          }}>{formatCurrency(item.cost)}</p>
+                          {item.category && (
+                            <p className="category-label" style={{
+                              fontSize: '14px',
+                              color: '#6b7280'
+                            }}>{item.category}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </Dialog>
       )}
