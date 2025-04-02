@@ -7,7 +7,7 @@ import { useAppContext } from '../context/AppContext';
  * @returns {Object} Notification methods
  */
 export function useNotification() {
-  const { addNotification, removeNotification } = useAppContext();
+  const { addNotification, removeNotification, notifications } = useAppContext();
   
   // Show a success notification
   const showSuccess = useCallback((message, duration = 3000) => {
@@ -36,9 +36,6 @@ export function useNotification() {
   
   // Show a notification that replaces all current notifications
   const showReplacing = useCallback((message, type = 'info', duration = 3000) => {
-    // Get all current notifications
-    const { notifications } = useAppContext();
-    
     // Remove all existing notifications
     notifications.forEach(notification => {
       removeNotification(notification.id);
@@ -46,7 +43,7 @@ export function useNotification() {
     
     // Show the new notification
     return addNotification(message, type, duration);
-  }, [addNotification, removeNotification, useAppContext]);
+  }, [addNotification, removeNotification, notifications]);
   
   // Dismiss a notification by ID
   const dismiss = useCallback((id) => {

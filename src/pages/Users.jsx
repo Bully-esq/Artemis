@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
 import PageLayout from '../components/common/PageLayout';
 import Button from '../components/common/Button';
 import { useApiCustomQuery } from '../hooks/useApi';
 import { useAuth } from '../context/AuthContext';
 import api, { apiClient } from '../services/api';
 import ActionButtonContainer from '../components/common/ActionButtonContainer';
+import { useNotification } from '../hooks/useNotification';
 
 // Import the necessary styles
 import '../styles/components/lists.css';
@@ -14,6 +15,8 @@ import '../styles/components/tables.css';
 const Users = () => {
   const { user: currentUser } = useAuth();
   const [selectedUser, setSelectedUser] = useState(null);
+  const { showNotification } = useNotification();
+  const queryClient = useQueryClient();
   
   // Fetch users data using the direct hook
   const { data: users, isLoading, error } = useApiCustomQuery(
@@ -26,6 +29,51 @@ const Users = () => {
       refetchOnWindowFocus: true
     }
   );
+
+  // Delete user mutation
+  const deleteUserMutation = useMutation(
+    (userId) => apiClient.delete(`/users/${userId}`),
+    {
+      onSuccess: () => {
+        // Invalidate and refetch users query
+        queryClient.invalidateQueries('users');
+        showNotification({
+          type: 'success',
+          title: 'Success',
+          message: 'User has been successfully deleted'
+        });
+      },
+      onError: (error) => {
+        console.error('Error deleting user:', error);
+        showNotification({
+          type: 'error',
+          title: 'Error',
+          message: error?.response?.data?.message || 'Failed to delete user. Please try again.'
+        });
+      }
+    }
+  );
+
+  // Handle user deletion
+  const handleDeleteUser = async (user) => {
+    if (!user || !user.id) return;
+    
+    // Prevent deleting the current user
+    if (user.id === currentUser.id) {
+      showNotification({
+        type: 'warning',
+        title: 'Warning',
+        message: 'You cannot delete your own account.'
+      });
+      return;
+    }
+
+    try {
+      await deleteUserMutation.mutateAsync(user.id);
+    } catch (error) {
+      // Error is handled in the mutation's onError
+    }
+  };
   
   if (currentUser?.role !== 'admin') {
     return (
@@ -109,17 +157,17 @@ const Users = () => {
               </p>
             </div>
             
-            <div className="overflow-x-auto" style={{ maxWidth: '100%' }}>
-              <div className="table-container" style={{ minWidth: '800px' }}>
-                <table className="table spaced-table">
+            <div className="responsive-table-wrapper w-full">
+              <div className="overflow-x-auto">
+                <table className="table spaced-table w-full">
                   <thead>
                     <tr>
-                      <th scope="col" style={{ width: '20%' }}>Name</th>
-                      <th scope="col" style={{ width: '20%' }}>Email</th>
-                      <th scope="col" style={{ width: '10%' }}>Role</th>
-                      <th scope="col" style={{ width: '15%' }}>Created</th>
-                      <th scope="col" style={{ width: '15%' }}>Last Login</th>
-                      <th scope="col" style={{ width: '20%' }} className="action-cell">Actions</th>
+                      <th scope="col" className="w-1/5">Name</th>
+                      <th scope="col" className="w-1/5">Email</th>
+                      <th scope="col" className="w-1/10">Role</th>
+                      <th scope="col" className="w-1/7">Created</th>
+                      <th scope="col" className="w-1/7">Last Login</th>
+                      <th scope="col" className="w-1/5 action-cell">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -127,10 +175,10 @@ const Users = () => {
                       users.map((user) => (
                         <tr key={user.id}>
                           <td>
-                            <div className="cell-content">{user.name}</div>
+                            <div className="cell-content truncate max-w-full">{user.name}</div>
                           </td>
                           <td>
-                            <div className="cell-content">{user.email}</div>
+                            <div className="cell-content truncate max-w-full">{user.email}</div>
                           </td>
                           <td>
                             <div className="status-button-container">
@@ -140,12 +188,12 @@ const Users = () => {
                             </div>
                           </td>
                           <td>
-                            <div className="cell-content" style={{ whiteSpace: 'nowrap' }}>
+                            <div className="cell-content whitespace-nowrap">
                               {new Date(user.createdAt).toLocaleDateString()}
                             </div>
                           </td>
                           <td>
-                            <div className="cell-content" style={{ whiteSpace: 'nowrap' }}>
+                            <div className="cell-content whitespace-nowrap">
                               {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
                             </div>
                           </td>
@@ -164,17 +212,24 @@ const Users = () => {
                               </button>
                               <button
                                 className="btn btn-list-item btn-list-item--danger"
+                                disabled={deleteUserMutation.isLoading || user.id === currentUser.id}
                                 onClick={() => {
-                                  // Handle delete user functionality here
                                   if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
-                                    // Add actual delete logic here
+                                    handleDeleteUser(user);
                                   }
                                 }}
                               >
                                 <span className="button-content">
-                                  <svg className="button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                                  </svg>
+                                  {deleteUserMutation.isLoading && deleteUserMutation.variables === user.id ? (
+                                    <svg className="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                  ) : (
+                                    <svg className="button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
                                   Delete
                                 </span>
                               </button>
@@ -210,4 +265,4 @@ const Users = () => {
   );
 };
 
-export default Users; 
+export default Users;

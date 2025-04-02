@@ -73,6 +73,7 @@ const QuoteBuilder = () => {
   
   // Add this state near your other dialog states
   const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [showMissingCompanyInfoDialog, setShowMissingCompanyInfoDialog] = useState(false);
   
   // Quote details
   const [quoteDetails, setQuoteDetails] = useState({
@@ -529,102 +530,15 @@ const QuoteBuilder = () => {
     }
   };
 
-  // Replace the existing handleEmailQuote function with this one
-  const handleEmailQuote = () => {
-    setShowEmailDialog(true);
-  };
-  
-  // Add a function to create a mailto link
-  const handleOpenEmailClient = () => {
-    const subject = `Quote for ${quoteDetails.client.name || 'your project'}`;
-    const body = `Dear ${quoteDetails.client.name},\n\nPlease find attached the quote for your project.\n\nThe quote is valid until ${quoteDetails.validUntil ? new Date(quoteDetails.validUntil).toLocaleDateString('en-GB') : 'the date specified'}.\n\nIf you have any questions, please don't hesitate to contact me.\n\nBest regards,\n${settings.company.name}`;
-    
-    // Open the mailto link
-    window.location.href = `mailto:${quoteDetails.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    
-    // Close the dialog
-    setShowEmailDialog(false);
-  };
-  
-  // Update the combined function for export and email
-  const handleExportAndEmail = () => {
-    // First generate the PDF - this will trigger browser save dialog
-    html2pdf()
-      .from(document.querySelector('.quote-preview'))
-      .set({
-        filename: `Quote_${quoteDetails.client.name || 'Untitled'}_${new Date().toISOString().split('T')[0]}.pdf`,
-        margin: [15, 15, 15, 15],
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      })
-      .save()
-      .then(() => {
-        // After PDF is saved, open email client
-        handleOpenEmailClient();
-      })
-      .catch(error => {
-        addNotification(`Error generating PDF: ${error.message}`, 'error');
-      });
-  };
-
-  // Add this new combined function for export and email
-  const handleExportAndOpenEmail = async () => {
-    try {
-      // First activate the preview tab to ensure the quote-preview element is in the DOM
-      setActiveTab('preview');
-      
-      // Show notification
-      addNotification('Preparing quote for email...', 'info');
-      
-      // Use setTimeout to ensure DOM is updated
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Get the quote preview element
-      const quotePreviewElement = document.querySelector('.quote-preview');
-      
-      if (!quotePreviewElement) {
-        throw new Error('Quote preview element not found');
-      }
-      
-      // Configure options
-      const options = {
-        filename: `Quote_${quoteDetails.client.name || 'Untitled'}_${new Date().toISOString().split('T')[0]}.pdf`,
-        margin: [15, 15, 15, 15],
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-      
-      // Generate PDF using html2pdf
-      await html2pdf()
-        .from(quotePreviewElement)
-        .set(options)
-        .save();
-      
-      addNotification('PDF saved. Opening email client...', 'success');
-      
-      // Open email client with template after a short delay to allow PDF to finish saving
-      setTimeout(() => {
-        const subject = `Quote for ${quoteDetails.client.name || 'your project'}`;
-        const body = `Dear ${quoteDetails.client.name},\n\nPlease find attached the quote for your project.\n\nThe quote is valid until ${quoteDetails.validUntil ? new Date(quoteDetails.validUntil).toLocaleDateString('en-GB') : 'the date specified'}.\n\nIf you have any questions, please don't hesitate to contact me.\n\nBest regards,\n${settings.company.name}`;
-        
-        // Open the mailto link
-        window.location.href = `mailto:${quoteDetails.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        
-        // Close dialog
-        setShowEmailDialog(false);
-      }, 1000);
-      
-    } catch (error) {
-      console.error('Error in export and email process:', error);
-      addNotification(`Error: ${error.message}`, 'error');
-    }
-  };
-
   // Create a safer export PDF function that ensures preview is visible
   const safeExportPDF = async () => {
     try {
+      // Check for missing company information before proceeding
+      if (!settings?.company?.name || !settings?.company?.address) {
+        setShowMissingCompanyInfoDialog(true);
+        return;
+      }
+      
       // First, make sure we're on the preview tab
       if (activeTab !== 'preview') {
         setActiveTab('preview');
@@ -639,6 +553,64 @@ const QuoteBuilder = () => {
       console.error('Error in safe PDF export:', error);
       addNotification(`Error exporting PDF: ${error.message}`, 'error');
       return Promise.reject(error);
+    }
+  };
+
+  // Function to validate company information before email or export
+  const validateCompanyInfo = () => {
+    if (!settings?.company?.name || !settings?.company?.address) {
+      setShowMissingCompanyInfoDialog(true);
+      return false;
+    }
+    return true;
+  };
+
+  // Modify handleEmailQuote to check company info first
+  const handleEmailQuote = () => {
+    if (validateCompanyInfo()) {
+      setShowEmailDialog(true);
+    }
+  };
+
+  // Add these functions before the return statement in your component
+
+  // Add this function for opening email client
+  const handleOpenEmailClient = () => {
+    try {
+      // Get client details
+      const subject = encodeURIComponent(`Quotation for ${quoteDetails.client.company || quoteDetails.client.name}`);
+      const body = encodeURIComponent(`Dear ${quoteDetails.client.name},\n\nPlease find attached our quotation as discussed.\n\nIf you have any questions, please do not hesitate to contact us.\n\nKind regards,\n${settings?.company?.name || 'Your Company'}`);
+      const clientEmail = quoteDetails.client.email || '';
+      
+      // Create mailto link and open it
+      const mailtoLink = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
+      window.location.href = mailtoLink;
+      
+      // Close dialog
+      setShowEmailDialog(false);
+      
+      // Show success notification
+      addNotification('Email client opened', 'success');
+    } catch (error) {
+      console.error('Error opening email client:', error);
+      addNotification(`Error opening email client: ${error.message}`, 'error');
+    }
+  };
+
+  // Add this function for exporting PDF and opening email
+  const handleExportAndOpenEmail = async () => {
+    try {
+      // First export the PDF
+      await safeExportPDF();
+      
+      // Then open email client
+      handleOpenEmailClient();
+      
+      // Close dialog
+      setShowEmailDialog(false);
+    } catch (error) {
+      console.error('Error in export and email:', error);
+      addNotification(`Error: ${error.message}`, 'error');
     }
   };
 
@@ -1560,77 +1532,79 @@ const QuoteBuilder = () => {
                 <p><span className="detail-label">Valid Until:</span> {quoteDetails.validUntil ? new Date(quoteDetails.validUntil).toLocaleDateString('en-GB') : 'N/A'}</p>
               </div>
               
-              {/* Items table */}
-              <table className="quote-table">
-                <thead>
-                  <tr>
-                    <th>Item Description</th>
-                    <th className="text-right">Qty</th>
-                    <th className="text-right">Unit Price</th>
-                    <th className="text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {quoteData.itemTotals.length === 0 ? (
+              {/* Items table with wrapper */}
+              <div className="quote-table-wrapper">
+                <table className="quote-table">
+                  <thead>
                     <tr>
-                      <td colSpan="4" className="empty-table-message">
-                        No items added to quote yet
-                      </td>
+                      <th>Item Description</th>
+                      <th className="text-right">Qty</th>
+                      <th className="text-right">Unit Price</th>
+                      <th className="text-right">Amount</th>
                     </tr>
-                  ) : (
-                    quoteData.itemTotals.map((item, index) => (
-                      <tr key={index}>
-                        <td>
-                          {item.description || item.name}
-                        </td>
-                        <td className="text-right">
-                          {item.quantity}
-                        </td>
-                        <td className="text-right">
-                          {formatCurrency(item.unitPrice)}
-                        </td>
-                        <td className="text-right">
-                          {formatCurrency(item.finalTotal)}
+                  </thead>
+                  <tbody>
+                    {quoteData.itemTotals.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" className="empty-table-message">
+                          No items added to quote yet
                         </td>
                       </tr>
-                    ))
-                  )}
-                  
-                  {/* Subtotal row - only show when VAT is enabled */}
-                  {quoteData.vatEnabled && (
-                    <tr className="quote-table-subtotal">
+                    ) : (
+                      quoteData.itemTotals.map((item, index) => (
+                        <tr key={index}>
+                          <td>
+                            {item.description || item.name}
+                          </td>
+                          <td className="text-right">
+                            {item.quantity}
+                          </td>
+                          <td className="text-right">
+                            {formatCurrency(item.unitPrice)}
+                          </td>
+                          <td className="text-right">
+                            {formatCurrency(item.finalTotal)}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                    
+                    {/* Subtotal row - only show when VAT is enabled */}
+                    {quoteData.vatEnabled && (
+                      <tr className="quote-table-subtotal">
+                        <td colSpan="3" className="text-right">
+                          Subtotal
+                        </td>
+                        <td className="text-right">
+                          {formatCurrency(quoteData.visibleTotal)}
+                        </td>
+                      </tr>
+                    )}
+                    
+                    {/* VAT row - only show when VAT is enabled */}
+                    {quoteData.vatEnabled && (
+                      <tr className="quote-table-vat">
+                        <td colSpan="3" className="text-right">
+                          VAT ({quoteData.vatRate}%)
+                        </td>
+                        <td className="text-right">
+                          {formatCurrency(quoteData.vatAmount)}
+                        </td>
+                      </tr>
+                    )}
+                    
+                    {/* Total row */}
+                    <tr className="quote-table-total">
                       <td colSpan="3" className="text-right">
-                        Subtotal
+                        Total
                       </td>
                       <td className="text-right">
-                        {formatCurrency(quoteData.visibleTotal)}
+                        {formatCurrency(quoteData.grandTotal)}
                       </td>
                     </tr>
-                  )}
-                  
-                  {/* VAT row - only show when VAT is enabled */}
-                  {quoteData.vatEnabled && (
-                    <tr className="quote-table-vat">
-                      <td colSpan="3" className="text-right">
-                        VAT ({quoteData.vatRate}%)
-                      </td>
-                      <td className="text-right">
-                        {formatCurrency(quoteData.vatAmount)}
-                      </td>
-                    </tr>
-                  )}
-                  
-                  {/* Total row */}
-                  <tr className="quote-table-total">
-                    <td colSpan="3" className="text-right">
-                      Total
-                    </td>
-                    <td className="text-right">
-                      {formatCurrency(quoteData.grandTotal)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
               
               {/* Terms section */}
               <div className="terms-section">
@@ -1678,12 +1652,16 @@ const QuoteBuilder = () => {
                 
                 {/* Add company footer */}
                 <div className="quote-footer">
-                  <p>{settings.company.name} | {settings.company.address}</p>
-                  <p>{settings.company.phone} | {settings.company.email} | {settings.company.website}</p>
-                  {settings.company.registration && (
+                  <p>{settings?.company?.name || 'Your Company'} {settings?.company?.address ? `| ${settings.company.address}` : ''}</p>
+                  <p>
+                    {settings?.company?.phone ? `${settings.company.phone} | ` : ''}
+                    {settings?.company?.email ? `${settings.company.email} | ` : ''}
+                    {settings?.company?.website || 'www.example.com'}
+                  </p>
+                  {settings?.company?.registration && (
                     <p>Company Registration: {settings.company.registration}</p>
                   )}
-                  {settings.company.vat && (
+                  {settings?.company?.vat && (
                     <p>VAT Registration: {settings.company.vat}</p>
                   )}
                 </div>
@@ -1738,74 +1716,39 @@ const QuoteBuilder = () => {
               </select>
             </div>
             
-            <div className="catalog-items-list" style={{ 
-              height: '60vh',
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              margin: '0 -16px',
-              padding: '0 16px'
-            }}>
+            <div className="catalog-items-list" style={{ maxHeight: '50vh', overflow: 'auto' }}>
               {filteredCatalogItems.length === 0 ? (
-                <div className="empty-message">
+                <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
                   No items match your search criteria
                 </div>
               ) : (
-                <div className="catalog-items">
+                <div style={{ display: 'grid', gap: '10px' }}>
                   {filteredCatalogItems.map(item => (
                     <div
                       key={item.id}
-                      className="catalog-item"
-                      onClick={() => handleAddItem(item)}
-                      style={{
-                        padding: '16px',
-                        marginBottom: '8px'
+                      style={{ 
+                        padding: '10px', 
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        handleAddItem(item);
+                        setShowItemDialog(false);
                       }}
                     >
-                      <div className="catalog-item-content" style={{ 
-                        minHeight: '80px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        gap: '24px' // Increased gap between content and price
-                      }}>
-                        <div style={{ 
-                          flex: '1 1 auto',
-                          minWidth: 0,
-                          maxWidth: 'calc(100% - 150px)' // Reserve space for price
-                        }}>
-                          <h3 className="catalog-item-name" style={{ 
-                            fontSize: '16px',
-                            fontWeight: '500',
-                            marginBottom: '8px',
-                            whiteSpace: 'normal', // Allow text to wrap
-                            overflow: 'visible'
-                          }}>{item.name}</h3>
-                          <p className="catalog-item-supplier" style={{
-                            marginBottom: '8px'
-                          }}>{getSupplierName(item.supplier)}</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div>
+                          <h3 style={{ margin: '0 0 5px 0' }}>{item.name}</h3>
+                          <p style={{ margin: '0 0 5px 0', color: '#666' }}>{getSupplierName(item.supplier)}</p>
                           {item.description && (
-                            <p className="catalog-item-description" style={{
-                              display: '-webkit-box',
-                              WebkitLineClamp: 3, // Show up to 3 lines
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              lineHeight: '1.4'
-                            }}>{item.description}</p>
+                            <p style={{ margin: '0', fontSize: '14px' }}>{item.description}</p>
                           )}
                         </div>
-                        <div className="catalog-item-price" style={{ 
-                          flex: '0 0 120px', // Fixed width for price section
-                          textAlign: 'right'
-                        }}>
-                          <p className="price-value" style={{
-                            fontSize: '16px',
-                            fontWeight: '500',
-                            marginBottom: '8px'
-                          }}>{formatCurrency(item.cost)}</p>
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{formatCurrency(item.cost)}</p>
                           {item.category && (
-                            <p className="category-label" style={{
-                              fontSize: '14px',
-                              color: '#6b7280'
-                            }}>{item.category}</p>
+                            <p style={{ margin: '0', fontSize: '12px', color: '#666' }}>{item.category}</p>
                           )}
                         </div>
                       </div>
@@ -1813,6 +1756,16 @@ const QuoteBuilder = () => {
                   ))}
                 </div>
               )}
+            </div>
+            
+            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+              <Button
+                variant="secondary"
+                onClick={() => setShowItemDialog(false)}
+                style={{ marginRight: '10px' }}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
         </Dialog>
@@ -2023,21 +1976,16 @@ const QuoteBuilder = () => {
               </Button>
               
               <div className="email-actions-row">
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowEmailDialog(false)}
-                >
-                  Cancel
-                </Button>
+               
                 <div className="email-actions-group">
                   <Button
-                    variant="secondary"
+                    variant="primary"
                     onClick={safeExportPDF}
                   >
                     Export PDF Only
                   </Button>
                   <Button
-                    variant="secondary"
+                    variant="primary"
                     onClick={handleOpenEmailClient}
                   >
                     Email Only
@@ -2081,7 +2029,7 @@ const QuoteBuilder = () => {
               />
             </div>
             
-            <div className="form-row" style={{ 
+                                  <div className="form-row" style={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(2, 1fr)', 
               gap: '1rem' 
@@ -2180,6 +2128,57 @@ const QuoteBuilder = () => {
             addNotification(`Contact selected: ${contact.firstName} ${contact.lastName}`, 'success');
           }}
         />
+      </Dialog>
+      
+      {/* Missing Company Information Dialog */}
+      <Dialog
+        isOpen={showMissingCompanyInfoDialog}
+        onClose={() => setShowMissingCompanyInfoDialog(false)}
+        title="Missing Company Information"
+      >
+        <div style={{ maxWidth: '500px' }}>
+          <div style={{ 
+                       backgroundColor: '#fff3cd', 
+            color: '#856404', 
+            padding: '12px 16px', 
+            borderRadius: '4px',
+            marginBottom: '16px'
+          }}>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px' }}>Company information is incomplete</h3>
+            <p style={{ margin: '0', fontSize: '14px' }}>
+              To create professional quotes, please update your company information in the settings.
+              {!settings?.company?.name && <strong>Yourcompany name is missing.</strong>}
+              {!settings?.company?.address && <strong> Your company address is missing.</strong>}
+            </p>
+          </div>
+          
+          <p>
+            You can continue without company information, but your quotes will look incomplete
+            and may appear unprofessional to clients.
+          </p>
+          
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            marginTop: '20px'
+          }}>
+            <Button
+              variant="secondary"
+              onClick={() => setShowMissingCompanyInfoDialog(false)}
+            >
+              Continue without company information
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setShowMissingCompanyInfoDialog(false);
+                navigate('/settings');
+              }}
+            >
+              Go to Settings
+            </Button>
+          </div>
+        </div>
       </Dialog>
     </PageLayout>
   );

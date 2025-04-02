@@ -163,9 +163,109 @@
     min-width: auto;
     text-align: center;
   }
+  
+  /* Quote Preview Mobile Adjustments */
+  .quote-preview {
+    font-size: 0.9rem;
+    width: 100%;
+    overflow-x: hidden;
+    padding: 0.5rem;
+  }
+  
+  /* Responsive header layout */
+  .quote-preview-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .quote-branding, .company-details {
+    width: 100%;
+    text-align: center;
+  }
+  
+  /* Logo sizing for mobile */
+  .logo-container, .logo-placeholder {
+    margin: 0 auto 1rem;
+    max-width: 200px !important;
+  }
+  
+  /* Quote title for mobile */
+  .quote-title {
+    font-size: 1.5rem !important;
+    margin: 0.5rem 0 !important;
+  }
+  
+  /* Client & date sections */
+  .client-section, .date-section {
+    padding: 0.5rem;
+  }
+  
+  /* Table improvements */
+  .quote-table {
+    font-size: 0.85rem;
+    width: 100%;
+    display: table; /* Force table display */
+    table-layout: fixed; /* Fixed layout for better control */
+  }
+  
+  /* Add horizontal scrolling only for the table */
+  .quote-preview .quote-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Column widths */
+  .quote-table th:first-child,
+  .quote-table td:first-child {
+    width: 50%; /* Description column */
+  }
+  
+  .quote-table th:nth-child(2),
+  .quote-table td:nth-child(2) {
+    width: 10%; /* Quantity column */
+  }
+  
+  .quote-table th:nth-child(3),
+  .quote-table td:nth-child(3) {
+    width: 20%; /* Unit price column */
+  }
+  
+  .quote-table th:last-child,
+  .quote-table td:last-child {
+    width: 20%; /* Amount column */
+  }
+  
+  /* Terms section */
+  .terms-section {
+    padding: 0.5rem;
+  }
+  
+  .terms-heading, .terms-subheading {
+    font-size: 1.1rem;
+  }
+  
+  .terms-list {
+    padding-left: 1.5rem;
+  }
+  
+  /* Footer scaling */
+  .quote-footer {
+    font-size: 0.8rem;
+    text-align: center;
+    margin-top: 2rem;
+  }
+  
+  /* Optional: Add scale transform for PDF export only */
+  @media print {
+    .quote-preview {
+      transform: scale(0.9);
+      transform-origin: top left;
+    }
+  }
 }
 
-/* Small mobile devices */
+/* Even smaller screens */
 @media screen and (max-width: 480px) {
   /* Very small screen adjustments with larger text */
   h1 {
@@ -198,6 +298,40 @@
   .header-content .page-title,
   h1.page-title {
     font-size: 1.6rem !important; /* Slightly reduced but still large */
+  }
+  
+  /* Tighter quote preview */
+  .quote-preview {
+    padding: 0.25rem;
+    font-size: 0.85rem;
+  }
+  
+  /* Smaller title for very small screens */
+  .quote-title {
+    font-size: 1.3rem !important;
+  }
+  
+  /* More compact table for very small screens */
+  .quote-table {
+    font-size: 0.75rem;
+  }
+  
+  /* Make table text and numbers smaller but still readable */
+  .quote-table th, .quote-table td {
+    padding: 4px;
+    word-break: break-word;
+  }
+  
+  /* Make sure the wrapper captures the table properly */
+  .quote-preview .quote-table-wrapper {
+    margin: 0 -0.25rem; /* Slightly extend beyond the container if needed */
+  }
+  
+  /* Stack totals nicely */
+  .quote-table-subtotal td,
+  .quote-table-vat td,
+  .quote-table-total td {
+    padding-right: 4px;
   }
 }
 

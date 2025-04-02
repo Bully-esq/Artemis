@@ -190,16 +190,17 @@
 }
 
 .email-dialog-content {
-  padding: 1.5rem;
+  padding: 1rem;
   background-color: white;
   border-radius: 0.5rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   max-width: 28rem;
-  margin: 5rem auto 0;
+  margin: 1rem auto 0;
 }
 
 .email-description {
   margin-bottom: 1rem;
+  margin-top: 0;
   color: #4b5563;
 }
 
@@ -223,4 +224,11 @@
 .email-actions-group {
   display: flex;
   gap: 0.5rem;
+  margin-left: 0px; /* Added margin-left to increase spacing between Cancel and Export PDF Only buttons */
+}
+
+/* Add styling to control button width in the email actions group */
+.email-actions-group button {
+  width: auto;
+  min-width: 120px; /* Provides a reasonable minimum width */
 }

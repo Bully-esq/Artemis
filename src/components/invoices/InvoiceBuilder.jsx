@@ -665,8 +665,8 @@ const InvoiceBuilder = () => {
 
   // Add this function to open email client
   const handleOpenEmailClient = () => {
-    const subject = `Invoice ${invoiceDetails.invoiceNumber} for ${invoiceDetails.clientName || 'your project'}`;
-    const body = `Dear ${invoiceDetails.clientName},\n\nPlease find attached your invoice (${invoiceDetails.invoiceNumber}) for ${invoiceDetails.description || 'your project'}.\n\nThe invoice is due by ${
+    const subject = `${invoiceDetails.client.address}`;
+    const body = `Hi ${invoiceDetails.clientName},\n\nPlease find attached your invoice (${invoiceDetails.invoiceNumber}) for ${invoiceDetails.description || 'your project'}.\n\nThe invoice is due by ${
       invoiceDetails.dueDate ? new Date(invoiceDetails.dueDate).toLocaleDateString('en-GB') : 'the date specified'
     }.\n\nIf you have any questions, please don't hesitate to contact me.\n\nBest regards,\n${settings.company?.name || 'Your Company'}`;
     

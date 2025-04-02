@@ -6,6 +6,17 @@
   margin-bottom: 1.5rem;
 }
 
+/* Filter buttons styling */
+.filter-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.filter-buttons button {
+  min-width: 80px;
+}
+
 .stat-card {
   background-color: var(--bg-white);
   border-radius: var(--border-radius);
