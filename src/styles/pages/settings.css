@@ -43,6 +43,48 @@
   margin-bottom: 2.5rem;
   border-bottom: 1px solid var(--border);
   padding-bottom: 0.5rem;
+  overflow-x: auto; /* Enable horizontal scrolling for mobile */
+  display: flex; /* Use flexbox to allow tabs to scroll */
+  white-space: nowrap; /* Prevent tabs from wrapping */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  scrollbar-width: thin; /* Firefox scrollbar style */
+}
+
+/* Style the horizontal scrollbar for better visibility */
+.settings-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.settings-tabs::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.settings-tabs::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+/* Mobile-specific tab styling */
+@media (max-width: 768px) {
+  .settings-tabs {
+    padding-bottom: 10px; /* Add more space for the scrollbar */
+  }
+  
+  /* Ensure active tab is more visible on mobile */
+  .settings-tabs button.active {
+    position: relative;
+  }
+  
+  .settings-tabs button.active::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--primary);
+  }
 }
 
 /* Logo upload styling */
@@ -55,6 +97,7 @@
   align-items: flex-start;
   gap: 1.5rem;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap; /* Allow wrapping on small screens */
 }
 
 .logo-preview {
@@ -145,4 +188,36 @@
   font-size: 0.875rem;
   color: #6b7280;
   line-height: 1.5;
+}
+
+/* Responsive form layout */
+@media (min-width: 768px) {
+  .form-row {
+    display: flex;
+    gap: 1.5rem;
+  }
+  
+  .form-row > * {
+    flex: 1;
+  }
+}
+
+/* Additional mobile optimizations */
+@media (max-width: 640px) {
+  .settings-card {
+    border-radius: 0;
+    box-shadow: none;
+  }
+  
+  .card-content {
+    padding: 1rem 0.75rem;
+  }
+  
+  .logo-upload-area {
+    gap: 1rem;
+  }
+  
+  .logo-image {
+    max-width: 100%; /* Full width on small screens */
+  }
 }
