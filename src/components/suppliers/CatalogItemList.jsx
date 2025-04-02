@@ -6,18 +6,6 @@ import Button from '../common/Button';
 import FormField from '../common/FormField';
 import Loading from '../common/Loading';
 import Dialog from '../common/Dialog';
-import '../../styles/components/suppliers/catalogItemList.css'; // Updated import path
-
-/**
- * Clean trailing zeros from item names
- * @param {string} name The item name to clean
- * @returns {string} Clean name without trailing zeros
- */
-const cleanItemName = (name) => {
-  if (!name) return '';
-  // Trim whitespace and then remove trailing zeros
-  return String(name).trim().replace(/0+$/, '');
-};
 
 /**
  * Catalog Item List component
@@ -74,20 +62,6 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
     { id: 'other', name: 'Other' }
   ];
   
-  // Add this effect to debug and log item names
-  useEffect(() => {
-    if (items && items.length > 0) {
-      console.log('Checking item names:');
-      items.forEach(item => {
-        const before = item.name;
-        const after = cleanItemName(item.name);
-        if (before !== after) {
-          console.log(`Found item with trailing zeros: "${before}" -> "${after}"`);
-        }
-      });
-    }
-  }, [items]);
-  
   // Filter items based on search and filters
   const filteredItems = React.useMemo(() => {
     if (!items) return [];
@@ -95,7 +69,7 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
     return items.filter(item => {
       // Filter by search term
       const matchesSearch = searchTerm === '' ||
-        (item.name && cleanItemName(item.name).toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()));
       
       // Filter by category
@@ -237,123 +211,85 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
           <table className="catalog-table">
             <thead className="table-header">
               <tr>
-                <th scope="col" className="column-header" style={{ width: '40%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
+                <th scope="col" className="column-header">
                   Name
                 </th>
-                <th scope="col" className="column-header" style={{ width: '15%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
+                <th scope="col" className="column-header">
                   Category
                 </th>
-                <th scope="col" className="column-header" style={{ width: '20%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
+                <th scope="col" className="column-header">
                   Supplier
                 </th>
-                <th scope="col" className="column-header" style={{ width: '10%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
+                <th scope="col" className="column-header">
                   Cost
                 </th>
-                <th scope="col" className="column-header column-actions" style={{ width: '15%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
+                <th scope="col" className="column-header">
+                  Lead Time
+                </th>
+                <th scope="col" className="column-header column-actions">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="table-body">
               {filteredItems.map((item) => {
-                // Find the category object based on item.category ID
-                const category = categories.find(cat => cat.id === item.category);
-                // Find the supplier object based on item.supplier ID
-                const supplier = suppliers?.find(sup => sup.id === item.supplier);
-
+                const supplier = suppliers?.find(s => s.id === item.supplier) || { name: 'Unknown' };
+                const category = categories.find(c => c.id === item.category) || { name: 'Other' };
+                
                 return (
-                  <tr 
-                    key={item.id} 
-                    className="catalog-item-row" // This class enables the alternating row colors
-                    // onClick={() => onSelectItem && onSelectItem(item)} // Use onSelectItem prop if row click is desired
-                  >
-                    <td className="item-cell item-main-info">
-                      <span className="item-name">{cleanItemName(item.name)}</span>
-                      {item.description && <span className="item-description">{item.description}</span>}
+                  <tr key={item.id} className={item.hidden ? 'row-hidden' : ''}>
+                    <td className="table-cell">
+                      <div className="item-name-container">
+                        <div>
+                          <div className="item-name">
+                            {item.name}
+                            {item.hidden && (
+                              <span className="hidden-badge">
+                                Hidden
+                              </span>
+                            )}
+                          </div>
+                          {item.description && (
+                            <div className="item-description">
+                              {item.description}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </td>
-                    <td className="item-cell item-category">
-                      {category ? (
-                        <span className="category-badge" style={{ 
-                          display: 'inline-block',
-                          padding: '3px 8px', 
-                          backgroundColor: '#e3f2fd', 
-                          color: '#0d47a1', 
-                          borderRadius: '4px',
-                          fontSize: '0.85rem'
-                        }}>
-                          {category.name} {/* Use found category name */}
-                        </span>
-                      ) : (
-                        <span className="category-badge-missing">Unknown</span>
-                      )}
+                    <td className="table-cell">
+                      <span className="category-badge">
+                        {category.name}
+                      </span>
                     </td>
-                    <td className="item-cell item-supplier">
-                      {supplier ? supplier.name : 'Unknown'} {/* Use found supplier name */}
+                    <td className="table-cell">
+                      {supplier.name}
                     </td>
-                    <td className="item-cell item-cost">
+                    <td className="table-cell">
                       £{item.cost?.toFixed(2) || '0.00'}
                     </td>
-                    <td className="item-cell item-actions">
-                      <div className="action-buttons-container" style={{ display: 'flex', gap: '4px' }}>
+                    <td className="table-cell">
+                      {item.leadTime || 0} days
+                    </td>
+                    <td className="table-cell cell-actions">
+                      <div className="action-buttons-container">
                         <button
                           type="button"
                           className="btn-select"
-                          style={{ 
-                            padding: '4px 8px', 
-                            background: '#e6f7ff', 
-                            color: '#0073cf',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.85rem'
-                          }}
-                          onClick={(e) => { // Prevent row click if button is clicked
-                            e.stopPropagation(); 
-                            onSelectItem && onSelectItem({
-                              ...item,
-                              name: cleanItemName(item.name)
-                            });
-                          }}
+                          onClick={() => onSelectItem && onSelectItem(item)}
                         >
                           Select
                         </button>
                         <button
                           type="button"
                           className="btn-edit"
-                          style={{ 
-                            padding: '4px 8px', 
-                            background: '#e6f7ff', 
-                            color: '#0073cf',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.85rem'
-                          }}
-                          onClick={() => {
-                            // Directly call the parent component's onAddItem with the item to edit
-                            // Make sure to clean the name before editing
-                            if (onAddItem) {
-                              onAddItem({
-                                ...item,
-                                name: cleanItemName(item.name)
-                              });
-                            }
-                          }}
+                          onClick={() => setItemToEdit(item)}
                         >
                           Edit
                         </button>
                         <button
                           type="button"
                           className="btn-delete"
-                          style={{ 
-                            padding: '4px 8px', 
-                            background: '#ffebeb', 
-                            color: '#d9363e',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.85rem'
-                          }}
                           onClick={() => setItemToDelete(item)}
                         >
                           Delete

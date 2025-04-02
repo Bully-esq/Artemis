@@ -11,45 +11,7 @@ import Dialog from '../common/Dialog';
 import FormField from '../common/FormField';
 import Loading from '../common/Loading';
 import Tabs from '../common/Tabs';
-import CatalogItemList from './CatalogItemList';
-import ActionButtonContainer from '../common/ActionButtonContainer';
-
-// First, move the UndoBanner component definition outside of the SupplierList component
-const UndoBanner = ({ lastUpdate, onUndo, isUndoing }) => (
-  <div className="undo-banner" style={{
-    position: 'fixed',
-    bottom: '1rem',
-    right: '1rem',
-    backgroundColor: 'white',
-    padding: '1rem',
-    borderRadius: '0.5rem',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    border: '1px solid #e5e7eb',
-    zIndex: 1000, // Increased z-index to ensure visibility
-    display: 'flex',
-    alignItems: 'center',
-    gap: '1rem',
-    maxWidth: '400px'
-  }}>
-    <div>
-      <p className="text-sm font-medium">
-        Recent price update: {lastUpdate.percentage}% for {lastUpdate.supplierName}
-      </p>
-      <p className="text-xs text-gray-500">
-        {new Date(lastUpdate.timestamp).toLocaleString()}
-      </p>
-    </div>
-    <Button
-      variant="secondary"
-      size="sm"
-      onClick={onUndo}
-      isLoading={isUndoing}
-      style={{ whiteSpace: 'nowrap' }}
-    >
-      Undo Update
-    </Button>
-  </div>
-);
+import CatalogItemList from './CatalogItemList'; // Import CatalogItemList
 
 const SupplierList = () => {
   const navigate = useNavigate();
@@ -84,17 +46,6 @@ const SupplierList = () => {
     phone: '',
     notes: ''
   });
-
-  // Add these state declarations after your existing useState declarations
-  const [showPriceUpdateDialog, setShowPriceUpdateDialog] = useState(false);
-  const [priceUpdateForm, setPriceUpdateForm] = useState({
-    supplierId: '',
-    percentage: '',
-    affectedItems: []
-  });
-
-  // Add this new state near your other useState declarations
-  const [lastPriceUpdate, setLastPriceUpdate] = useState(null);
 
   // Define categories for catalog items
   const categories = [
@@ -145,112 +96,15 @@ const SupplierList = () => {
     }
   );
 
-  // Modify the updateCatalogPricesMutation to store the previous state
-  const updateCatalogPricesMutation = useMutation(
-    async ({ supplierId, percentage }) => {
-      const items = queryClient.getQueryData('catalog') || [];
-      const previousItems = items.filter(item => item.supplier === supplierId);
-      
-      const updatedItems = items.map(item => {
-        if (item.supplier === supplierId) {
-          return {
-            ...item,
-            cost: Number((item.cost * (1 + percentage / 100)).toFixed(2))
-          };
-        }
-        return item;
-      });
-
-      // Add this console.log to debug
-      console.log('Setting lastPriceUpdate:', {
-        supplierId,
-        supplierName: suppliers.find(s => s.id === supplierId)?.name,
-        percentage,
-        previousItems,
-        timestamp: new Date().toISOString()
-      });
-
-      // Store the previous state before updating
-      setLastPriceUpdate({
-        supplierId,
-        supplierName: suppliers.find(s => s.id === supplierId)?.name,
-        percentage,
-        previousItems,
-        timestamp: new Date().toISOString()
-      });
-
-      return api.catalog.update(updatedItems);
-    },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('catalog');
-        setShowPriceUpdateDialog(false);
-        addNotification('Prices updated successfully', 'success');
-      },
-      onError: (error) => {
-        addNotification(`Error updating prices: ${error.message}`, 'error');
-        setLastPriceUpdate(null);
-      }
-    }
-  );
-
-  // Add this new mutation for undoing price updates
-  const undoPriceUpdateMutation = useMutation(
-    async () => {
-      if (!lastPriceUpdate) return;
-      
-      const items = queryClient.getQueryData('catalog') || [];
-      const updatedItems = items.map(item => {
-        const previousItem = lastPriceUpdate.previousItems.find(prev => prev.id === item.id);
-        if (previousItem) {
-          return {
-            ...item,
-            cost: previousItem.cost
-          };
-        }
-        return item;
-      });
-
-      return api.catalog.update(updatedItems);
-    },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('catalog');
-        addNotification('Price update undone successfully', 'success');
-        setLastPriceUpdate(null);
-      },
-      onError: (error) => {
-        addNotification(`Error undoing price update: ${error.message}`, 'error');
-      }
-    }
-  );
-
-  /**
-   * Clean trailing zeros from item names
-   * @param {string} name The item name to clean
-   * @returns {string} Clean name without trailing zeros
-   */
-  const cleanItemName = (name) => {
-    if (!name) return '';
-    // Trim whitespace and then remove trailing zeros
-    return String(name).trim().replace(/0+$/, '');
-  };
-
-  // Replace your saveCatalogItemMutation with this enhanced version
+  // Add this new mutation for saving catalog items
   const saveCatalogItemMutation = useMutation(
     (itemData) => {
       const items = queryClient.getQueryData('catalog') || [];
       
-      // Apply name cleanup to ensure no trailing zeros
-      const cleanedItemData = {
-        ...itemData,
-        name: cleanItemName(itemData.name) // Ensure cleaning happens here too
-      };
-      
       // If it's a new item, add it to the collection
-      if (!cleanedItemData.id) {
+      if (!itemData.id) {
         const newItem = {
-          ...cleanedItemData,
+          ...itemData,
           id: Date.now().toString(), // Generate a unique ID
         };
         return api.catalog.update([...items, newItem]);
@@ -258,7 +112,7 @@ const SupplierList = () => {
       
       // If it's an existing item, update it in the collection
       const updatedItems = items.map(item => 
-        item.id === cleanedItemData.id ? { ...item, ...cleanedItemData } : item
+        item.id === itemData.id ? { ...item, ...itemData } : item
       );
       return api.catalog.update(updatedItems);
     },
@@ -398,7 +252,7 @@ const SupplierList = () => {
       // If editing existing item, populate the form
       setCatalogItemForm({
         id: itemToEdit.id || '',
-        name: cleanItemName(itemToEdit.name) || '', // Ensure cleaning happens here
+        name: itemToEdit.name || '',
         description: itemToEdit.description || '',
         category: itemToEdit.category || '',
         supplier: itemToEdit.supplier || '',
@@ -437,16 +291,12 @@ const SupplierList = () => {
       return;
     }
     
-    // Parse the cost to ensure it's a number and clean the name
+    // Parse the cost to ensure it's a number
     const formattedItem = {
       ...catalogItemForm,
-      name: cleanItemName(catalogItemForm.name), // Ensure cleaning happens here
       cost: catalogItemForm.cost === '' ? 0 : parseFloat(catalogItemForm.cost),
       leadTime: catalogItemForm.leadTime === '' ? 0 : parseInt(catalogItemForm.leadTime, 10)
     };
-    
-    // Log the cleaned name for debugging
-    console.log(`Saving catalog item with cleaned name: "${formattedItem.name}"`);
     
     saveCatalogItemMutation.mutate(formattedItem);
   };
@@ -457,30 +307,6 @@ const SupplierList = () => {
     setCatalogItemForm({
       ...catalogItemForm,
       [name]: type === 'checkbox' ? checked : value
-    });
-  };
-
-  // Add these helper functions after your existing functions
-  const calculateAffectedItems = (supplierId, percentage) => {
-    const items = queryClient.getQueryData('catalog') || [];
-    return items
-      .filter(item => item.supplier === supplierId)
-      .map(item => ({
-        ...item,
-        newCost: Number((item.cost * (1 + percentage / 100)).toFixed(2))
-      }));
-  };
-
-  const handlePriceUpdate = () => {
-    const percentage = parseFloat(priceUpdateForm.percentage);
-    if (isNaN(percentage)) {
-      addNotification('Please enter a valid percentage', 'error');
-      return;
-    }
-
-    updateCatalogPricesMutation.mutate({
-      supplierId: priceUpdateForm.supplierId,
-      percentage: percentage
     });
   };
 
@@ -510,20 +336,17 @@ const SupplierList = () => {
   }
   
   return (
-    <PageLayout title="Suppliers & Catalog">
-      {/* Add ActionButtonContainer below the header */}
-      <ActionButtonContainer>
-        <Button 
-          variant="primary"
-          onClick={handleAddSupplier} 
-        >
+    <PageLayout 
+      title="Suppliers & Catalog" 
+      actions={
+        <Button variant="primary" onClick={handleAddSupplier}>
           <svg className="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Add Supplier
         </Button>
-      </ActionButtonContainer>
-      
+      }
+    >
       {/* Page Header - Styled like Dashboard */}
       <div className="page-header">
         <h1 className="page-title">Supplier Management</h1>
@@ -618,26 +441,13 @@ const SupplierList = () => {
                         <p className="item-detail">{supplier.phone || ''}</p>
                         <div className="action-buttons">
                           <button
-                            className="btn btn-list-item btn-list-item--secondary"
-                            onClick={() => {
-                              setPriceUpdateForm({
-                                supplierId: supplier.id,
-                                percentage: '',
-                                affectedItems: []
-                              });
-                              setShowPriceUpdateDialog(true);
-                            }}
-                          >
-                            Update Prices
-                          </button>
-                          <button
-                            className="btn btn-list-item btn-list-item--secondary"
+                            className="action-button edit"
                             onClick={() => handleEditSupplier(supplier)}
                           >
                             Edit
                           </button>
                           <button
-                            className="btn btn-list-item btn-list-item--danger"
+                            className="action-button delete"
                             onClick={() => handleDeleteClick(supplier)}
                           >
                             Delete
@@ -969,91 +779,6 @@ const SupplierList = () => {
             </div>
           </div>
         </Dialog>
-      )}
-
-      {/* Add this new dialog component just before the closing PageLayout tag */}
-      {showPriceUpdateDialog && (
-        <Dialog
-          title="Update Supplier Prices"
-          onClose={() => setShowPriceUpdateDialog(false)}
-          size="md"
-          footer={
-            <div className="dialog-footer">
-              <Button 
-                variant="secondary" 
-                onClick={() => setShowPriceUpdateDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                variant="primary" 
-                onClick={handlePriceUpdate}
-                isLoading={updateCatalogPricesMutation.isLoading}
-              >
-                Update Prices
-              </Button>
-            </div>
-          }
-        >
-          <div className="form-container" style={{ maxHeight: '70vh', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <FormField
-              label="Price Increase/Decrease (%)"
-              name="percentage"
-              type="number"
-              step="0.1"
-              value={priceUpdateForm.percentage}
-              onChange={(e) => {
-                const value = e.target.value;
-                setPriceUpdateForm(prev => ({
-                  ...prev,
-                  percentage: value,
-                  affectedItems: value ? calculateAffectedItems(prev.supplierId, parseFloat(value)) : []
-                }));
-              }}
-              placeholder="Enter percentage (e.g. 6 for 6% increase)"
-            />
-
-            {priceUpdateForm.affectedItems.length > 0 && (
-              <div className="price-preview">
-                <h4 className="text-sm font-semibold mb-2">Price Preview</h4>
-                <div style={{ 
-                  maxHeight: '40vh', 
-                  overflowY: 'auto',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '0.375rem'
-                }}>
-                  <table className="w-full text-sm">
-                    <thead style={{ position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
-                      <tr>
-                        <th className="text-left p-2 border-b">Item</th>
-                        <th className="text-right p-2 border-b">Current</th>
-                        <th className="text-right p-2 border-b">New</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {priceUpdateForm.affectedItems.map(item => (
-                        <tr key={item.id} className="hover:bg-gray-50">
-                          <td className="text-left p-2 border-b">{item.name}</td>
-                          <td className="text-right p-2 border-b">£{item.cost.toFixed(2)}</td>
-                          <td className="text-right p-2 border-b">£{item.newCost.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        </Dialog>
-      )}
-
-      {/* Make sure this is the last element inside PageLayout */}
-      {lastPriceUpdate && (
-        <UndoBanner
-          lastUpdate={lastPriceUpdate}
-          onUndo={() => undoPriceUpdateMutation.mutate()}
-          isUndoing={undoPriceUpdateMutation.isLoading}
-        />
       )}
     </PageLayout>
   );
