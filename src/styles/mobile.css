@@ -1,0 +1,188 @@
+/* Mobile styles - for screens smaller than 768px */
+@media screen and (max-width: 768px) {
+  /* General layout adjustments */
+  .container, .page-container {
+    padding: 10px;
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  /* Typography adjustments */
+  h1 {
+    font-size: 1.8rem;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+  }
+  
+  p, li, label, input {
+    font-size: 0.95rem;
+  }
+  
+  /* Form adjustments */
+  input, select, textarea, button {
+    width: 100%;
+    margin-bottom: 10px;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+    padding: 8px;
+  }
+  
+  .form-row {
+    flex-direction: column;
+  }
+  
+  /* Table adjustments */
+  table {
+    display: block;
+    overflow-x: auto;
+    width: 100%;
+  }
+  
+  th, td {
+    padding: 8px;
+  }
+  
+  /* Card adjustments */
+  .card {
+    margin: 0.5rem 0;
+    width: 100%;
+  }
+  
+  /* Dialog adjustments */
+  .dialog-content {
+    width: 95%;
+    max-width: 95%;
+    margin: 0 auto;
+  }
+  
+  /* List adjustments */
+  .list-item {
+    padding: 8px;
+  }
+  
+  /* Button adjustments */
+  .button-container {
+    flex-direction: column;
+  }
+  
+  .button-container .btn {
+    margin: 5px 0;
+  }
+
+  /* Sidebar adjustments */
+  .sidebar {
+    width: 100%;
+    position: relative;
+  }
+
+  /* Header layout fix - ensure menu and title stay left-aligned */
+  .app-header {
+    justify-content: flex-start;
+  }
+  
+  .menu-button {
+    margin-right: 10px;
+  }
+  
+  .app-title {
+    margin-right: auto;
+  }
+  
+  /* Tab adjustments - Adding styling from settings.css */
+  .tabs-container, .settings-tabs, .tabs {
+    margin-bottom: 1.5rem;
+    overflow-x: auto; /* Enable horizontal scrolling for mobile */
+    display: flex; /* Use flexbox to allow tabs to scroll */
+    white-space: nowrap; /* Prevent tabs from wrapping */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    scrollbar-width: thin; /* Firefox scrollbar style */
+    padding-bottom: 10px; /* Add more space for the scrollbar */
+  }
+  
+  /* Fix for tab text size - make tabs smaller on mobile */
+  .tabs button, .tabs-container button, .settings-tabs button {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  /* Style the horizontal scrollbar for better visibility */
+  .tabs-container::-webkit-scrollbar,
+  .settings-tabs::-webkit-scrollbar,
+  .tabs::-webkit-scrollbar {
+    height: 4px;
+  }
+  
+  .tabs-container::-webkit-scrollbar-track,
+  .settings-tabs::-webkit-scrollbar-track,
+  .tabs::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  .tabs-container::-webkit-scrollbar-thumb,
+  .settings-tabs::-webkit-scrollbar-thumb,
+  .tabs::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+  }
+  
+  /* Ensure active tab is more visible on mobile */
+  .tabs-container button.active,
+  .settings-tabs button.active,
+  .tabs button.active {
+    position: relative;
+  }
+  
+  .tabs-container button.active::after,
+  .settings-tabs button.active::after,
+  .tabs button.active::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--primary);
+  }
+  
+  /* Fix tabs with actions layout */
+  .tabs-with-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  /* Ensure tabs don't get cut off */
+  .tabs, .tabs-container, .settings-tabs {
+    width: auto;
+    min-width: 100%;
+  }
+}
+
+/* Small mobile devices */
+@media screen and (max-width: 480px) {
+  /* Very small screen adjustments */
+  h1 {
+    font-size: 1.5rem;
+  }
+  
+  h2 {
+    font-size: 1.2rem;
+  }
+  
+  .card-title {
+    font-size: 1.1rem;
+  }
+  
+  /* Tighten up padding for very small screens */
+  .container, .page-container {
+    padding: 5px;
+  }
+  
+  /* Even smaller tabs for very small screens */
+  .tabs button, .tabs-container button, .settings-tabs button {
+    font-size: 0.85rem;
+    padding: 0.45rem 0.65rem;
+  }
+}

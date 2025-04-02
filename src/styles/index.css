@@ -29,3 +29,6 @@
 @import './pages/invoices.css';
 @import './pages/settings.css';
 @import './pages/suppliers.css';
+
+/* Import mobile styles (should be last to override other styles) */
+@import './mobile.css';
