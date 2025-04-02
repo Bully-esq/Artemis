@@ -242,7 +242,7 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
                       <div className="item-name-container">
                         <div>
                           <div className="item-name">
-                            {item.name}
+                            {item.name ? String(item.name).replace(/0+$/, '') : ''}
                             {item.hidden && (
                               <span className="hidden-badge">
                                 Hidden
@@ -314,7 +314,7 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
         >
           <div className="dialog-content">
             <p className="dialog-message">
-              Are you sure you want to delete the item "{itemToDelete.name}"? This action cannot be undone.
+              Are you sure you want to delete the item "{itemToDelete.name ? String(itemToDelete.name).replace(/0+$/, '') : ''}"? This action cannot be undone.
             </p>
             
             <div className="dialog-actions">
@@ -343,10 +343,9 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
           onClose={() => setItemToEdit(null)}
           title="Edit Item"
         >
-          {/* This is just a placeholder. The actual editing form would be implemented by the parent component */}
           <div className="dialog-content">
             <p className="dialog-message">
-              Edit form for "{itemToEdit.name}" would be displayed here.
+              Edit form for "{itemToEdit.name ? String(itemToEdit.name).replace(/0+$/, '') : ''}" would be displayed here.
             </p>
             
             <div className="dialog-actions">
