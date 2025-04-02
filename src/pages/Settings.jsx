@@ -12,7 +12,14 @@ import api from '../services/api';
 import { deepMerge } from '../utils/deepMerge';
 
 const Settings = () => {
-  const { settings, updateSettings, addNotification } = useAppContext();
+  const { 
+    settings, 
+    updateSettings, 
+    addNotification, 
+    settingsCircuitBroken, 
+    resetSettingsCircuitBreaker 
+  } = useAppContext();
+  
   const [activeTab, setActiveTab] = useState('company');
   const [isLoading, setIsLoading] = useState(true);
   const [localSettings, setLocalSettings] = useState(null);
@@ -71,9 +78,23 @@ const Settings = () => {
       return;
     }
     try {
+      // Update cache before attempting API call to ensure fallbacks work
+      localStorage.setItem('cachedSettings', JSON.stringify(localSettings));
+      
+      // Try API call
       await saveSettingsMutation.mutateAsync(localSettings);
     } catch (err) {
       console.error('Error initiating settings save:', err);
+      // Even if API call fails, we've already updated the cache
+      addNotification('Settings saved locally. Some changes may not sync to the server.', 'warning');
+      updateSettings(localSettings);
+    }
+  };
+  
+  // Handle reset circuit breaker
+  const handleResetCircuitBreaker = () => {
+    if (resetSettingsCircuitBreaker()) {
+      addNotification('Settings circuit breaker has been reset. Reload the page to retry loading settings.', 'info', 5000);
     }
   };
 
@@ -159,6 +180,33 @@ const Settings = () => {
       <div className="settings-header">
         <h1 className="page-title">Settings</h1>
         <p className="page-description">Configure your business settings</p>
+        
+        {/* Add circuit breaker status indicator */}
+        {settingsCircuitBroken && (
+          <div 
+            style={{
+              backgroundColor: '#fff3cd',
+              color: '#856404',
+              padding: '10px 15px',
+              borderRadius: '5px',
+              marginTop: '10px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
+            <div>
+              <strong>Notice:</strong> Settings are using local cache due to network issues.
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleResetCircuitBreaker}
+            >
+              Reset & Retry
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="card settings-card">

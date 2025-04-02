@@ -1,4 +1,4 @@
-// App.js - With modular CSS import
+// App.js - With modular CSS import and circuit breaker support
 
 import React from 'react';
 import './styles/index.css';  // Updated to use our modular CSS structure
@@ -42,14 +42,19 @@ const queryClient = new QueryClient({
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, circuitBroken } = useAuth();
   const location = useLocation();
 
-  // If authentication is still loading, show nothing (or a spinner)
+  // If authentication is still loading, show a spinner
   if (loading) {
     return <div className="flex items-center justify-center h-screen">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
     </div>;
+  }
+
+  // If circuit breaker is active, redirect to login with a warning
+  if (circuitBroken) {
+    return <Navigate to="/login" state={{ from: location, circuitBroken: true }} replace />;
   }
 
   // If not authenticated, redirect to login with return path

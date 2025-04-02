@@ -1,13 +1,20 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+// Get API URL from sessionStorage (if user selected one) or use the default
+const getApiUrl = () => {
+  return sessionStorage.getItem('apiBaseUrl') || 
+         process.env.REACT_APP_API_URL || 
+         'https://app.uncharted.social/api';
+};
 
-// Create axios instance
+// Create axios instance with dynamic baseURL and improved default timeout
 export const apiClient = axios.create({
-  baseURL: API_URL,
+  baseURL: getApiUrl(),
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  timeout: 30000, // Default 30 second timeout for all requests
+  timeoutErrorMessage: 'Request timed out - the server may be under load or unreachable'
 });
 
 // Set auth token if it exists in localStorage
@@ -19,14 +26,26 @@ if (token) {
 // Add a request interceptor to ensure token is applied to all requests
 apiClient.interceptors.request.use(
   config => {
+    // Check if API URL changed (from login page selection)
+    const currentApiUrl = getApiUrl();
+    if (currentApiUrl !== config.baseURL) {
+      console.log(`API URL changed to ${currentApiUrl}. Updating request config.`);
+      config.baseURL = currentApiUrl;
+    }
+    
     // Check if token exists in localStorage before each request
     const currentToken = localStorage.getItem('token');
     if (currentToken) {
       config.headers.Authorization = `Bearer ${currentToken}`;
     }
+    
+    // Add info to help with debugging
+    console.log(`API Request: ${config.method?.toUpperCase() || 'GET'} ${config.baseURL}${config.url}`);
+    
     return config;
   },
   error => {
+    console.error('API request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -301,34 +320,17 @@ const catalog = {
     try {
       // Fetch specific item from server (assuming an endpoint exists, e.g., /api/catalog/:id)
       // If not, this might need to fetch all and filter, or rely on localStorage/cache
-      // For now, keeping the localStorage logic as the server endpoint isn't shown for getById
-      const rawData = localStorage.getItem('catalog'); // Keep localStorage for getById for now
-      if (!rawData) return null;
-      
-      const items = JSON.parse(rawData);
-      const item = items.find(item => item.id === id);
-      
-      // Clean the item name before returning
-      return item ? {
-        ...item,
-        name: item.name ? String(item.name).replace(/0+$/, '') : ''
-      } : null;
+      const response = await apiClient.get(`/catalog/${id}`);
+      return response.data;
     } catch (error) {
-      console.error(`Error in catalog.getById(${id}):`, error);
-      return null;
+      console.error(`Error fetching catalog item ${id} from server:`, error);
+      throw error;
     }
   },
   
   update: async (items) => {
     try {
-      // Ensure items is an array
-      if (!Array.isArray(items)) {
-        console.error('Invalid catalog items format for update:', items);
-        throw new Error('Items must be an array');
-      }
-      
-      // Clean all item names before sending to server - KEEP this cleaning step here
-      // as the component saving might not be the one displaying.
+      // Ensure items are properly sanitized before saving
       const cleanedItems = items.map(item => ({
         ...item,
         name: item.name ? String(item.name).replace(/0+$/, '') : ''
