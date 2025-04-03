@@ -8,6 +8,17 @@ import Loading from '../common/Loading';
 import Dialog from '../common/Dialog';
 
 /**
+ * Clean trailing zeros from item names
+ * @param {string} name The item name to clean
+ * @returns {string} Clean name without trailing zeros
+ */
+const cleanItemName = (name) => {
+  if (!name) return '';
+  // Trim whitespace and then remove trailing zeros
+  return String(name).trim().replace(/0+$/, '');
+};
+
+/**
  * Catalog Item List component
  * Displays the catalog items with filtering and management options
  */
@@ -62,6 +73,20 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
     { id: 'other', name: 'Other' }
   ];
   
+  // Add this effect to debug and log item names
+  useEffect(() => {
+    if (items && items.length > 0) {
+      console.log('Checking item names:');
+      items.forEach(item => {
+        const before = item.name;
+        const after = cleanItemName(item.name);
+        if (before !== after) {
+          console.log(`Found item with trailing zeros: "${before}" -> "${after}"`);
+        }
+      });
+    }
+  }, [items]);
+  
   // Filter items based on search and filters
   const filteredItems = React.useMemo(() => {
     if (!items) return [];
@@ -69,7 +94,7 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
     return items.filter(item => {
       // Filter by search term
       const matchesSearch = searchTerm === '' ||
-        (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.name && cleanItemName(item.name).toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()));
       
       // Filter by category
@@ -211,38 +236,37 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
           <table className="catalog-table">
             <thead className="table-header">
               <tr>
-                <th scope="col" className="column-header">
+                <th scope="col" className="column-header" style={{ width: '40%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
                   Name
                 </th>
-                <th scope="col" className="column-header">
+                <th scope="col" className="column-header" style={{ width: '15%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
                   Category
                 </th>
-                <th scope="col" className="column-header">
+                <th scope="col" className="column-header" style={{ width: '20%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
                   Supplier
                 </th>
-                <th scope="col" className="column-header">
+                <th scope="col" className="column-header" style={{ width: '10%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
                   Cost
                 </th>
-                <th scope="col" className="column-header">
-                  Lead Time
-                </th>
-                <th scope="col" className="column-header column-actions">
+                <th scope="col" className="column-header column-actions" style={{ width: '15%', textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="table-body">
               {filteredItems.map((item) => {
-                const supplier = suppliers?.find(s => s.id === item.supplier) || { name: 'Unknown' };
-                const category = categories.find(c => c.id === item.category) || { name: 'Other' };
-                
+                // Find the category object based on item.category ID
+                const category = categories.find(cat => cat.id === item.category);
+                // Find the supplier object based on item.supplier ID
+                const supplier = suppliers?.find(sup => sup.id === item.supplier);
+
                 return (
                   <tr key={item.id} className={item.hidden ? 'row-hidden' : ''}>
                     <td className="table-cell">
                       <div className="item-name-container">
                         <div>
                           <div className="item-name">
-                            {item.name ? String(item.name).trim().replace(/0+$/, '') : ''}
+                            {item.name ? String(item.name).replace(/0+$/, '') : ''}
                             {item.hidden && (
                               <span className="hidden-badge">
                                 Hidden
@@ -257,39 +281,89 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
                         </div>
                       </div>
                     </td>
-                    <td className="table-cell">
-                      <span className="category-badge">
-                        {category.name}
-                      </span>
+                    <td className="item-cell item-category">
+                      {category ? (
+                        <span className="category-badge" style={{ 
+                          display: 'inline-block',
+                          padding: '3px 8px', 
+                          backgroundColor: '#e3f2fd', 
+                          color: '#0d47a1', 
+                          borderRadius: '4px',
+                          fontSize: '0.85rem'
+                        }}>
+                          {category.name} {/* Use found category name */}
+                        </span>
+                      ) : (
+                        <span className="category-badge-missing">Unknown</span>
+                      )}
                     </td>
-                    <td className="table-cell">
-                      {supplier.name}
+                    <td className="item-cell item-supplier">
+                      {supplier ? supplier.name : 'Unknown'} {/* Use found supplier name */}
                     </td>
-                    <td className="table-cell">
+                    <td className="item-cell item-cost">
                       £{item.cost?.toFixed(2) || '0.00'}
                     </td>
-                    <td className="table-cell">
-                      {item.leadTime || 0} days
-                    </td>
-                    <td className="table-cell cell-actions">
-                      <div className="action-buttons-container">
+                    <td className="item-cell item-actions">
+                      <div className="action-buttons-container" style={{ display: 'flex', gap: '4px' }}>
                         <button
                           type="button"
                           className="btn-select"
-                          onClick={() => onSelectItem && onSelectItem(item)}
+                          style={{ 
+                            padding: '4px 8px', 
+                            background: '#e6f7ff', 
+                            color: '#0073cf',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem'
+                          }}
+                          onClick={(e) => { // Prevent row click if button is clicked
+                            e.stopPropagation(); 
+                            onSelectItem && onSelectItem({
+                              ...item,
+                              name: cleanItemName(item.name)
+                            });
+                          }}
                         >
                           Select
                         </button>
                         <button
                           type="button"
                           className="btn-edit"
-                          onClick={() => setItemToEdit(item)}
+                          style={{ 
+                            padding: '4px 8px', 
+                            background: '#e6f7ff', 
+                            color: '#0073cf',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem'
+                          }}
+                          onClick={() => {
+                            // Directly call the parent component's onAddItem with the item to edit
+                            // Make sure to clean the name before editing
+                            if (onAddItem) {
+                              onAddItem({
+                                ...item,
+                                name: cleanItemName(item.name)
+                              });
+                            }
+                          }}
                         >
                           Edit
                         </button>
                         <button
                           type="button"
                           className="btn-delete"
+                          style={{ 
+                            padding: '4px 8px', 
+                            background: '#ffebeb', 
+                            color: '#d9363e',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem'
+                          }}
                           onClick={() => setItemToDelete(item)}
                         >
                           Delete
@@ -314,7 +388,7 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
         >
           <div className="dialog-content">
             <p className="dialog-message">
-              Are you sure you want to delete the item "{itemToDelete.name ? String(itemToDelete.name).trim().replace(/0+$/, '') : ''}"? This action cannot be undone.
+              Are you sure you want to delete the item "{itemToDelete.name ? String(itemToDelete.name).replace(/0+$/, '') : ''}"? This action cannot be undone.
             </p>
             
             <div className="dialog-actions">
@@ -343,9 +417,10 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
           onClose={() => setItemToEdit(null)}
           title="Edit Item"
         >
+          {/* This is just a placeholder. The actual editing form would be implemented by the parent component */}
           <div className="dialog-content">
             <p className="dialog-message">
-              Edit form for "{itemToEdit.name ? String(itemToEdit.name).trim().replace(/0+$/, '') : ''}" would be displayed here.
+              Edit form for "{itemToEdit.name ? String(itemToEdit.name).replace(/0+$/, '') : ''}" would be displayed here.
             </p>
             
             <div className="dialog-actions">
