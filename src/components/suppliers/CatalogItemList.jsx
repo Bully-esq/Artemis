@@ -261,14 +261,25 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
                 const supplier = suppliers?.find(sup => sup.id === item.supplier);
 
                 return (
-                  <tr 
-                    key={item.id} 
-                    className="catalog-item-row" // Removed conditional 'selected' class based on undefined 'selectedItem'
-                    // onClick={() => onSelectItem && onSelectItem(item)} // Use onSelectItem prop if row click is desired
-                  >
-                    <td className="item-cell item-main-info">
-                      <span className="item-name">{cleanItemName(item.name)}</span>
-                      {item.description && <span className="item-description">{item.description}</span>}
+                  <tr key={item.id} className={item.hidden ? 'row-hidden' : ''}>
+                    <td className="table-cell">
+                      <div className="item-name-container">
+                        <div>
+                          <div className="item-name">
+                            {cleanItemName(item.name)}
+                            {item.hidden && (
+                              <span className="hidden-badge">
+                                Hidden
+                              </span>
+                            )}
+                          </div>
+                          {item.description && (
+                            <div className="item-description">
+                              {item.description}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="item-cell item-category">
                       {category ? (
@@ -377,7 +388,7 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
         >
           <div className="dialog-content">
             <p className="dialog-message">
-              Are you sure you want to delete the item "{itemToDelete.name}"? This action cannot be undone.
+              Are you sure you want to delete the item "{cleanItemName(itemToDelete.name)}"? This action cannot be undone.
             </p>
             
             <div className="dialog-actions">
@@ -409,7 +420,7 @@ const CatalogItemList = ({ onAddItem, onSelectItem }) => {
           {/* This is just a placeholder. The actual editing form would be implemented by the parent component */}
           <div className="dialog-content">
             <p className="dialog-message">
-              Edit form for "{itemToEdit.name}" would be displayed here.
+              Edit form for "{cleanItemName(itemToEdit.name)}" would be displayed here.
             </p>
             
             <div className="dialog-actions">

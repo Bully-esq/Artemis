@@ -3,6 +3,9 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useAppContext } from '../../context/AppContext';
+import '../../styles/pages/suppliers.css'; // Import the CSS file
+import '../../styles/components/lists.css'; // Import list styles
+import '../../styles/components/common/buttons.css'; // Import button styles
 
 // Components
 import PageLayout from '../common/PageLayout';
