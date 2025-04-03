@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from 'react-query';
 import PageLayout from '../components/common/PageLayout';
 import Button from '../components/common/Button';
 import Loading from '../components/common/Loading';
+import ActionButtonContainer from '../components/common/ActionButtonContainer';
 
 // Contexts and Hooks
 import { useAppContext } from '../context/AppContext';
@@ -187,29 +188,26 @@ const Dashboard = () => {
 
       {/* Period selector */}
       <div className="mb-6">
-        <div className="filter-buttons">
-          <button
-            type="button"
-            className={`btn ${period === 'week' ? 'btn-primary' : 'btn-secondary'}`}
+        <ActionButtonContainer>
+          <Button
+            variant={period === 'week' ? 'primary' : 'secondary'}
             onClick={() => setPeriod('week')}
           >
             Week
-          </button>
-          <button
-            type="button"
-            className={`btn ${period === 'month' ? 'btn-primary' : 'btn-secondary'}`}
+          </Button>
+          <Button
+            variant={period === 'month' ? 'primary' : 'secondary'}
             onClick={() => setPeriod('month')}
           >
             Month
-          </button>
-          <button
-            type="button"
-            className={`btn ${period === 'year' ? 'btn-primary' : 'btn-secondary'}`}
+          </Button>
+          <Button
+            variant={period === 'year' ? 'primary' : 'secondary'}
             onClick={() => setPeriod('year')}
           >
             Year
-          </button>
-        </div>
+          </Button>
+        </ActionButtonContainer>
       </div>
 
       {/* Metrics Cards */}

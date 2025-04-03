@@ -12,6 +12,7 @@ import FormField from '../common/FormField';
 import Loading from '../common/Loading';
 import Tabs from '../common/Tabs';
 import CatalogItemList from './CatalogItemList'; // Import CatalogItemList
+import ActionButtonContainer from '../common/ActionButtonContainer';
 
 const SupplierList = () => {
   const navigate = useNavigate();
@@ -338,15 +339,16 @@ const SupplierList = () => {
   return (
     <PageLayout 
       title="Suppliers & Catalog" 
-      actions={
+    >
+      <ActionButtonContainer>
         <Button variant="primary" onClick={handleAddSupplier}>
           <svg className="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Add Supplier
         </Button>
-      }
-    >
+      </ActionButtonContainer>
+      
       {/* Page Header - Styled like Dashboard */}
       <div className="page-header">
         <h1 className="page-title">Supplier Management</h1>
