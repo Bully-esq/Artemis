@@ -1,0 +1,192 @@
+/* List item components and shared styles */
+
+/* Container for status badge and action buttons */
+.status-button-container {
+  display: flex;
+  align-items: center;
+  margin-left: 16px;
+}
+
+.status-button-container .status-badge {
+  margin-right: 8px;
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge-success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-badge-warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-badge-danger {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-badge-info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+/* Filter buttons - to replace inline styles */
+.filter-button {
+  padding: 8px 16px;
+  margin-right: 10px;
+  border-radius: 4px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: #f0f4f8;
+  color: #4a5568;
+}
+
+.filter-button:last-child {
+  margin-right: 0;
+}
+
+.filter-button.active {
+  background-color: #0073cf;
+  color: white;
+}
+
+/* Layout for filter groups */
+.filter-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Action buttons container in list items */
+.action-buttons-container {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.action-buttons-container .status-badge {
+  margin-right: 8px;
+}
+
+/* Status badge variants for quotes */
+.status-badge-active {
+  background-color: #cce5ff;
+  color: #004085;
+}
+
+.status-badge-expiring {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-badge-expired {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Improved button styling for list items with higher specificity */
+button.btn-list-item,
+.btn.btn-list-item,
+a.btn-list-item {
+  padding: 0.2rem 0.4rem !important; /* Force override with !important */
+  font-size: 0.75rem !important;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  margin-left: 4px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  white-space: nowrap;
+  min-width: 60px !important;
+}
+
+/* Fix for button icons */
+.button-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+}
+
+/* Action row for buttons */
+.action-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+.action-row button,
+.action-row .btn {
+  flex: 1 1 0% !important;
+}
+
+/* View/Edit buttons - with increased specificity and !important to override any conflicts */
+button.btn.btn-list-item.btn-list-item--secondary,
+.btn.btn-list-item.btn-list-item--secondary,
+a.btn.btn-list-item.btn-list-item--secondary {
+  background-color: #0073cf !important;
+  color: #ffffff !important;
+  border-color: #0073cf !important;
+}
+
+/* Add hover state for better UX */
+button.btn.btn-list-item.btn-list-item--secondary:hover,
+.btn.btn-list-item.btn-list-item--secondary:hover,
+a.btn.btn-list-item.btn-list-item--secondary:hover {
+  background-color: #0061b0 !important;
+  border-color: #0061b0 !important;
+}
+
+/* Invoice/Primary buttons - Add !important to ensure color is applied */
+button.btn-list-item--primary,
+.btn.btn-list-item--primary,
+a.btn-list-item--primary,
+button.btn.btn-list-item.btn-list-item--primary,
+.btn.btn-list-item.btn-list-item--primary,
+a.btn-list-item.btn-list-item--primary {
+  background-color: #0073cf !important; /* Explicit blue color */
+  color: white !important;
+  border-color: #0073cf !important;
+}
+
+/* Hover state for primary buttons */
+button.btn-list-item--primary:hover,
+.btn.btn-list-item--primary:hover,
+a.btn-list-item--primary:hover,
+button.btn.btn-list-item.btn-list-item--primary:hover,
+.btn.btn-list-item.btn-list-item--primary:hover,
+a.btn-list-item.btn-list-item--primary:hover {
+  background-color: #0061b0 !important;
+  border-color: #0061b0 !important;
+  color: white !important;
+}
+
+/* Delete buttons */
+button.btn-list-item--danger,
+.btn.btn-list-item--danger,
+a.btn-list-item--danger {
+  background-color: #e53e3e; /* Explicit red color */
+  color: white !important;
+  border-color: #e53e3e;
+}
+
+/* Hover state for danger buttons */
+button.btn-list-item--danger:hover,
+.btn.btn-list-item--danger:hover,
+a.btn-list-item--danger:hover {
+  background-color: #c53030 !important;
+  border-color: #c53030 !important;
+  color: white !important;
+}

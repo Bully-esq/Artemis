@@ -1,0 +1,270 @@
+/* Quote Builder specific styles */
+.quote-builder-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-light);
+}
+
+.quote-details-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .quote-details-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.card-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.quote-items-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .quote-items-grid {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+.items-container {
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.item-card {
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.item-card-hidden {
+  border-style: dashed;
+  background-color: var(--bg-light);
+}
+
+.item-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.item-name {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.item-supplier {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+.item-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-bottom: 0.25rem;
+}
+
+.total-display {
+  padding: 0.5rem;
+  background-color: var(--bg-light);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Hidden costs section */
+.hidden-costs-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.hidden-cost-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  margin-bottom: 0.5rem;
+}
+
+.cost-name {
+  font-weight: 500;
+}
+
+.cost-actions {
+  display: flex;
+  align-items: center;
+}
+
+.cost-amount {
+  margin-right: 0.75rem;
+}
+
+.summary-items {
+  margin-bottom: 1rem;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+}
+
+.summary-total {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.summary-stats {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+}
+
+.summary-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+}
+
+.stat-label {
+  color: var(--text-light);
+}
+
+/* Quote preview styles */
+.quote-preview {
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  background-color: white;
+  padding: 2rem;
+}
+
+.quote-preview-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.quote-logo {
+  height: 4rem;
+  margin-bottom: 1rem;
+}
+
+.quote-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.quote-reference {
+  color: var(--text-light);
+}
+
+.company-details {
+  text-align: right;
+  font-size: 0.875rem;
+}
+
+.company-name {
+  font-weight: 600;
+}
+
+.company-address {
+  white-space: pre-line;
+}
+
+.company-contact {
+  margin-top: 0.25rem;
+}
+
+.client-section, .date-section {
+  margin-bottom: 1.5rem;
+}
+
+.section-header {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.detail-label {
+  font-weight: 500;
+  margin-right: 0.5rem;
+}
+
+.detail-address {
+  white-space: pre-line;
+  margin-left: 1rem;
+}
+
+.terms-section {
+  margin-top: 2rem;
+}
+
+.terms-heading {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.terms-subheading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  margin-top: 1rem;
+}
+
+.terms-list {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.terms-notes {
+  white-space: pre-line;
+}
+
+.quote-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+  color: var(--text-light);
+}

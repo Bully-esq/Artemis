@@ -1,0 +1,318 @@
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.btn-secondary {
+  background-color: var(--secondary);
+  color: white;
+  border-color: var(--secondary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--secondary-hover);
+  border-color: var(--secondary-hover);
+}
+
+.btn-danger {
+  background-color: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: var(--danger-hover);
+  border-color: var(--danger-hover);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--text-light);
+  border-color: transparent;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1.125rem;
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Loading state for buttons */
+.btn-loading {
+  position: relative;
+}
+
+.button-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  border-right-color: transparent;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Styles for buttons within list items */
+.btn-list-item {
+  padding: 0.2rem 0.4rem; /* Reduced from 0.25rem 0.5rem */
+  font-size: 0.75rem;     /* Reduced from 0.8rem */
+  border-radius: var(--border-radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  line-height: 1.2; /* Adjust line height for smaller buttons */
+  margin-left: 0.25rem; /* Add small space between buttons */
+}
+
+/* Modifier for View/Edit/Default actions (e.g., secondary style) */
+.btn-list-item.btn-list-item--secondary {
+  background-color: var(--bg-light);
+  color: var(--text-secondary);
+  border-color: var(--border);
+}
+.btn-list-item.btn-list-item--secondary:hover {
+  background-color: var(--bg-lighter);
+  border-color: var(--border-dark);
+}
+
+/* Modifier for Primary actions (e.g., Invoice) */
+.btn-list-item.btn-list-item--primary {
+  background-color: var(--primary);
+  color: var(--white);
+  border-color: var(--primary);
+}
+.btn-list-item.btn-list-item--primary:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+/* Modifier for Destructive actions (e.g., Delete) */
+.btn-list-item.btn-list-item--danger {
+  background-color: #e53e3e; /* Bright red color */
+  color: var(--white);
+  border-color: #e53e3e;
+}
+.btn-list-item.btn-list-item--danger:hover {
+  background-color: #c53030; /* Darker red on hover */
+  border-color: #c53030;
+}
+
+/* ------------ ActionButtons Component Styles ------------ */
+
+/* ActionButtons component container */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  position: relative;
+  top: -2px; /* Keep the overall container position */
+}
+
+/* Dropdown buttons and mobile menu button in ActionButtons */
+.action-buttons button.dropdown-toggle,
+.action-buttons .mobile-dropdown button {
+  position: relative;
+  top: 0; /* Remove the -15px negative positioning */
+  margin-top: 0; /* Remove the -5px negative margin */
+}
+
+/* Make sure the dropdown toggle has appropriate styles */
+.dropdown-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  height: 32px; /* Explicit height setting */
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+/* Desktop/mobile button visibility */
+.desktop-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.mobile-dropdown {
+  display: none;
+  position: relative;
+  z-index: 1500;
+}
+
+/* Mobile actions overlay (modal style) */
+.mobile-actions-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.mobile-actions-menu {
+  background-color: white;
+  border-radius: 4px;
+  width: 90%;
+  max-width: 300px;
+  max-height: 80vh;
+  overflow: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-actions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+  padding: -15px;
+}
+
+.mobile-actions-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.mobile-actions-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  color: #666;
+}
+
+.mobile-actions-list {
+  padding: 8px 0;
+}
+
+.mobile-action-item {
+  display: block;
+  width: 100%;
+  padding: 12px 15px;
+  text-align: left;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s;
+}
+
+.mobile-action-item:hover {
+  background-color: #f7fafc;
+}
+
+/* Responsive breakpoint */
+@media (max-width: 768px) {
+  .desktop-buttons {
+    display: none;
+  }
+  
+  .mobile-dropdown {
+    display: block;
+    position: relative;
+    z-index: 1500;
+  }
+}
+
+/* ------------ ActionButtonContainer Styles ------------ */
+.action-button-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;  /* Reduced from 8px */
+  align-items: center;
+  padding: 6px 16px;  /* Reduced top/bottom padding from 8px to 6px */
+  background-color: var(--bg-light);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+/* Make buttons in the container more compact but still clickable */
+.action-button-container .btn,
+.action-button-container .dropdown-toggle {
+  height: 28px;  /* Reduced from 32px */
+  padding: 0 10px;  /* Reduced horizontal padding from 12px to 10px */
+  font-size: 0.75rem;  /* Reduced from 0.85rem */
+}
+
+/* Reduce the size of icons inside action buttons */
+.action-button-container .btn svg,
+.action-button-container .dropdown-toggle svg {
+  width: 14px;  /* New property for icon width */
+  height: 14px;  /* New property for icon height */
+}
+
+/* Add some spacing between icon and text */
+.action-button-container .btn svg {
+  margin-right: 4px;
+}
+
+/* Responsive handling for the container */
+@media (max-width: 768px) {
+  .action-button-container {
+    padding: 6px;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+}

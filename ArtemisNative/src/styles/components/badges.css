@@ -1,0 +1,91 @@
+/* Status badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: 9999px;
+}
+
+.badge-success {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.badge-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.badge-danger {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.badge-info {
+  background-color: #e0f2fe;
+  color: #0284c7;
+}
+
+/* Status badges used across the app */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: 9999px;
+}
+
+.status-badge-active, .status-badge-success {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge-expiring, .status-badge-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge-expired, .status-badge-danger {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Category badges */
+.category-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  margin-right: 0.5rem;
+}
+
+.category-badge.timber {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.category-badge.hardware {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.category-badge.glass {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.category-badge.labour {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.category-badge.other {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}

@@ -1,0 +1,207 @@
+/* Invoice Preview Styles */
+.empty-state {
+  padding: 2rem;
+  text-align: center;
+  border: 1px dashed #ccc;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.empty-message {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.invoice-preview {
+  padding: 2rem;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.print-mode {
+  padding: 0;
+  box-shadow: none;
+  border: none;
+}
+
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.invoice-branding {
+  display: flex;
+  flex-direction: column;
+}
+
+.company-logo {
+  max-width: 200px;
+  max-height: 80px;
+  margin-bottom: 1rem;
+}
+
+.invoice-title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.invoice-reference {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-badge-success {
+  background-color: #10b981;
+  color: white;
+}
+
+.status-badge-danger {
+  background-color: #ef4444;
+  color: white;
+}
+
+.status-badge-info {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.invoice-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.section-header {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+/* Enhanced client details styling */
+.client-info {
+  text-align: left;
+}
+
+.client-details {
+  margin-bottom: 20px;
+}
+
+.client-details p {
+  margin: 0 0 3px 0;
+  line-height: 1.4;
+}
+
+.client-name {
+  font-weight: 600;
+  margin-bottom: 5px !important;
+}
+
+.client-company {
+  font-weight: 500;
+  margin-bottom: 5px !important;
+}
+
+.client-address {
+  margin: 5px 0 8px 0;
+  text-align: left;
+}
+
+.address-line {
+  display: block;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.3 !important;
+}
+
+.client-contact-info {
+  margin-top: 8px;
+  border-top: 1px solid #eee;
+  padding-top: 6px;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem 1rem;
+}
+
+.detail-label {
+  font-weight: 500;
+}
+
+.invoice-items {
+  margin-bottom: 2rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 2px solid #e5e7eb;
+  font-weight: 600;
+}
+
+.table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.description-column {
+  width: 70%;
+}
+
+.amount-column {
+  width: 30%;
+  text-align: right;
+}
+
+.amount-cell {
+  text-align: right;
+}
+
+.labour-row {
+  background-color: #f9fafb;
+}
+
+.cis-deduction-row {
+  color: #ef4444;
+}
+
+.subtotal-row td {
+  padding-top: 1rem;
+  font-weight: 500;
+}
+
+.total-row td {
+  padding-top: 1rem;
+  font-weight: 700;
+  border-top: 2px solid #e5e7eb;
+  border-bottom: none;
+}
+
+.total-label {
+  text-align: right;
+}
+
+.total-value {
+  text-align: right;
+}
+
+/* Other styles can be added as needed */

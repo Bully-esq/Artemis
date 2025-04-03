@@ -1,0 +1,196 @@
+/* Tables */
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-bottom: 1rem;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.table th {
+  font-weight: 600;
+  background-color: var(--bg-light);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-light);
+}
+
+.table tr {
+  background-color: var(--bg-white);
+  transition: background-color 0.2s;
+}
+
+.table tr:hover {
+  background-color: var(--bg-light);
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Table spacing improvements */
+.table-container {
+  padding: 12px;
+}
+
+table.spaced-table th {
+  padding: 12px 24px;
+  text-align: left;
+}
+
+table.spaced-table td {
+  padding: 16px 24px;
+}
+
+table.spaced-table td .cell-content {
+  padding-left: 8px;
+}
+
+.action-cell {
+  padding-right: 20px !important;
+  text-align: right;
+}
+
+/* Quote Table */
+.quote-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1.5rem 0;
+}
+
+.quote-table th {
+  background-color: var(--bg-light);
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  border: 1px solid var(--border);
+}
+
+.quote-table td {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+}
+
+.quote-table tr:nth-child(even) {
+  background-color: var(--bg-light);
+}
+
+.quote-table-total {
+  font-weight: 600;
+  background-color: var(--primary-light) !important;
+}
+
+/* Invoice Table */
+.description-column {
+  text-align: left;
+}
+
+.amount-column {
+  text-align: right;
+}
+
+.description-cell {
+  padding: 0.75rem 1rem;
+}
+
+.amount-cell {
+  padding: 0.75rem 1rem;
+  text-align: right;
+}
+
+.labour-row {
+  background-color: var(--bg-light);
+}
+
+.subtotal-row {
+  background-color: var(--bg-light);
+  font-weight: 500;
+}
+
+.cis-deduction-row {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  font-style: italic;
+}
+
+.total-row {
+  background-color: var(--bg-light);
+  font-weight: 700;
+}
+
+.text-right {
+  text-align: right;
+}
+
+/* Responsive table styles */
+.responsive-table-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.overflow-x-auto {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+}
+
+@media (max-width: 1024px) {
+  table.spaced-table th,
+  table.spaced-table td {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+  }
+  
+  .action-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .btn-list-item {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .cell-content.truncate {
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  table.spaced-table th,
+  table.spaced-table td {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+}
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Ensure table content doesn't overflow */
+.cell-content {
+  display: block;
+  min-width: 0;
+}
+
+.cell-content.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,0 +1,85 @@
+/* src/components/common/ToggleSwitch.css */
+
+.toggle-switch-field {
+  display: flex;
+  flex-direction: column; /* Stack label, switch, and help text vertically */
+  margin-bottom: 1.5rem; /* Increased spacing to match other form fields */
+  align-items: flex-start; /* Align items to the start */
+}
+
+.toggle-switch-label {
+  display: block; /* Make label take its own line */
+  margin-bottom: 0.75rem; /* Space between label and switch */
+  font-weight: 500; /* Slightly bolder label */
+  color: var(--text); /* Match app text color */
+  font-size: 0.875rem;
+}
+
+.toggle-switch-container {
+  position: relative;
+  display: inline-block;
+  width: 50px; /* Width of the toggle switch */
+  height: 26px; /* Height of the toggle switch */
+}
+
+/* Hide default HTML checkbox */
+.toggle-switch-checkbox {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+/* The slider (the background track) */
+.toggle-switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc; /* Default background color (off state) */
+  transition: .4s;
+  border-radius: 26px; /* Make it rounded */
+}
+
+/* The handle (the circle) */
+.toggle-switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px; /* Size of the handle */
+  width: 20px;
+  left: 3px; /* Position from the left */
+  bottom: 3px; /* Position from the bottom */
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%; /* Make it a circle */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* When the checkbox is checked, change the background color of the slider */
+.toggle-switch-checkbox:checked + .toggle-switch-slider {
+  background-color: var(--primary); /* Use app primary color for on state */
+}
+
+/* When the checkbox is checked, move the handle to the right */
+.toggle-switch-checkbox:checked + .toggle-switch-slider:before {
+  transform: translateX(24px); /* Move handle across (width - handle width - 2*padding) */
+}
+
+/* Focus styles for accessibility */
+.toggle-switch-checkbox:focus + .toggle-switch-slider {
+  box-shadow: 0 0 1px var(--primary);
+}
+
+.toggle-switch-help {
+  margin-top: 0.5rem; /* Space between switch and help text */
+  font-size: 0.875rem;
+  color: var(--text-light); /* Match app text-light color */
+}
+
+/* Adjust alignment if needed within a form row */
+.form-row .toggle-switch-field {
+  margin-bottom: 0; /* Remove bottom margin when in a row */
+  /* Add other alignment styles if necessary */
+}

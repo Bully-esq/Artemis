@@ -1,0 +1,34 @@
+/* Import base styles */
+@import './base/variables.css';
+@import './base/reset.css';
+@import './base/typography.css';
+@import './base/layout.css';
+
+/* Import component styles */
+@import './components/common/buttons.css';
+@import './components/common/pageLayout.css';
+@import './components/lists.css';
+@import './components/forms.css';
+@import './components/cards.css';
+@import './components/tables.css';
+@import './components/dialogs.css';
+@import './components/notifications.css';
+@import './components/tabs.css';
+@import './components/loaders.css';
+@import './components/badges.css';
+@import './components/sidebar.css';
+@import './components/activity.css';
+@import './components/common/toggleSwitch.css';
+@import './components/suppliers/catalogItemList.css';
+@import './components/invoices/invoice-builder.css';
+
+/* Import page-specific styles */
+@import './pages/dashboard.css';
+@import './pages/contacts.css';
+@import './pages/quotes.css';
+@import './pages/invoices.css';
+@import './pages/settings.css';
+@import './pages/suppliers.css';
+
+/* Import mobile styles (should be last to override other styles) */
+@import './mobile.css';

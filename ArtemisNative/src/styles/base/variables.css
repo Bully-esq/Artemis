@@ -1,0 +1,24 @@
+/* CSS Variables */
+:root {
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-light: #e0f2fe;
+  --secondary: #9ca3af;
+  --secondary-hover: #6b7280;
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --text: #333333;
+  --text-light: #6b7280;
+  --border: #e5e7eb;
+  --bg-light: #f3f4f6;
+  --bg-white: #ffffff;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --sidebar-width: 250px;
+  --header-height: 64px;
+  --border-radius: 0.375rem;
+  --transition: all 0.2s ease-in-out;
+}

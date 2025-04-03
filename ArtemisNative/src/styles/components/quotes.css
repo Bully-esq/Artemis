@@ -1,0 +1,237 @@
+.tabs-with-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.save-tab-button {
+  margin-left: 20px;
+}
+
+/* Delete confirmation dialog styles */
+.delete-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.delete-confirm-dialog {
+  background-color: white;
+  border-radius: 4px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.delete-confirm-dialog h3 {
+  margin-top: 0;
+  color: #e53935;
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+/* Add danger variant for buttons */
+.btn-danger {
+  background-color: #e53935;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #c62828;
+}
+
+/* Item reordering styles */
+.item-actions {
+  display: flex;
+  align-items: center;
+}
+
+.reorder-buttons {
+  display: flex;
+  flex-direction: column;
+  margin-right: 10px;
+}
+
+.reorder-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: #4b5563;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reorder-button:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  color: #1d4ed8;
+}
+
+.reorder-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.reorder-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.item-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.catalog-item {
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  background-color: #ffffff;
+}
+
+.catalog-item:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.catalog-item-name {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #111827;
+  line-height: 1.4;
+}
+
+.catalog-item-supplier {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.catalog-item-description {
+  margin: 0;
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+.catalog-item-price {
+  text-align: right;
+}
+
+.price-value {
+  margin: 0 0 8px 0;
+  font-weight: 500;
+  color: #1f2937;
+  font-size: 16px;
+}
+
+.category-label {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.catalog-items {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.catalog-item-content {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.form-field {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Add these PDF-specific styles */
+.pdf-export-mode {
+  font-size: 80%; /* Base font size reduction */
+}
+
+.pdf-export-mode .quote-title {
+  font-size: 24px;
+}
+
+.pdf-export-mode .quote-reference {
+  font-size: 14px;
+}
+
+.pdf-export-mode .company-name {
+  font-size: 14px !important;
+}
+
+.pdf-export-mode .company-address,
+.pdf-export-mode .company-contact {
+  font-size: 12px;
+}
+
+.pdf-export-mode .client-section p,
+.pdf-export-mode .date-section p {
+  font-size: 12px;
+  margin: 4px 0;
+}
+
+.pdf-export-mode .quote-table th,
+.pdf-export-mode .quote-table td {
+  font-size: 11px;
+  padding: 6px 8px;
+}
+
+.pdf-export-mode .quote-table-total td {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.pdf-export-mode .terms-heading {
+  font-size: 14px;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.pdf-export-mode .terms-subheading {
+  font-size: 12px;
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+
+.pdf-export-mode .terms-list li,
+.pdf-export-mode .terms-notes,
+.pdf-export-mode .terms-section p {
+  font-size: 11px;
+  margin: 4px 0;
+}
+
+.pdf-export-mode .quote-footer p {
+  font-size: 10px;
+  margin: 2px 0;
+}
