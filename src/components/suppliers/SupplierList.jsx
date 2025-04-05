@@ -444,19 +444,28 @@ const SupplierList = () => {
                       </div>
                       <div className="item-actions">
                         <p className="item-detail">{supplier.phone || ''}</p>
-                        <div className="action-buttons">
-                          <button
-                            className="action-button edit"
-                            onClick={() => handleEditSupplier(supplier)}
+                        <div className="action-button-container">
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            className="mr-4"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditSupplier(supplier);
+                            }}
                           >
                             Edit
-                          </button>
-                          <button
-                            className="action-button delete"
-                            onClick={() => handleDeleteClick(supplier)}
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(supplier);
+                            }}
                           >
                             Delete
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     </div>

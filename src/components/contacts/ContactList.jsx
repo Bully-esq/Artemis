@@ -372,34 +372,35 @@ const ContactList = () => {
                     <p className="list-item-detail">
                       {contact.phone || ''}
                     </p>
-                    <div className="status-button-container">
-                      <span className={`status-badge ${
-                        contact.customerType === 'company' 
-                          ? 'status-badge-info' 
-                          : 'status-badge-success'
-                      }`}>
-                        {contact.customerType === 'company' ? 'Company' : 'Individual'}
-                      </span>
-                      <ActionButtonContainer>
-                        <button
-                          className="btn-list-item btn-list-item--primary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditContact(contact);
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="btn-list-item btn-list-item--danger"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteContact(contact);
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </ActionButtonContainer>
+                    <span className={`status-badge ${
+                      contact.customerType === 'company' 
+                        ? 'status-badge-info' 
+                        : 'status-badge-success'
+                    }`}>
+                      {contact.customerType === 'company' ? 'Company' : 'Individual'}
+                    </span>
+                    <div className="action-button-container">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="mr-4"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditContact(contact);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteContact(contact);
+                        }}
+                      >
+                        Delete
+                      </Button>
                     </div>
                   </div>
                 </div>
