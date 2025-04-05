@@ -375,10 +375,34 @@
     flex: 0 0 auto !important; /* Don't allow buttons to grow or shrink */
   }
   /* End mobile optimizations for contact list items */
+
+  /* Checkbox filter optimizations for mobile */
+  .checkbox-filters {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 15px !important;
+  }
+
+  .checkbox-label {
+    display: inline-flex !important;
+    align-items: center !important;
+    white-space: nowrap !important;
+  }
+
+  .checkbox-input {
+    margin-right: 6px !important; /* Bring text closer to checkbox */
+    width: auto !important; /* Override the default width: 100% on mobile */
+    margin-bottom: 0 !important; /* Remove bottom margin from mobile inputs */
+  }
+
+  .checkbox-text {
+    margin-left: 0 !important; /* Remove any left margin that might separate the text */
+    font-size: 0.95rem !important; /* Make the text slightly larger for better readability */
+  }
+  /* End checkbox filter optimizations */
 }
 
 /* A4 format styles to override mobile styles when exporting to PDF */
-/* These have !important to ensure they override any mobile styles */
 .pdf-a4-format {
   /* Standard A4 dimensions */
   width: 210mm !important;

@@ -379,11 +379,10 @@ const ContactList = () => {
                     }`}>
                       {contact.customerType === 'company' ? 'Company' : 'Individual'}
                     </span>
-                    <div className="action-button-container">
+                    <div className="status-button-container">
                       <Button
-                        variant="primary"
-                        size="sm"
-                        className="mr-4"
+                        className="btn-list-item btn-list-item--primary"
+                        style={{ backgroundColor: '#0073cf', color: 'white' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleEditContact(contact);
@@ -392,8 +391,8 @@ const ContactList = () => {
                         Edit
                       </Button>
                       <Button
-                        variant="danger"
-                        size="sm"
+                        className="btn-list-item btn-list-item--danger"
+                        style={{ backgroundColor: '#dc3545', color: 'white', marginLeft: '8px' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteContact(contact);
@@ -416,16 +415,19 @@ const ContactList = () => {
           title={selectedContact ? "Edit Contact" : "Add New Contact"}
           isOpen={showAddContactDialog}
           onClose={handleDialogClose}
-          size="lg"
+          size="md"
+          className="contacts-dialog"
         >
-          <ContactForm
-            contact={selectedContact}
-            onCancel={handleDialogClose}
-            onSuccess={() => {
-              handleDialogClose();
-              queryClient.invalidateQueries('contacts');
-            }}
-          />
+          <div className="scrollable-dialog-content">
+            <ContactForm
+              contact={selectedContact}
+              onCancel={handleDialogClose}
+              onSuccess={() => {
+                handleDialogClose();
+                queryClient.invalidateQueries('contacts');
+              }}
+            />
+          </div>
         </Dialog>
       )}
     </PageLayout>

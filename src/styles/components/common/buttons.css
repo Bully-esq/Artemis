@@ -282,7 +282,7 @@
   gap: 6px;  /* Reduced from 8px */
   align-items: center;
   padding: 6px 16px;  /* Reduced top/bottom padding from 8px to 6px */
-  background-color: white; 
+  background-color: #f3f4f6; /* Restored gray background */
   border-bottom: none; /* Removed border */
   margin-bottom: 0; /* Removed margin */
   width: auto; /* Changed from 100% to auto to fit content */
@@ -294,6 +294,17 @@
   height: 28px;  /* Reduced from 32px */
   padding: 0 10px;  /* Reduced horizontal padding from 12px to 10px */
   font-size: 0.75rem;  /* Reduced from 0.85rem */
+}
+
+/* Override for variant buttons within list items to ensure their backgrounds are maintained */
+.action-button-container .btn.btn-primary {
+  background-color: var(--primary);
+  color: white;
+}
+
+.action-button-container .btn.btn-danger {
+  background-color: var(--danger);
+  color: white;
 }
 
 /* Reduce the size of icons inside action buttons */

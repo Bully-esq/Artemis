@@ -444,11 +444,10 @@ const SupplierList = () => {
                       </div>
                       <div className="item-actions">
                         <p className="item-detail">{supplier.phone || ''}</p>
-                        <div className="action-button-container">
+                        <div className="status-button-container">
                           <Button
-                            variant="primary"
-                            size="sm"
-                            className="mr-4"
+                            className="btn-list-item btn-list-item--primary"
+                            style={{ backgroundColor: '#0073cf', color: 'white' }}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleEditSupplier(supplier);
@@ -457,8 +456,8 @@ const SupplierList = () => {
                             Edit
                           </Button>
                           <Button
-                            variant="danger"
-                            size="sm"
+                            className="btn-list-item btn-list-item--danger"
+                            style={{ backgroundColor: '#dc3545', color: 'white', marginLeft: '8px' }}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteClick(supplier);

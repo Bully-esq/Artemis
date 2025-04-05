@@ -27,10 +27,7 @@ const ContactForm = ({ contact = null, onSuccess, onCancel }) => {
     email: '',
     phone: '',
     address: '',
-    notes: '',
-    gdprConsent: false,
-    gdprConsentSource: '',
-    marketingConsent: false
+    notes: ''
   });
   
   // Load contact data when editing
@@ -44,10 +41,7 @@ const ContactForm = ({ contact = null, onSuccess, onCancel }) => {
         email: contact.email || '',
         phone: contact.phone || '',
         address: contact.address || '',
-        notes: contact.notes || '',
-        gdprConsent: Boolean(contact.gdprConsent),
-        gdprConsentSource: contact.gdprConsentSource || '',
-        marketingConsent: Boolean(contact.marketingConsent)
+        notes: contact.notes || ''
       });
     }
   }, [contact]);
@@ -110,11 +104,6 @@ const ContactForm = ({ contact = null, onSuccess, onCancel }) => {
       newErrors.email = 'Please enter a valid email address';
     }
     
-    // Check for GDPR consent source when consent is given
-    if (formData.gdprConsent && !formData.gdprConsentSource) {
-      newErrors.gdprConsentSource = 'Please select a consent source';
-    }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -131,19 +120,8 @@ const ContactForm = ({ contact = null, onSuccess, onCancel }) => {
     // Prepare contact data
     const contactData = {
       id: contact?.id || Date.now().toString(),
-      ...formData,
-      gdprConsent: formData.gdprConsent ? 1 : 0,
-      marketingConsent: formData.marketingConsent ? 1 : 0
+      ...formData
     };
-    
-    // Add timestamps
-    if (formData.gdprConsent) {
-      contactData.gdprConsentDate = contact?.gdprConsentDate || new Date().toISOString();
-    }
-    
-    if (formData.marketingConsent) {
-      contactData.marketingConsentDate = contact?.marketingConsentDate || new Date().toISOString();
-    }
     
     // Add creation and update timestamps
     if (!isEditing) {
@@ -243,52 +221,6 @@ const ContactForm = ({ contact = null, onSuccess, onCancel }) => {
         onChange={handleChange}
         rows="3"
       />
-      
-      {/* GDPR Section */}
-      <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mt-8">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">GDPR Compliance</h3>
-        
-        {/* Data Processing Consent */}
-        <FormField
-          label="Data Processing Consent"
-          name="gdprConsent"
-          type="checkbox"
-          checked={formData.gdprConsent}
-          onChange={handleChange}
-          helpText="Contact has consented to their data being stored and processed for business purposes"
-        />
-        
-        {/* Consent Source */}
-        {formData.gdprConsent && (
-          <FormField
-            label="Consent Source"
-            name="gdprConsentSource"
-            type="select"
-            value={formData.gdprConsentSource}
-            onChange={handleChange}
-            error={errors.gdprConsentSource}
-            required={formData.gdprConsent}
-          >
-            <option value="">Select source...</option>
-            <option value="form">Website Contact Form</option>
-            <option value="email">Email</option>
-            <option value="phone">Phone Call</option>
-            <option value="in-person">In Person</option>
-            <option value="contract">Contract/Agreement</option>
-            <option value="other">Other</option>
-          </FormField>
-        )}
-        
-        {/* Marketing Consent */}
-        <FormField
-          label="Marketing Communications Consent"
-          name="marketingConsent"
-          type="checkbox"
-          checked={formData.marketingConsent}
-          onChange={handleChange}
-          helpText="Contact has consented to receive marketing communications"
-        />
-      </div>
       
       {/* Form buttons */}
       <div className="flex justify-end space-x-3">
