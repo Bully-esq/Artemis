@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery, useQueryClient } from 'react-query';
 import { useAppContext } from '../../context/AppContext';
 import api from '../../services/api';
 import pdfGenerator from '../../services/pdfGenerator';
@@ -25,6 +25,7 @@ const QuoteBuilder = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { addNotification, settings } = useAppContext();
+  const queryClient = useQueryClient(); // Add QueryClient
   
   // Local state
   const [activeTab, setActiveTab] = useState('details');
@@ -74,6 +75,12 @@ const QuoteBuilder = () => {
   // Add this state near your other dialog states
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [showMissingCompanyInfoDialog, setShowMissingCompanyInfoDialog] = useState(false);
+  
+  // Add this state variable for tracking user's choice to bypass company info check
+  const [bypassCompanyInfoCheck, setBypassCompanyInfoCheck] = useState(false);
+  
+  // Add these new state variables near the other state variables
+  const [saveAsContact, setSaveAsContact] = useState(false);
   
   // Quote details
   const [quoteDetails, setQuoteDetails] = useState({
@@ -382,6 +389,49 @@ const QuoteBuilder = () => {
       const quoteId = quoteDetails.id || Date.now().toString();
       console.log("Using quote ID:", quoteId);
       
+      // Save client as contact if checkbox is checked
+      if (saveAsContact && quoteDetails.client.name) {
+        try {
+          // Check if client has minimum required information
+          if (quoteDetails.client.name) {
+            console.log("Saving client as contact...");
+            
+            // Split the name into first and last name
+            const nameParts = quoteDetails.client.name.split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.slice(1).join(' ') || '';
+            
+            // Prepare contact data
+            const contactData = {
+              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              customerType: quoteDetails.client.company ? 'business' : 'individual',
+              firstName,
+              lastName,
+              company: quoteDetails.client.company || '',
+              email: quoteDetails.client.email || '',
+              phone: quoteDetails.client.phone || '',
+              address: quoteDetails.client.address || '',
+              notes: `Added from Quote ${quoteId} on ${new Date().toLocaleDateString()}`,
+              createdAt: new Date().toISOString()
+            };
+            
+            // Save contact
+            await api.contacts.save(contactData);
+            addNotification(`Saved ${contactData.firstName} ${contactData.lastName} as a contact`, 'success');
+            
+            // Invalidate contacts query to refresh contact list
+            queryClient.invalidateQueries('contacts');
+            
+            // Reset the checkbox
+            setSaveAsContact(false);
+          }
+        } catch (contactError) {
+          console.error("Error saving contact:", contactError);
+          addNotification(`Error saving contact: ${contactError.message}`, 'error');
+          // Continue with quote save even if contact save fails
+        }
+      }
+      
       // Fix potential issues with quantity values
       const sanitizedItems = Array.isArray(selectedItems) ? selectedItems.map(item => {
         // Make sure quantity is converted to a number properly
@@ -485,8 +535,10 @@ const QuoteBuilder = () => {
       // Add notification
       addNotification('Generating PDF...', 'info');
       
-      // Add PDF export class
+      // Add PDF export classes
       quotePreviewElement.classList.add('pdf-export-mode');
+      // Add a new class specifically for ensuring A4 sizing
+      quotePreviewElement.classList.add('pdf-a4-format');
       
       // Configure options
       const options = {
@@ -514,27 +566,44 @@ const QuoteBuilder = () => {
         
         addNotification('PDF exported successfully!', 'success');
       } finally {
-        // Always remove the PDF export class, even if there's an error
+        // Always remove the PDF export classes, even if there's an error
         quotePreviewElement.classList.remove('pdf-export-mode');
+        quotePreviewElement.classList.remove('pdf-a4-format');
       }
       
     } catch (error) {
       console.error('PDF generation error:', error);
       addNotification(`Error generating PDF: ${error.message}`, 'error');
       
-      // Make sure we remove the class if there's an error
+      // Make sure we remove the classes if there's an error
       const quotePreviewElement = document.querySelector('.quote-preview');
       if (quotePreviewElement) {
         quotePreviewElement.classList.remove('pdf-export-mode');
+        quotePreviewElement.classList.remove('pdf-a4-format');
       }
     }
+  };
+
+  // Function to validate company information before email or export
+  const validateCompanyInfo = () => {
+    // If user has chosen to bypass company info check, return true
+    if (bypassCompanyInfoCheck) {
+      return true;
+    }
+    
+    if (!settings?.company?.name || !settings?.company?.address) {
+      setShowMissingCompanyInfoDialog(true);
+      return false;
+    }
+    return true;
   };
 
   // Create a safer export PDF function that ensures preview is visible
   const safeExportPDF = async () => {
     try {
       // Check for missing company information before proceeding
-      if (!settings?.company?.name || !settings?.company?.address) {
+      // Skip this check if bypassCompanyInfoCheck is true
+      if (!bypassCompanyInfoCheck && (!settings?.company?.name || !settings?.company?.address)) {
         setShowMissingCompanyInfoDialog(true);
         return;
       }
@@ -556,13 +625,24 @@ const QuoteBuilder = () => {
     }
   };
 
-  // Function to validate company information before email or export
-  const validateCompanyInfo = () => {
-    if (!settings?.company?.name || !settings?.company?.address) {
-      setShowMissingCompanyInfoDialog(true);
-      return false;
+  // Add a new function to export PDF without company info check
+  const exportPDFWithoutCompanyCheck = async () => {
+    try {
+      // First, make sure we're on the preview tab
+      if (activeTab !== 'preview') {
+        setActiveTab('preview');
+        
+        // Wait for the tab change to take effect and DOM to update
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      // Now execute the normal PDF export
+      return handleExportPDF();
+    } catch (error) {
+      console.error('Error in export without company check:', error);
+      addNotification(`Error exporting PDF: ${error.message}`, 'error');
+      return Promise.reject(error);
     }
-    return true;
   };
 
   // Modify handleEmailQuote to check company info first
@@ -897,6 +977,19 @@ const QuoteBuilder = () => {
                 onChange={(e) => handleClientChange('address', e.target.value)}
                 rows={3}
               />
+              
+              {/* Add Save as Contact checkbox */}
+              <div className="form-field" style={{ marginTop: '10px' }}>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={saveAsContact}
+                    onChange={(e) => setSaveAsContact(e.target.checked)}
+                    className="form-checkbox"
+                  />
+                  <span className="checkbox-text">Save as contact when quote is saved</span>
+                </label>
+              </div>
             </div>
           </div>
           
@@ -1679,8 +1772,8 @@ const QuoteBuilder = () => {
           title="Add Item to Quote"
         >
           <div style={{ 
-            width: '900px', // Increased fixed width
-            maxWidth: '95vw',
+            width: '100%',
+            maxWidth: '800px',
             padding: '0 16px',
             boxSizing: 'border-box'
           }}>
@@ -1730,23 +1823,28 @@ const QuoteBuilder = () => {
                         padding: '10px', 
                         border: '1px solid #ddd',
                         borderRadius: '4px',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        overflow: 'hidden'
                       }}
                       onClick={() => {
                         handleAddItem(item);
                         setShowItemDialog(false);
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <div>
-                          <h3 style={{ margin: '0 0 5px 0' }}>{item.name}</h3>
+                      <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between',
+                        width: '100%'
+                      }}>
+                        <div style={{ flexGrow: 1, minWidth: 0, paddingRight: '10px', maxWidth: '70%' }}>
+                          <h3 style={{ margin: '0 0 5px 0', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</h3>
                           <p style={{ margin: '0 0 5px 0', color: '#666' }}>{getSupplierName(item.supplier)}</p>
                           {item.description && (
-                            <p style={{ margin: '0', fontSize: '14px' }}>{item.description}</p>
+                            <p style={{ margin: '0', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.description}</p>
                           )}
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{formatCurrency(item.cost)}</p>
+                        <div style={{ textAlign: 'right', flexShrink: 0, minWidth: '80px' }}>
+                          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{formatCurrency(item.cost)}</p>
                           {item.category && (
                             <p style={{ margin: '0', fontSize: '12px', color: '#666' }}>{item.category}</p>
                           )}
@@ -1795,7 +1893,7 @@ const QuoteBuilder = () => {
               backgroundColor: 'white',
               padding: '20px',
               borderRadius: '5px',
-              width: '80%',
+              width: '90%',
               maxWidth: '800px',
               maxHeight: '80vh',
               overflow: 'auto'
@@ -1862,23 +1960,28 @@ const QuoteBuilder = () => {
                         padding: '10px', 
                         border: '1px solid #ddd',
                         borderRadius: '4px',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        overflow: 'hidden'
                       }}
                       onClick={() => {
                         handleAddItem(item);
                         setShowItemDialog(false);
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <div>
-                          <h3 style={{ margin: '0 0 5px 0' }}>{item.name}</h3>
+                      <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between',
+                        width: '100%'
+                      }}>
+                        <div style={{ flexGrow: 1, minWidth: 0, paddingRight: '10px', maxWidth: '70%' }}>
+                          <h3 style={{ margin: '0 0 5px 0', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</h3>
                           <p style={{ margin: '0 0 5px 0', color: '#666' }}>{getSupplierName(item.supplier)}</p>
                           {item.description && (
-                            <p style={{ margin: '0', fontSize: '14px' }}>{item.description}</p>
+                            <p style={{ margin: '0', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.description}</p>
                           )}
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{formatCurrency(item.cost)}</p>
+                        <div style={{ textAlign: 'right', flexShrink: 0, minWidth: '80px' }}>
+                          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{formatCurrency(item.cost)}</p>
                           {item.category && (
                             <p style={{ margin: '0', fontSize: '12px', color: '#666' }}>{item.category}</p>
                           )}
@@ -2164,7 +2267,20 @@ const QuoteBuilder = () => {
           }}>
             <Button
               variant="secondary"
-              onClick={() => setShowMissingCompanyInfoDialog(false)}
+              onClick={() => {
+                // Set the bypass flag to true when user chooses to continue without company info
+                setBypassCompanyInfoCheck(true);
+                setShowMissingCompanyInfoDialog(false);
+                
+                // Continue with PDF export
+                if (activeTab !== 'preview') {
+                  setActiveTab('preview');
+                  // Wait for tab change and then export
+                  setTimeout(() => handleExportPDF(), 300);
+                } else {
+                  handleExportPDF();
+                }
+              }}
             >
               Continue without company information
             </Button>

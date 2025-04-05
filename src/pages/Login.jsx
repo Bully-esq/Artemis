@@ -51,22 +51,25 @@ const Login = () => {
   const location = useLocation();
 
   // Get redirect path from location state or default to dashboard
-  const from = location.state?.from?.pathname || '/';
+  // Ensure the path always starts with a forward slash
+  const from = (location.state?.from?.pathname && location.state.from.pathname !== '/login') 
+    ? location.state.from.pathname 
+    : '/dashboard';
 
   // Tell AuthContext we're on the login page when component mounts
   useEffect(() => {
     // Only set the login page status if we're not being redirected from somewhere else
     // This prevents clearing the token during legitimate redirects after login
     if (!location.state?.from || location.state?.from?.pathname === '/login') {
-      console.log('Setting login page status - not being redirected from protected route');
+      // console.log('Setting login page status - not being redirected from protected route');
       setLoginPageStatus(true);
     } else {
-      console.log('Not setting login page status - being redirected from:', location.state?.from);
+      // console.log('Not setting login page status - being redirected from:', location.state?.from);
     }
     
     return () => {
       // Reset the flag when we leave the login page
-      console.log('Leaving login page, resetting login page status');
+      // console.log('Leaving login page, resetting login page status');
       setLoginPageStatus(false);
     };
   }, [setLoginPageStatus, location.state]);
@@ -75,7 +78,7 @@ const Login = () => {
   useEffect(() => {
     // Only clear token if we're on the login page and not being redirected from elsewhere
     if (!location.state?.from) {
-      console.log('Login page loaded, clearing authentication tokens');
+      // console.log('Login page loaded, clearing authentication tokens');
       localStorage.removeItem('token');
       sessionStorage.removeItem('user');
       
@@ -117,10 +120,10 @@ const Login = () => {
 
   // Redirect if already authenticated
   useEffect(() => {
-    console.log('Login.jsx - Redirect effect triggered:');
-    console.log('- isAuthenticated:', isAuthenticated);
-    console.log('- from path:', from);
-    console.log('- token exists:', !!localStorage.getItem('token'));
+    // console.log('Login.jsx - Redirect effect triggered:');
+    // console.log('- isAuthenticated:', isAuthenticated);
+    // console.log('- from path:', from);
+    // console.log('- token exists:', !!localStorage.getItem('token'));
     
     // Update auth debug info for the debug panel
     setAuthDebugInfo(prev => ({
@@ -131,11 +134,13 @@ const Login = () => {
     }));
     
     if (isAuthenticated) {
-      console.log('Navigating to:', from);
+      // console.log('Navigating to:', from);
       // Add a small delay to ensure state is fully updated
       setTimeout(() => {
-        navigate(from, { replace: true });
-        console.log('Navigation command executed');
+        // Always navigate to a valid route to prevent 404
+        const navigateTo = from || '/dashboard';
+        navigate(navigateTo, { replace: true });
+        // console.log('Navigation command executed to:', navigateTo);
       }, 100);
     }
   }, [isAuthenticated, navigate, from]);
@@ -242,12 +247,12 @@ const Login = () => {
     
     // Validate form
     if (!validateForm()) {
-      console.log('Form validation failed', formErrors);
+      // console.log('Form validation failed', formErrors);
       return;
     }
     
-    console.log('Attempting login with:', formData);
-    console.log('Target API URL:', selectedApiEndpoint);
+    // console.log('Attempting login with:', formData);
+    // console.log('Target API URL:', selectedApiEndpoint);
     
     try {
       // Update debugging state
@@ -259,7 +264,7 @@ const Login = () => {
       
       // Attempt login with the selected endpoint
       await login(formData.email, formData.password, selectedApiEndpoint);
-      console.log('Login successful, should redirect to:', from);
+      // console.log('Login successful, should redirect to:', from);
       
       // Update debug info
       setAuthDebugInfo(prev => ({
@@ -278,13 +283,14 @@ const Login = () => {
       // Add a manual navigation as a backup
       setTimeout(() => {
         if (document.location.pathname === '/login') {
-          console.log('Still on login page after 1000ms - forcing navigation to dashboard...');
+          // console.log('Still on login page after 1000ms - forcing navigation to dashboard...');
+          // Always navigate to the dashboard as a safe fallback
           navigate('/dashboard', { replace: true });
         }
       }, 1000);
     } catch (err) {
       // Auth errors are handled by the context
-      console.error('Login failed in component:', err.message);
+      // console.error('Login failed in component:', err.message);
       
       // Update debug info
       setAuthDebugInfo(prev => ({
@@ -398,7 +404,7 @@ const Login = () => {
                   checked={rememberMe}
                   onChange={() => setRememberMe(!rememberMe)}
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                <label htmlFor="remember-me" className="ml-4 block text-sm text-gray-900" style={{ marginLeft: '10px' }}>
                   Remember me
                 </label>
               </div>
@@ -430,93 +436,6 @@ const Login = () => {
             </p>
           </div>
 
-          {/* API Connection Status */}
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <div className="flex flex-col items-center text-sm">
-              <div className="mb-2 flex items-center">
-                <span className="mr-2">API Connection:</span>
-                {apiStatus === 'connected' && (
-                  <span className="text-green-600 flex items-center">
-                    <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    Connected
-                  </span>
-                )}
-                {apiStatus === 'disconnected' && (
-                  <span className="text-red-600 flex items-center">
-                    <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                    Disconnected
-                  </span>
-                )}
-                {apiStatus === 'checking' && (
-                  <span className="text-yellow-600 flex items-center">
-                    <svg className="h-4 w-4 mr-1 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Checking...
-                  </span>
-                )}
-                {apiStatus === 'error' && (
-                  <span className="text-red-600 flex items-center">
-                    <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                    Connection Error
-                  </span>
-                )}
-                {apiStatus === null && (
-                  <span className="text-gray-600">Unknown</span>
-                )}
-              </div>
-              <div className="flex flex-col items-center mb-2">
-                <button 
-                  type="button"
-                  className="text-xs text-blue-600 hover:text-blue-500"
-                  onClick={() => setShowApiConfig(!showApiConfig)}
-                >
-                  {showApiConfig ? 'Hide API Configuration' : 'Show API Configuration'}
-                </button>
-                
-                {showApiConfig && (
-                  <div className="mt-2 w-full">
-                    <label htmlFor="api-endpoint" className="block text-xs font-medium text-gray-700">
-                      API Endpoint
-                    </label>
-                    <select
-                      id="api-endpoint"
-                      name="api-endpoint"
-                      className="mt-1 block w-full pl-3 pr-10 py-2 text-xs border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
-                      value={selectedApiEndpoint}
-                      onChange={handleApiEndpointChange}
-                    >
-                      {API_ENDPOINTS.map((endpoint) => (
-                        <option key={endpoint.url} value={endpoint.url}>
-                          {endpoint.name} ({endpoint.url})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                
-                <button 
-                  type="button" 
-                  onClick={handleTestConnection}
-                  className="mt-2 text-xs text-blue-600 hover:text-blue-500"
-                >
-                  Test API connection
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {apiStatus === 'disconnected' && `Cannot connect to ${selectedApiEndpoint}. Try a different endpoint.`}
-                {apiStatus === 'error' && "Connection blocked. Check console for details, might be CORS or ad blocker."}
-              </p>
-            </div>
-          </div>
-          
           {/* Debug Information - hidden by default, shown after 5 rapid taps on title */}
           {showDebugInfo && (
             <div className="mt-4 pt-4 border-t border-gray-200 text-xs">

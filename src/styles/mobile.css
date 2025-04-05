@@ -262,7 +262,45 @@
       transform: scale(0.9);
       transform-origin: top left;
     }
+    
+    /* But never scale for PDF generation */
+    .pdf-a4-format {
+      transform: none !important;
+      width: 210mm !important;
+      min-height: 297mm !important;
+    }
   }
+}
+
+/* A4 format styles to override mobile styles when exporting to PDF */
+/* These have !important to ensure they override any mobile styles */
+.pdf-a4-format {
+  /* Standard A4 dimensions */
+  width: 210mm !important;
+  min-height: 297mm !important;
+  padding: 20mm !important;
+  margin: 0 auto !important;
+  font-size: 12pt !important;
+  
+  /* Override any transforms or mobile-specific layouts */
+  transform: none !important;
+  -webkit-transform: none !important;
+}
+
+/* Reset mobile-specific adjustments for tables in PDFs */
+.pdf-a4-format .quote-table,
+.pdf-a4-format .invoice-table {
+  font-size: 11pt !important;
+  width: 100% !important;
+  overflow: visible !important;
+}
+
+.pdf-a4-format .quote-table th,
+.pdf-a4-format .quote-table td,
+.pdf-a4-format .invoice-table th,
+.pdf-a4-format .invoice-table td {
+  font-size: 11pt !important;
+  padding: 5mm !important;
 }
 
 /* Even smaller screens */

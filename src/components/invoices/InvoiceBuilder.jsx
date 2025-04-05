@@ -249,6 +249,10 @@ const InvoiceBuilder = () => {
       // Add notification
       addNotification('Invoice saved. Generating PDF...', 'info');
       
+      // Add PDF export classes
+      invoicePreviewElement.classList.add('pdf-export-mode');
+      invoicePreviewElement.classList.add('pdf-a4-format');
+      
       // Configure options
       const options = {
         filename: `Invoice_${invoiceDetails.invoiceNumber || 'Untitled'}_${new Date().toISOString().split('T')[0]}.pdf`,
@@ -265,10 +269,18 @@ const InvoiceBuilder = () => {
           .set(options)
           .save()
           .then(() => {
+            // Remove PDF export classes
+            invoicePreviewElement.classList.remove('pdf-export-mode');
+            invoicePreviewElement.classList.remove('pdf-a4-format');
+            
             addNotification('PDF exported successfully!', 'success');
             resolve(true);
           })
           .catch(err => {
+            // Remove PDF export classes
+            invoicePreviewElement.classList.remove('pdf-export-mode');
+            invoicePreviewElement.classList.remove('pdf-a4-format');
+            
             console.error('PDF generation error in promise:', err);
             addNotification(`Error generating PDF: ${err.message}`, 'error');
             reject(err);
@@ -277,6 +289,14 @@ const InvoiceBuilder = () => {
     } catch (error) {
       console.error('PDF generation error:', error);
       addNotification(`Error generating PDF: ${error.message}`, 'error');
+      
+      // Make sure we remove the classes if there's an error
+      const invoicePreviewElement = document.querySelector('.invoice-preview');
+      if (invoicePreviewElement) {
+        invoicePreviewElement.classList.remove('pdf-export-mode');
+        invoicePreviewElement.classList.remove('pdf-a4-format');
+      }
+      
       return Promise.reject(error);
     }
   };
