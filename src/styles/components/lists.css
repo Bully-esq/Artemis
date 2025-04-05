@@ -5,6 +5,7 @@
   display: flex;
   align-items: center;
   margin-left: 16px;
+  gap: 0.5rem;
 }
 
 .status-button-container .status-badge {
@@ -103,7 +104,7 @@ a.btn-list-item {
   padding: 0.2rem 0.4rem !important; /* Force override with !important */
   font-size: 0.75rem !important;
   border-radius: 4px;
-  border: 1px solid transparent;
+  border: none !important;
   margin-left: 4px;
   display: flex !important;
   align-items: center !important;
@@ -111,6 +112,9 @@ a.btn-list-item {
   text-align: center !important;
   white-space: nowrap;
   min-width: 60px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s ease !important;
 }
 
 /* Fix for button icons */
@@ -138,7 +142,7 @@ button.btn.btn-list-item.btn-list-item--secondary,
 a.btn.btn-list-item.btn-list-item--secondary {
   background-color: #0073cf !important;
   color: #ffffff !important;
-  border-color: #0073cf !important;
+  border: none !important;
 }
 
 /* Add hover state for better UX */
@@ -146,7 +150,7 @@ button.btn.btn-list-item.btn-list-item--secondary:hover,
 .btn.btn-list-item.btn-list-item--secondary:hover,
 a.btn.btn-list-item.btn-list-item--secondary:hover {
   background-color: #0061b0 !important;
-  border-color: #0061b0 !important;
+  border: none !important;
 }
 
 /* Invoice/Primary buttons - Add !important to ensure color is applied */
@@ -156,9 +160,9 @@ a.btn-list-item--primary,
 button.btn.btn-list-item.btn-list-item--primary,
 .btn.btn-list-item.btn-list-item--primary,
 a.btn-list-item.btn-list-item--primary {
-  background-color: #0073cf !important; /* Explicit blue color */
+  background-color: #0073cf !important;
   color: white !important;
-  border-color: #0073cf !important;
+  border: none !important;
 }
 
 /* Hover state for primary buttons */
@@ -169,7 +173,7 @@ button.btn.btn-list-item.btn-list-item--primary:hover,
 .btn.btn-list-item.btn-list-item--primary:hover,
 a.btn-list-item.btn-list-item--primary:hover {
   background-color: #0061b0 !important;
-  border-color: #0061b0 !important;
+  border: none !important;
   color: white !important;
 }
 
@@ -177,9 +181,9 @@ a.btn-list-item.btn-list-item--primary:hover {
 button.btn-list-item--danger,
 .btn.btn-list-item--danger,
 a.btn-list-item--danger {
-  background-color: #e53e3e; /* Explicit red color */
+  background-color: #e53e3e !important;
   color: white !important;
-  border-color: #e53e3e;
+  border: none !important;
 }
 
 /* Hover state for danger buttons */
@@ -187,6 +191,104 @@ button.btn-list-item--danger:hover,
 .btn.btn-list-item--danger:hover,
 a.btn-list-item--danger:hover {
   background-color: #c53030 !important;
-  border-color: #c53030 !important;
+  border: none !important;
   color: white !important;
+}
+
+/* List container and items */
+.list-container {
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.list-item {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.list-item:last-child {
+  border-bottom: none;
+}
+
+.list-item:hover {
+  background-color: var(--bg-light);
+}
+
+.list-item-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.list-item-main {
+  flex: 1;
+  min-width: 0; /* Allows text truncation to work */
+}
+
+.list-item-title {
+  font-weight: 500;
+  color: var(--text);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-item-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-light);
+  margin: 0.25rem 0 0 0;
+}
+
+.list-item-detail {
+  font-weight: 500;
+  margin: 0 0 0.25rem 0;
+  text-align: right;
+}
+
+.list-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Alphabet Filter Styles */
+.alphabet-filter-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: var(--background-color-light);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.alphabet-filter-btn {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid var(--border-color);
+  background-color: var(--background-color);
+  color: var(--text-color-secondary);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.alphabet-filter-btn:hover {
+  background-color: var(--background-color-hover);
+  border-color: var(--primary-color-light);
+  color: var(--primary-color);
+}
+
+.alphabet-filter-btn.active {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--text-color-inverse);
+  font-weight: 600;
 }

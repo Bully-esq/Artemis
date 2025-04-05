@@ -6,6 +6,9 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { contactsApi } from '../../services/api';
 import { useAppContext } from '../../context/AppContext';
 
+// Styles
+import '../../styles/components/lists.css';
+
 // Components
 import PageLayout from '../common/PageLayout';
 import Button from '../common/Button';
@@ -26,6 +29,7 @@ const ContactList = () => {
   const [filterIndividuals, setFilterIndividuals] = useState(true);
   const [showAddContactDialog, setShowAddContactDialog] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
+  const [alphabetFilter, setAlphabetFilter] = useState('All');
   
   // Fetch contacts
   const { 
@@ -82,6 +86,54 @@ const ContactList = () => {
     });
   }, [contacts, searchTerm, filterCompanies, filterIndividuals]);
   
+  // Helper to format contact display name
+  const getContactDisplayName = (contact) => {
+    if (contact.customerType === 'company') {
+      return contact.company || 'Unnamed Company';
+    } else {
+      return `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || 'Unnamed Contact';
+    }
+  };
+  
+  // Sort contacts alphabetically by display name
+  const sortedContacts = React.useMemo(() => {
+    if (!contacts) return [];
+    
+    // Filter first based on search and type
+    let initiallyFiltered = contacts.filter(contact => {
+      if (contact.customerType === 'company' && !filterCompanies) return false;
+      if (contact.customerType === 'individual' && !filterIndividuals) return false;
+      
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const displayName = getContactDisplayName(contact).toLowerCase();
+        const email = (contact.email || '').toLowerCase();
+        const phone = (contact.phone || '').toLowerCase();
+        
+        return (
+          displayName.includes(term) ||
+          email.includes(term) ||
+          phone.includes(term)
+        );
+      }
+      
+      return true;
+    });
+
+    // Then apply alphabet filter
+    if (alphabetFilter !== 'All') {
+      initiallyFiltered = initiallyFiltered.filter(contact => {
+        const displayName = getContactDisplayName(contact);
+        return displayName.toUpperCase().startsWith(alphabetFilter);
+      });
+    }
+
+    // Finally, sort alphabetically
+    return [...initiallyFiltered].sort((a, b) => {
+      return getContactDisplayName(a).localeCompare(getContactDisplayName(b));
+    });
+  }, [contacts, searchTerm, filterCompanies, filterIndividuals, alphabetFilter]);
+  
   // Handle contact click
   const handleContactClick = (contact) => {
     navigate(`/contacts/${contact.id}`);
@@ -107,32 +159,6 @@ const ContactList = () => {
     setSelectedContact(contact);
     setShowAddContactDialog(true);
   };
-  
-  // Helper to format contact display name
-  const getContactDisplayName = (contact) => {
-    if (contact.customerType === 'company') {
-      return contact.company || 'Unnamed Company';
-    } else {
-      return `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || 'Unnamed Contact';
-    }
-  };
-  
-  // Sort contacts: companies first, then individuals by last name
-  const sortedContacts = React.useMemo(() => {
-    return [...filteredContacts].sort((a, b) => {
-      if (a.customerType === 'company' && b.customerType !== 'company') {
-        return -1;
-      } else if (a.customerType !== 'company' && b.customerType === 'company') {
-        return 1;
-      } else if (a.customerType === 'company' && b.customerType === 'company') {
-        return (a.company || '').localeCompare(b.company || '');
-      } else {
-        return `${a.lastName || ''}, ${a.firstName || ''}`.localeCompare(
-          `${b.lastName || ''}, ${b.firstName || ''}`
-        );
-      }
-    });
-  }, [filteredContacts]);
   
   // Handle dialog close
   const handleDialogClose = () => {
@@ -164,6 +190,9 @@ const ContactList = () => {
       Add Contact
     </Button>
   );
+  
+  // Generate alphabet array
+  const alphabet = ['All', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))];
   
   // Loading state
   if (isLoading) {
@@ -274,6 +303,19 @@ const ContactList = () => {
         </div>
       </div>
       
+      {/* Alphabet Filter */}
+      <div className="alphabet-filter-container mb-4">
+        {alphabet.map(letter => (
+          <button
+            key={letter}
+            className={`alphabet-filter-btn ${alphabetFilter === letter ? 'active' : ''}`}
+            onClick={() => setAlphabetFilter(letter)}
+          >
+            {letter}
+          </button>
+        ))}
+      </div>
+
       {/* Full-width Contact List */}
       <div className="card">
         <div className="card-header">
@@ -285,52 +327,51 @@ const ContactList = () => {
           </div>
         </div>
         
-        {/* Contact List styled like Dashboard's recent-items */}
         {sortedContacts.length === 0 ? (
           <div className="empty-state">
             <svg className="empty-state-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
             </svg>
             <h3 className="empty-state-title">
-              {searchTerm || !filterCompanies || !filterIndividuals ? 
+              {searchTerm || alphabetFilter !== 'All' || !filterCompanies || !filterIndividuals ? 
                 'No contacts match your search criteria' : 
-                'You haven\'t added any contacts yet'}
+                "You haven't added any contacts yet"}
             </h3>
             <p className="empty-state-description">
-              {searchTerm || !filterCompanies || !filterIndividuals ? 
-                'Try adjusting your search or filters to find what you\'re looking for.' : 
+              {searchTerm || alphabetFilter !== 'All' || !filterCompanies || !filterIndividuals ? 
+                "Try adjusting your search or filters to find what you're looking for." : 
                 'Get started by adding your first contact.'}
             </p>
-            {!searchTerm && filterCompanies && filterIndividuals && (
+            {!searchTerm && alphabetFilter === 'All' && filterCompanies && filterIndividuals && (
               <Button variant="primary" onClick={() => setShowAddContactDialog(true)}>
                 Add Your First Contact
               </Button>
             )}
           </div>
         ) : (
-          <div className="recent-items">
+          <div className="list-container">
             {sortedContacts.map((contact) => (
               <div
                 key={contact.id}
-                className="recent-item"
+                className="list-item"
                 onClick={() => handleContactClick(contact)}
               >
-                <div className="item-content">
-                  <div>
-                    <p className="item-title">
+                <div className="list-item-content">
+                  <div className="list-item-main">
+                    <h3 className="list-item-title">
                       {getContactDisplayName(contact)}
-                    </p>
-                    <p className="item-subtitle">
+                    </h3>
+                    <p className="list-item-subtitle">
                       {contact.customerType === 'individual' && contact.company ? contact.company : ''}
                       {contact.customerType === 'individual' && contact.company && contact.email && ' • '}
                       {contact.email || ''}
                     </p>
                   </div>
-                  <div className="item-actions">
-                    <p className="item-detail">
+                  <div className="list-item-actions">
+                    <p className="list-item-detail">
                       {contact.phone || ''}
                     </p>
-                    <div className="item-badges">
+                    <div className="status-button-container">
                       <span className={`status-badge ${
                         contact.customerType === 'company' 
                           ? 'status-badge-info' 
@@ -340,7 +381,7 @@ const ContactList = () => {
                       </span>
                       <ActionButtonContainer>
                         <button
-                          className="btn btn-list-item btn-list-item--secondary"
+                          className="btn-list-item btn-list-item--primary"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleEditContact(contact);
@@ -349,7 +390,7 @@ const ContactList = () => {
                           Edit
                         </button>
                         <button
-                          className="btn btn-list-item btn-list-item--danger"
+                          className="btn-list-item btn-list-item--danger"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteContact(contact);

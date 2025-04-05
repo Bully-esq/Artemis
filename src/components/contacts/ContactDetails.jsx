@@ -399,15 +399,15 @@ const ContactDetails = () => {
                     <div className="section-content">
                       <dl className="details-grid">
                         <div className="details-item">
-                          <dt className="details-label">Email</dt>
+                          <dt className="details-label"><b>Email</b></dt>
                           <dd className="details-value">{contact.email || '-'}</dd>
                         </div>
                         <div className="details-item">
-                          <dt className="details-label">Phone</dt>
+                          <dt className="details-label"><b>Phone</b></dt>
                           <dd className="details-value">{contact.phone || '-'}</dd>
                         </div>
                         <div className="details-item full-width">
-                          <dt className="details-label">Address</dt>
+                          <dt className="details-label"><b>Address</b></dt>
                           <dd className="details-value address-value">{contact.address || '-'}</dd>
                         </div>
                       </dl>
