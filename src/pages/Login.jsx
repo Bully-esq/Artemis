@@ -49,6 +49,7 @@ const Login = () => {
   
   const navigate = useNavigate();
   const location = useLocation();
+  const intentionalLogin = useRef(false);
 
   // Get redirect path from location state or default to dashboard
   // Ensure the path always starts with a forward slash
@@ -74,15 +75,20 @@ const Login = () => {
     };
   }, [setLoginPageStatus, location.state]);
 
-  // Original token clearing logic is still useful as a backup
+  // Modified token clearing logic - only clear when explicitly logging out or first app load
   useEffect(() => {
-    // Only clear token if we're on the login page and not being redirected from elsewhere
-    if (!location.state?.from) {
-      // console.log('Login page loaded, clearing authentication tokens');
-      localStorage.removeItem('token');
+    // ONLY clear tokens if:
+    // 1. We're on the login page without being redirected from a protected route AND
+    // 2. We don't have an active auth token (indicating a fresh visit or explicit logout)
+    const isDirectLoginPageVisit = !location.state?.from;
+    const hasNoActiveToken = !localStorage.getItem('token');
+    
+    if (isDirectLoginPageVisit && hasNoActiveToken) {
+      // This is likely an explicit logout or first app visit
+      // console.log('Login page loaded directly with no token - clearing any stale auth data');
       sessionStorage.removeItem('user');
       
-      // Also clear any API URL that might be causing issues
+      // API URL correction logic
       if (localStorage.getItem('selectedApiEndpoint') && 
           localStorage.getItem('selectedApiEndpoint').includes(':3001')) {
         // Update any references to port 3001 to use 3002 instead
@@ -95,36 +101,13 @@ const Login = () => {
 
   // Check API connectivity only once on component mount
   useEffect(() => {
-    // Disabling automatic API test on load - users can manually test instead
-    // This prevents unnecessary network requests when the page loads
-    
     // Set API status to unknown initially instead of trying to connect
     setApiStatus('unknown');
     apiChecked.current = true;
-    
-    /* Original automatic connectivity test code - now disabled
-    const checkApiConnection = async () => {
-      try {
-        const connected = await testConnection(selectedApiEndpoint);
-        setApiStatus(connected ? 'connected' : 'disconnected');
-      } catch (err) {
-        console.error('API check failed:', err);
-        setApiStatus('error');
-      }
-      apiChecked.current = true;
-    };
-    
-    checkApiConnection();
-    */
   }, [selectedApiEndpoint, testConnection]); // Re-run when selected endpoint changes
 
   // Redirect if already authenticated
   useEffect(() => {
-    // console.log('Login.jsx - Redirect effect triggered:');
-    // console.log('- isAuthenticated:', isAuthenticated);
-    // console.log('- from path:', from);
-    // console.log('- token exists:', !!localStorage.getItem('token'));
-    
     // Update auth debug info for the debug panel
     setAuthDebugInfo(prev => ({
       ...prev,
@@ -134,13 +117,11 @@ const Login = () => {
     }));
     
     if (isAuthenticated) {
-      // console.log('Navigating to:', from);
       // Add a small delay to ensure state is fully updated
       setTimeout(() => {
         // Always navigate to a valid route to prevent 404
         const navigateTo = from || '/dashboard';
         navigate(navigateTo, { replace: true });
-        // console.log('Navigation command executed to:', navigateTo);
       }, 100);
     }
   }, [isAuthenticated, navigate, from]);
@@ -245,14 +226,13 @@ const Login = () => {
     // Clear any previous auth errors
     if (error) clearError();
     
+    // Mark this as an intentional login attempt
+    intentionalLogin.current = true;
+    
     // Validate form
     if (!validateForm()) {
-      // console.log('Form validation failed', formErrors);
       return;
     }
-    
-    // console.log('Attempting login with:', formData);
-    // console.log('Target API URL:', selectedApiEndpoint);
     
     try {
       // Update debugging state
@@ -264,7 +244,6 @@ const Login = () => {
       
       // Attempt login with the selected endpoint
       await login(formData.email, formData.password, selectedApiEndpoint);
-      // console.log('Login successful, should redirect to:', from);
       
       // Update debug info
       setAuthDebugInfo(prev => ({
@@ -283,14 +262,12 @@ const Login = () => {
       // Add a manual navigation as a backup
       setTimeout(() => {
         if (document.location.pathname === '/login') {
-          // console.log('Still on login page after 1000ms - forcing navigation to dashboard...');
           // Always navigate to the dashboard as a safe fallback
           navigate('/dashboard', { replace: true });
         }
       }, 1000);
     } catch (err) {
       // Auth errors are handled by the context
-      // console.error('Login failed in component:', err.message);
       
       // Update debug info
       setAuthDebugInfo(prev => ({

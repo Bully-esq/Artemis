@@ -16,7 +16,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   // Initialize token as null instead of checking localStorage immediately
-  const [token, setToken] = useState(null);
+  const [_token, _setToken] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -48,22 +48,33 @@ export const AuthProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, []);
 
+  // Wrapper function for setToken to add logging
+  const setToken = (newToken) => {
+    // Use simple, distinct logs without stack traces
+    if (newToken === null) {
+      console.log("!!!!!!!!!! AuthContext: setToken CALLED WITH NULL !!!!!!!!!!");
+    } else {
+      console.log("++++++++++ AuthContext: setToken CALLED WITH VALID TOKEN ++++++++++");
+    }
+    _setToken(newToken); // Call original state setter
+  };
+
   // Initialize auth state from localStorage only if not on login page
   useEffect(() => {
     // Skip auto-authentication if we're on the login page
     if (isOnLoginPage) {
-      console.log('On login page, skipping auto-authentication');
+      console.log('AuthContext: On login page, skipping auto-authentication');
       return;
     }
     
     const savedToken = localStorage.getItem('token');
     if (savedToken && !circuitBroken.current) {
-      console.log('Found saved token, attempting to restore session');
+      console.log('AuthContext: Found saved token, attempting to restore session');
       
       try {
         // Validate token format before proceeding (basic check)
         if (typeof savedToken !== 'string' || savedToken.length < 20) {
-          console.error('Invalid token format found in localStorage');
+          console.error('AuthContext: Invalid token format found in localStorage');
           localStorage.removeItem('token'); // Clear invalid token
           return;
         }
@@ -76,15 +87,16 @@ export const AuthProvider = ({ children }) => {
           try {
             // Set loading state while we validate the token
             setLoading(true);
+            console.log('AuthContext: Attempting to load user data from initial useEffect');
             
             // Try to load user data with a more generous timeout
             await loadUserData(savedToken);
             
             // If we get here, authentication was successful
             setIsAuthenticated(true);
-            console.log('Session restored successfully');
+            console.log('AuthContext: Session restored successfully');
           } catch (error) {
-            console.error('Failed to restore session:', error);
+            console.error('AuthContext: Failed to restore session in initial useEffect:', error);
             // Clear invalid token
             localStorage.removeItem('token');
             setToken(null);
@@ -96,32 +108,43 @@ export const AuthProvider = ({ children }) => {
         
         loadingUserData();
       } catch (error) {
-        console.error('Error during session restoration:', error);
+        console.error('AuthContext: Error during session restoration in initial useEffect:', error);
         // Clear potentially corrupted token
         localStorage.removeItem('token');
         setToken(null);
       }
     }
-  }, [isOnLoginPage]);
+  }, []);
   
   // Add function to set login page status
   const setLoginPageStatus = (status) => {
     setIsOnLoginPage(status);
-    if (status === true) {
-      // Clear token when entering login page
+    
+    // Only clear tokens when explicitly entering login page AND no active token
+    // This prevents clearing during React.StrictMode remounts and 404 redirects
+    if (status === true && !localStorage.getItem('token') && !isAuthenticated) {
+      console.log('AuthContext: Entering login page - clearing auth state', new Error().stack);
       localStorage.removeItem('token');
       sessionStorage.removeItem('user');
       setToken(null);
       setUser(null);
       setIsAuthenticated(false);
+    } else if (status === true && localStorage.getItem('token')) {
+      // If token exists, ensure it's applied to headers
+      const authToken = localStorage.getItem('token');
+      console.log('AuthContext: Re-applying existing token to headers');
+      axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      if (apiClient && apiClient.defaults) {
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      }
     }
   };
 
   // Set auth token in axios headers whenever it changes
   useEffect(() => {
-    if (token) {
+    if (_token) {
       // Set token for both axios defaults and the apiClient instance
-      const authHeader = `Bearer ${token}`;
+      const authHeader = `Bearer ${_token}`;
       axios.defaults.headers.common['Authorization'] = authHeader;
       
       // Also set it on apiClient from api.js if it's available
@@ -129,7 +152,7 @@ export const AuthProvider = ({ children }) => {
         apiClient.defaults.headers.common['Authorization'] = authHeader;
       }
       
-      console.log('Token applied to axios headers:', token ? 'YES (token exists)' : 'NO');
+      console.log('AuthContext: Token applied to axios headers:', _token ? 'YES (token exists)' : 'NO');
     } else {
       delete axios.defaults.headers.common['Authorization'];
       
@@ -138,14 +161,15 @@ export const AuthProvider = ({ children }) => {
         delete apiClient.defaults.headers.common['Authorization'];
       }
       
-      console.log('Token removed from axios headers');
+      // Ensure stack trace is logged when token becomes null
+      console.log('AuthContext: Token became null, removing header', new Error().stack);
     }
-  }, [token]);
+  }, [_token]);
 
   // Listen for auth-failed events
   useEffect(() => {
     const handleAuthFailed = () => {
-      console.log('Auth failed event received - logging out user');
+      console.log('AuthContext: Auth failed event received - logging out user', new Error().stack);
       logout();
     };
     
@@ -183,7 +207,7 @@ export const AuthProvider = ({ children }) => {
     try {
       // Check for circuit breaker
       if (authAttempts.current >= maxAuthAttempts) {
-        console.warn('Auth circuit breaker activated: too many failed auth attempts');
+        console.warn('AuthContext: Auth circuit breaker activated: too many failed auth attempts');
         circuitBroken.current = true;
         lastAuthAttemptTime.current = Date.now();
         setError('Too many authentication attempts. Please try again later.');
@@ -205,11 +229,11 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       authAttempts.current = 0; // Reset counter on success
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('AuthContext: Error loading user data:', error);
       
       // If we get a 401 Unauthorized, the token is invalid/expired
       if (error.response && error.response.status === 401) {
-        console.log('Token invalid or expired - logging out');
+        console.log('AuthContext: Token invalid or expired (401) - logging out');
         logout();
       }
       
@@ -218,6 +242,7 @@ export const AuthProvider = ({ children }) => {
         circuitBroken.current = true;
         lastAuthAttemptTime.current = Date.now();
         setError('Authentication service unavailable. Please try again later.');
+        console.warn('AuthContext: Circuit breaker activated after loadUserData failure', new Error().stack);
         logout();
       }
     } finally {
@@ -247,14 +272,14 @@ export const AuthProvider = ({ children }) => {
       // Use the provided custom API URL if available, otherwise use the current apiUrl
       const targetApiUrl = customApiUrl || apiUrl;
       
-      console.log(`Attempting login with API URL: ${targetApiUrl}`);
+      console.log(`AuthContext: Attempting login with API URL: ${targetApiUrl}`);
       
       // If a custom API URL was provided, update our state and apiClient
       if (customApiUrl && customApiUrl !== apiUrl) {
         setApiUrl(customApiUrl);
         apiClient.defaults.baseURL = customApiUrl;
         sessionStorage.setItem('apiBaseUrl', customApiUrl);
-        console.log('Updated API URL to:', customApiUrl);
+        console.log('AuthContext: Updated API URL to:', customApiUrl);
       }
       
       authAttempts.current++;
@@ -267,7 +292,7 @@ export const AuthProvider = ({ children }) => {
         timeout: 30000 // Increased from 8000ms to 30000ms (30 seconds)
       });
       
-      console.log('Login successful:', response.data);
+      console.log('AuthContext: Login successful:', response.data);
       
       const { token: authToken, user: userData } = response.data;
       
@@ -289,12 +314,12 @@ export const AuthProvider = ({ children }) => {
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
       }
       
-      console.log('Authentication completed, token applied to headers');
+      console.log('AuthContext: Authentication completed, token applied to headers');
       authAttempts.current = 0; // Reset counter on success
       
       return response.data;
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('AuthContext: Login error:', err);
       let errorMessage = 'Login failed';
       
       // Extract meaningful error messages
@@ -368,7 +393,7 @@ export const AuthProvider = ({ children }) => {
         timeout: 30000 // Increased from 8 seconds to 30 seconds
       });
       
-      console.log('Registration successful:', response.data);
+      console.log('AuthContext: Registration successful:', response.data);
       
       // Auto-login after successful registration if the server returns a token
       if (response.data.token) {
@@ -382,7 +407,7 @@ export const AuthProvider = ({ children }) => {
       
       return response.data;
     } catch (err) {
-      console.error('Registration error:', err);
+      console.error('AuthContext: Registration error:', err);
       let errorMessage = 'Registration failed';
       
       if (err.response) {
@@ -412,21 +437,29 @@ export const AuthProvider = ({ children }) => {
 
   // Logout function
   const logout = () => {
+    // Restore distinct log WITH stack trace
+    console.log('>>>>>>>>>> AuthContext: LOGOUT FUNCTION WAS CALLED <<<<<<<<<<', new Error().stack);
+    
+    // Restore missing lines
+    setUser(null);
+    setToken(null);
+    setIsAuthenticated(false);
+    setError(null); // Clear errors on logout
+    
     localStorage.removeItem('token');
     sessionStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
-    setIsAuthenticated(false);
     
-    // Don't clear error here as it might contain important information about why logout occurred
-    
-    // Remove auth header
+    // Restore header deletion
     delete axios.defaults.headers.common['Authorization'];
     if (apiClient && apiClient.defaults) {
       delete apiClient.defaults.headers.common['Authorization'];
     }
     
-    console.log('User logged out');
+    // Restore circuit breaker reset
+    circuitBroken.current = false;
+    authAttempts.current = 0;
+    
+    console.log('AuthContext: User logged out, token and user data cleared.');
   };
 
   // Clear error helper
@@ -450,7 +483,7 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.put(`${apiUrl}/users/profile`, profileData, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${_token}`
         }
       });
       
@@ -464,7 +497,7 @@ export const AuthProvider = ({ children }) => {
         data: response.data
       };
     } catch (error) {
-      console.error('Failed to update profile:', error);
+      console.error('AuthContext: Failed to update profile:', error);
       setError({
         message: error.response?.data?.message || 'Failed to update profile',
         status: error.response?.status,
@@ -483,7 +516,7 @@ export const AuthProvider = ({ children }) => {
       // Use custom API URL if provided, otherwise use the current apiUrl
       const targetUrl = customApiUrl || apiUrl;
       
-      console.log(`Testing API connectivity to: ${targetUrl}/ping`);
+      console.log(`AuthContext: Testing API connectivity to: ${targetUrl}/ping`);
       
       // First try with a short timeout to get fast feedback
       try {
@@ -491,27 +524,27 @@ export const AuthProvider = ({ children }) => {
           timeout: 5000,  // Start with a short timeout
           headers: { 'X-Test-Connection': 'true' } 
         });
-        console.log('API connectivity test successful:', response.data);
+        console.log('AuthContext: API connectivity test successful:', response.data);
         return true;
       } catch (quickError) {
         // If the short timeout fails, try again with a longer timeout
-        console.log('Quick connectivity test failed, trying with longer timeout');
+        console.log('AuthContext: Quick connectivity test failed, trying with longer timeout');
         const response = await axios.get(`${targetUrl}/ping`, { 
           timeout: 15000,  // Longer timeout for the second attempt
           headers: { 'X-Test-Connection': 'true' } 
         });
-        console.log('API connectivity test successful on second attempt:', response.data);
+        console.log('AuthContext: API connectivity test successful on second attempt:', response.data);
         return true;
       }
     } catch (error) {
-      console.error('API connectivity test failed:', error.message);
+      console.error('AuthContext: API connectivity test failed:', error.message);
       // More detailed error reporting
       if (error.code === 'ECONNABORTED') {
-        console.log('Connection timeout - server might be slow or unavailable');
+        console.log('AuthContext: Connection timeout - server might be slow or unavailable');
       } else if (error.message.includes('Network Error')) {
-        console.log('Network error - possible CORS issue or server not reachable');
+        console.log('AuthContext: Network error - possible CORS issue or server not reachable');
       } else if (error.response) {
-        console.log('Server responded with error:', error.response.status, error.response.data);
+        console.log('AuthContext: Server responded with error:', error.response.status, error.response.data);
       }
       return false;
     } finally {
@@ -522,7 +555,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={{
       user,
-      token,
+      token: _token,
       loading,
       error,
       isAuthenticated,
