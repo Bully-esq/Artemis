@@ -282,10 +282,10 @@
   gap: 6px;  /* Reduced from 8px */
   align-items: center;
   padding: 6px 16px;  /* Reduced top/bottom padding from 8px to 6px */
-  background-color: var(--bg-light);
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 16px;
-  width: 100%;
+  background-color: white; 
+  border-bottom: none; /* Removed border */
+  margin-bottom: 0; /* Removed margin */
+  width: auto; /* Changed from 100% to auto to fit content */
 }
 
 /* Make buttons in the container more compact but still clickable */
