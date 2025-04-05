@@ -8,6 +8,7 @@ import { useAppContext } from '../../context/AppContext';
 
 // Styles
 import '../../styles/components/lists.css';
+import '../../styles/mobile.css';
 
 // Components
 import PageLayout from '../common/PageLayout';

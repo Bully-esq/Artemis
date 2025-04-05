@@ -270,6 +270,111 @@
       min-height: 297mm !important;
     }
   }
+
+  /* Add styles for alphabet filter */
+  .alphabet-filter-container {
+    display: flex !important; /* Ensure flex display */
+    flex-wrap: nowrap !important; /* Override wrap with nowrap */
+    overflow-x: auto !important; /* Enable horizontal scrolling */
+    white-space: nowrap !important; /* Prevent buttons from wrapping */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    padding-bottom: 8px !important; /* Add some padding below the scrollbar */
+    margin-bottom: 1rem !important; /* Maintain original bottom margin */
+    gap: 2px !important; /* Drastically reduce gap between buttons */
+    padding: 0.5rem !important; /* Reduce container padding */
+  }
+
+  .alphabet-filter-btn,
+  button.alphabet-filter-btn {
+    display: inline-flex !important; /* Ensure buttons stay in line */
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap !important; /* Prevent text wrapping */
+    vertical-align: middle !important; /* Align buttons nicely */
+    flex-shrink: 0 !important; /* Prevent buttons from shrinking */
+    padding: 0.2rem 0.3rem !important; /* Minimal padding */
+    min-width: 28px !important; /* Smaller minimum width */
+    max-width: 28px !important; /* Force maximum width */
+    height: 28px !important; /* Force consistent height */
+    margin: 0 1px !important; /* Almost no margin */
+    font-size: 0.8rem !important; /* Smaller font size */
+    text-align: center !important; /* Center the text */
+    border-radius: 4px !important; /* Consistent border radius */
+  }
+  /* End styles for alphabet filter */
+
+  /* Mobile optimizations for contact list items */
+  .list-item {
+    padding: 12px 10px !important;
+  }
+
+  .list-item-content {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  .list-item-main {
+    width: 100% !important;
+  }
+
+  .list-item-title {
+    font-size: 1.1rem !important;
+    margin-bottom: 2px !important;
+  }
+
+  .list-item-subtitle {
+    font-size: 0.85rem !important;
+    color: var(--text-light) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    width: 100% !important;
+  }
+
+  .list-item-actions {
+    width: 100% !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  .list-item-detail {
+    width: 100% !important;
+    text-align: left !important;
+    margin: 0 !important;
+    font-size: 0.9rem !important;
+  }
+
+  .status-button-container {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-left: 0 !important; 
+  }
+
+  .status-badge {
+    margin-right: 0 !important;
+  }
+
+  /* Action button container adjustments */
+  .action-button-container {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+  }
+
+  /* Make buttons more touch-friendly but not too wide */
+  .btn-list-item {
+    padding: 8px 12px !important;
+    font-size: 0.9rem !important;
+    min-width: auto !important;
+    width: auto !important; /* Prevent buttons from stretching */
+    height: auto !important;
+    flex: 0 0 auto !important; /* Don't allow buttons to grow or shrink */
+  }
+  /* End mobile optimizations for contact list items */
 }
 
 /* A4 format styles to override mobile styles when exporting to PDF */
