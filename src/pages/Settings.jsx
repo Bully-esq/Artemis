@@ -37,6 +37,11 @@ const Settings = () => {
     setThemePreference(isDarkMode ? 'dark' : 'light');
   };
 
+  // Add a new function to handle theme preference selection
+  const handleThemePreferenceChange = (preference) => {
+    setThemePreference(preference);
+  };
+
   // Handle input change with better debugging
   const handleChange = (section, field, value) => {
     console.log(`Settings change: ${section}.${field} = ${JSON.stringify(value)}`);
@@ -194,13 +199,48 @@ const Settings = () => {
         <div className="settings-section">
           <h3>Appearance</h3>
           <div className="form-field">
-            <ToggleSwitch
-              label="Dark Mode"
-              checked={themePreference === 'dark'}
-              onChange={handleDarkModeToggle}
-              name="dark-mode-toggle"
-              helpText="Enable dark mode for the application interface"
-            />
+            <label className="field-label">Theme Preference</label>
+            <div className="theme-options">
+              <div className="radio-option">
+                <input
+                  type="radio"
+                  id="theme-light"
+                  name="theme-preference"
+                  checked={themePreference === 'light'}
+                  onChange={() => handleThemePreferenceChange('light')}
+                />
+                <label htmlFor="theme-light" className="radio-label">
+                  <span className="radio-text">Light Mode</span>
+                  <p className="helper-text">Always use light theme regardless of system settings</p>
+                </label>
+              </div>
+              <div className="radio-option">
+                <input
+                  type="radio"
+                  id="theme-dark"
+                  name="theme-preference"
+                  checked={themePreference === 'dark'}
+                  onChange={() => handleThemePreferenceChange('dark')}
+                />
+                <label htmlFor="theme-dark" className="radio-label">
+                  <span className="radio-text">Dark Mode</span>
+                  <p className="helper-text">Always use dark theme regardless of system settings</p>
+                </label>
+              </div>
+              <div className="radio-option">
+                <input
+                  type="radio"
+                  id="theme-system"
+                  name="theme-preference"
+                  checked={themePreference === 'system' || themePreference === 'auto'}
+                  onChange={() => handleThemePreferenceChange('system')}
+                />
+                <label htmlFor="theme-system" className="radio-label">
+                  <span className="radio-text">Match System Theme</span>
+                  <p className="helper-text">Automatically follows your device's appearance settings</p>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
       ),
