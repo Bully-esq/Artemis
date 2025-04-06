@@ -125,6 +125,30 @@
 .header-content .page-title {
     margin-bottom: 0;
 }
+
+/* Header right side with logo */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header-logo {
+    height: 40px;
+    width: auto;
+    margin-left: 0.5rem;
+}
+
+/* Make sure the theme-aware icon inherits the styling */
+.theme-aware-icon.header-logo {
+    object-fit: contain;
+}
+
+@media (max-width: 767px) {
+    .header-logo {
+        height: 32px;
+    }
+}
   
 /* Specific icon styles */
 .icon {

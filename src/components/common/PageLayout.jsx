@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import ThemeAwareLogo from './ThemeAwareLogo';
 import '../../styles/components/common/pageLayout.css';
 
 /**
@@ -221,7 +222,10 @@ const PageLayout = ({ title, children, actions }) => {
           
           <div className="header-content">
             <h1 className="page-title">{title}</h1>
-            {actions && <div className="action-buttons">{actions}</div>}
+            <div className="header-right">
+              {actions && <div className="action-buttons">{actions}</div>}
+              <ThemeAwareLogo className="header-logo" alt="Axton's Staircases Logo" isTransparent={true} />
+            </div>
           </div>
         </div>
         
