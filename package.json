@@ -67,6 +67,5 @@
     "postcss": "^8.4.31",
     "prettier": "^3.1.0",
     "tailwindcss": "^3.3.5"
-  },
-  "proxy": "https://app.uncharted.social"
+  }
 }

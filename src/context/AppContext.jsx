@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 // Import apiClient instead of axios directly for settings fetch
 import { apiClient } from '../services/api'; 
+import { useAuth } from './AuthContext'; // <-- Import useAuth
 import axios from 'axios'; // Keep axios for other potential uses if needed
 import NotificationContainer from '../components/common/NotificationContainer';
 
@@ -8,17 +9,26 @@ const AppContext = createContext();
 
 export const useAppContext = () => useContext(AppContext);
 
-// Default settings structure
+// Default settings structure - Make it more comprehensive
 const defaultSettings = {
-  companyName: 'Your Company',
-  address: '123 Main St',
-  vatNumber: '',
-  defaultVatRate: 20,
-  currencySymbol: '£',
-  // Add other default settings as needed
+  general: { theme: 'system' },
+  company: { name: '', contactName: '', email: '', phone: '', website: '', address: '', logo: null },
+  quote: { defaultMarkup: 0, prefix: 'Q-', validityPeriod: 30, defaultTerms: '1' },
+  invoice: { prefix: 'INV-', defaultPaymentTerms: 30, notesTemplate: '', footer: '' },
+  bank: { name: '', accountName: '', accountNumber: '', sortCode: '', iban: '', bic: '' },
+  cis: { companyName: '', utr: '', niNumber: '' },
+  vat: { enabled: false, rate: 20, number: '' },
+  // Keep original simple defaults commented out for reference if needed
+  // companyName: 'Your Company',
+  // address: '123 Main St',
+  // vatNumber: '',
+  // defaultVatRate: 20,
+  // currencySymbol: '£',
 };
 
 export const AppProvider = ({ children }) => {
+  // Initialize with the comprehensive default settings
+  const { isAuthReady } = useAuth(); // <-- Get isAuthReady state
   const [settings, setSettings] = useState(defaultSettings);
   const [notifications, setNotifications] = useState([]);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -65,6 +75,7 @@ export const AppProvider = ({ children }) => {
     }
 
     const loadSettings = async () => {
+      console.log('Attempting to run loadSettings function...');
       // Don't try if circuit breaker is active
       if (settingsCircuitBroken) {
         console.log('Settings circuit breaker active, skipping fetch.');
@@ -87,6 +98,7 @@ export const AppProvider = ({ children }) => {
         console.log(`Loading settings from: ${apiClient.defaults.baseURL}/settings`);
         
         // Use apiClient.get instead of axios.get, include Authorization header if token exists
+        console.log(`Attempting apiClient.get('/settings') with URL: ${apiClient.defaults.baseURL}/settings`);
         const response = await apiClient.get('/settings', {
           headers: {
             'Cache-Control': 'no-cache',
@@ -192,7 +204,7 @@ export const AppProvider = ({ children }) => {
     }, 500);
     
     return () => clearTimeout(timer);
-  }, [settingsCircuitBroken]); // Rerun if circuit breaker resets
+  }, [settingsCircuitBroken, isAuthReady]); // <-- Add isAuthReady dependency & rerun if circuit breaker resets OR auth becomes ready
 
   // Force reset settings circuit breaker (for debugging)
   const resetSettingsCircuitBreaker = () => {

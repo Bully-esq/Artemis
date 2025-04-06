@@ -23,6 +23,7 @@ const applyThemePreview = (preference) => {
 
 const Settings = () => {
   const { settings, updateSettings, addNotification } = useAppContext();
+  console.log("Settings from context:", settings);
   const [activeTab, setActiveTab] = useState('general');
   const [isLoading, setIsLoading] = useState(true);
   const [localSettings, setLocalSettings] = useState(null);

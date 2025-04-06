@@ -21,6 +21,8 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [apiUrl, setApiUrl] = useState(getApiUrl());
+  // Add isAuthReady state for initial load
+  const [isAuthReady, setIsAuthReady] = useState(false);
   // Add isOnLoginPage flag
   const [isOnLoginPage, setIsOnLoginPage] = useState(false);
   
@@ -114,7 +116,10 @@ export const AuthProvider = ({ children }) => {
         setToken(null);
       }
     }
-  }, []);
+    // Ensure readiness is set even if no token found or circuit broken
+    setIsAuthReady(true); 
+    console.log('AuthContext: Initial auth check complete.');
+  }, [isOnLoginPage]); // Depend on isOnLoginPage to re-run if needed
   
   // Add function to set login page status
   const setLoginPageStatus = (status) => {
@@ -569,7 +574,8 @@ export const AuthProvider = ({ children }) => {
       apiUrl,
       resetCircuitBreaker,
       circuitBroken: circuitBroken.current,
-      setLoginPageStatus
+      setLoginPageStatus,
+      isAuthReady
     }}>
       {children}
     </AuthContext.Provider>
