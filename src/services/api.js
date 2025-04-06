@@ -279,13 +279,142 @@ export const contactsApi = {
 // Suppliers API
 export const suppliersApi = {
   getAll: async () => {
-    const response = await apiClient.get('/suppliers');
-    return response.data;
+    try {
+      console.log('Fetching all suppliers from server');
+      const response = await apiClient.get('/suppliers');
+      console.log(`Received ${response.data?.length || 0} suppliers from server`);
+      
+      // Check if we have a localStorage version to compare with
+      const localSuppliersString = localStorage.getItem('suppliers');
+      if (localSuppliersString) {
+        const localSuppliers = JSON.parse(localSuppliersString);
+        console.log(`Found ${localSuppliers.length} suppliers in localStorage`);
+        
+        // If the server response is inconsistent with our local changes,
+        // prefer our local state which includes our deletions
+        if (response.data && Array.isArray(response.data) && 
+            localSuppliers.length < response.data.length) {
+          console.log('Using localStorage suppliers as server data appears outdated');
+          return localSuppliers;
+        }
+      }
+      
+      // Otherwise use server data and update localStorage
+      if (response.data && Array.isArray(response.data)) {
+        localStorage.setItem('suppliers', JSON.stringify(response.data));
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching suppliers:', error);
+      
+      // On server error, try to return localStorage data as fallback
+      try {
+        const localSuppliersString = localStorage.getItem('suppliers');
+        if (localSuppliersString) {
+          const localSuppliers = JSON.parse(localSuppliersString);
+          console.log(`Using ${localSuppliers.length} suppliers from localStorage due to server error`);
+          return localSuppliers;
+        }
+      } catch (localError) {
+        console.error('Error retrieving from localStorage:', localError);
+      }
+      
+      // Return empty array on error to prevent UI breakage
+      return [];
+    }
   },
   
   update: async (suppliers) => {
-    const response = await apiClient.put('/suppliers', { suppliers });
-    return response.data;
+    try {
+      if (!suppliers || !Array.isArray(suppliers)) {
+        console.error('Invalid suppliers data:', suppliers);
+        throw new Error('Invalid suppliers data provided');
+      }
+      
+      console.log(`Updating suppliers with ${suppliers.length} suppliers`);
+      
+      // Make sure we're sending proper data to the server
+      const response = await apiClient.put('/suppliers', { suppliers });
+      
+      // Also update localStorage for offline access if needed
+      localStorage.setItem('suppliers', JSON.stringify(suppliers));
+      
+      console.log('Suppliers update successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating suppliers:', error);
+      
+      // Enhanced error logging
+      if (error.response) {
+        console.error('Server responded with error:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+      } else if (error.request) {
+        console.error('No response received from server. Request details:', error.request);
+      } else {
+        console.error('Error setting up request:', error.message);
+      }
+      
+      throw error;
+    }
+  },
+  
+  delete: async (id) => {
+    try {
+      if (!id) {
+        throw new Error('No supplier ID provided for deletion');
+      }
+      
+      console.log(`Deleting supplier with ID: ${id}`);
+      
+      // Get current suppliers from localStorage
+      const suppliersString = localStorage.getItem('suppliers');
+      let suppliers = [];
+      
+      if (suppliersString) {
+        suppliers = JSON.parse(suppliersString);
+      } else {
+        // If not in localStorage, fetch from server first
+        const response = await apiClient.get('/suppliers');
+        suppliers = response.data || [];
+      }
+      
+      // Filter out the supplier to delete
+      const updatedSuppliers = suppliers.filter(supplier => supplier.id !== id);
+      
+      if (updatedSuppliers.length === suppliers.length) {
+        console.warn(`Supplier with ID ${id} not found, nothing deleted`);
+      }
+      
+      // Update the server
+      const response = await apiClient.put('/suppliers', { suppliers: updatedSuppliers });
+      
+      // Update localStorage regardless of server response
+      localStorage.setItem('suppliers', JSON.stringify(updatedSuppliers));
+      
+      console.log(`Supplier with ID ${id} deleted successfully`);
+      return { success: true, suppliersRemaining: updatedSuppliers.length };
+    } catch (error) {
+      console.error(`Error deleting supplier ${id}:`, error);
+      
+      // Try to update localStorage even if server update fails
+      try {
+        const suppliersString = localStorage.getItem('suppliers');
+        if (suppliersString) {
+          const suppliers = JSON.parse(suppliersString);
+          const updatedSuppliers = suppliers.filter(supplier => supplier.id !== id);
+          localStorage.setItem('suppliers', JSON.stringify(updatedSuppliers));
+          console.log(`Updated suppliers in localStorage after server error`);
+        }
+      } catch (localError) {
+        console.error('Error updating localStorage:', localError);
+      }
+      
+      throw error;
+    }
   }
 };
 

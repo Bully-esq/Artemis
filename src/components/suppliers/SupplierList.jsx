@@ -88,13 +88,18 @@ const SupplierList = () => {
   
   // Mutation for updating suppliers
   const updateSuppliersMutation = useMutation(
-    (updatedSuppliers) => api.suppliers.update(updatedSuppliers),
+    (updatedSuppliers) => {
+      console.log('Mutation triggered with suppliers:', updatedSuppliers);
+      return api.suppliers.update(updatedSuppliers);
+    },
     {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        console.log('Mutation successful, response:', data);
         queryClient.invalidateQueries('suppliers');
         addNotification('Suppliers updated successfully', 'success');
       },
       onError: (err) => {
+        console.error('Mutation error:', err);
         addNotification(`Error updating suppliers: ${err.message}`, 'error');
       }
     }
@@ -128,6 +133,25 @@ const SupplierList = () => {
       },
       onError: (error) => {
         addNotification(`Error saving catalog item: ${error.message}`, 'error');
+      }
+    }
+  );
+  
+  // Add a delete supplier mutation
+  const deleteSupplierMutation = useMutation(
+    (id) => api.suppliers.delete(id),
+    {
+      onSuccess: () => {
+        console.log('Supplier deleted successfully');
+        queryClient.invalidateQueries('suppliers');
+        addNotification('Supplier deleted successfully', 'success');
+        
+        // Also refresh catalog items as they may reference this supplier
+        queryClient.invalidateQueries('catalog');
+      },
+      onError: (err) => {
+        console.error('Error deleting supplier:', err);
+        addNotification(`Error deleting supplier: ${err.message}`, 'error');
       }
     }
   );
@@ -220,9 +244,20 @@ const SupplierList = () => {
   
   // Delete a supplier
   const handleDeleteSupplier = () => {
+    if (!currentSupplier || !currentSupplier.id) {
+      console.error('No supplier selected for deletion or supplier has no ID');
+      addNotification('Error: No supplier selected for deletion', 'error');
+      setShowDeleteConfirmDialog(false);
+      return;
+    }
+
+    console.log('Attempting to delete supplier:', currentSupplier);
+    
     // Check if any catalog items use this supplier
-    const { data: catalogItems = [] } = queryClient.getQueryData('catalog') || { data: [] };
+    const catalogItems = queryClient.getQueryData('catalog') || [];
+    console.log('Catalog items:', catalogItems);
     const itemsUsingSupplier = catalogItems.filter(item => item.supplier === currentSupplier.id);
+    console.log('Items using this supplier:', itemsUsingSupplier);
     
     if (itemsUsingSupplier.length > 0) {
       if (!window.confirm(`This supplier is used by ${itemsUsingSupplier.length} catalog items. Deleting it will affect those items. Continue?`)) {
@@ -231,11 +266,8 @@ const SupplierList = () => {
       }
     }
     
-    const updatedSuppliers = suppliers.filter(supplier => 
-      supplier.id !== currentSupplier.id
-    );
-    
-    updateSuppliersMutation.mutate(updatedSuppliers);
+    // Use the new direct delete method instead of update
+    deleteSupplierMutation.mutate(currentSupplier.id);
     setShowDeleteConfirmDialog(false);
   };
   
@@ -645,14 +677,23 @@ const SupplierList = () => {
             <div className="dialog-footer">
               <Button 
                 variant="secondary" 
-                onClick={() => setShowDeleteConfirmDialog(false)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowDeleteConfirmDialog(false);
+                }}
               >
                 Cancel
               </Button>
               <Button 
                 variant="danger" 
-                onClick={handleDeleteSupplier}
-                isLoading={updateSuppliersMutation.isLoading}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log("Delete button clicked");
+                  handleDeleteSupplier();
+                }}
+                isLoading={deleteSupplierMutation.isLoading}
               >
                 Delete Supplier
               </Button>
