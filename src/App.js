@@ -1,6 +1,6 @@
 // App.js - With modular CSS import and circuit breaker support
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import './styles/index.css';  // Updated to use our modular CSS structure
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
@@ -41,6 +41,40 @@ const queryClient = new QueryClient({
   },
 });
 
+// Component to handle favicon updates on route changes
+function FaviconUpdater() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Update favicons when route changes
+    const updateFavicons = () => {
+      const isDarkMode = window.matchMedia && 
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const baseUrl = window.location.origin;
+      
+      // Update favicon
+      const favicon = document.querySelector('link[rel="icon"]');
+      if (favicon) {
+        favicon.href = isDarkMode ? 
+          `${baseUrl}/logo-dark.png?route=${location.pathname}` : 
+          `${baseUrl}/logo-light.png?route=${location.pathname}`;
+      }
+      
+      // Update apple touch icon
+      const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+      if (appleIcon) {
+        appleIcon.href = isDarkMode ? 
+          `${baseUrl}/logo-dark.png?route=${location.pathname}` : 
+          `${baseUrl}/logo-light.png?route=${location.pathname}`;
+      }
+    };
+    
+    updateFavicons();
+  }, [location]);
+
+  return null; // This component doesn't render anything
+}
+
 // Protected route component
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading, circuitBroken } = useAuth();
@@ -75,6 +109,7 @@ function App() {
           <ThemeProvider> {/* Wrap app with ThemeProvider */}
             <Router>
               <div className="app-container">
+                <FaviconUpdater /> {/* Add the FaviconUpdater component */}
                 <Notifications />
                 <NetworkStatus />
                 

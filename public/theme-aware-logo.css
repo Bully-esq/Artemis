@@ -1,25 +1,26 @@
 /* Theme-aware logo switching based on system color scheme preference */
 @media (prefers-color-scheme: dark) {
   .theme-aware-icon {
-    content: url("%PUBLIC_URL%/logo-dark.png");
+    content: url("/logo-dark.png");
   }
 }
 
 @media (prefers-color-scheme: light) {
   .theme-aware-icon {
-    content: url("%PUBLIC_URL%/logo-light.png");
+    content: url("/logo-light.png");
   }
 }
 
-/* Theme-aware favicon switching */
+/* Theme-aware favicon switching - Note: This CSS approach doesn't work reliably for favicons,
+   we're using the JavaScript approach in theme-handler.js instead */
 @media (prefers-color-scheme: dark) {
   link[rel="icon"] {
-    href: url("%PUBLIC_URL%/logo-dark.png");
+    href: url("/logo-dark.png");
   }
 }
 
 @media (prefers-color-scheme: light) {
   link[rel="icon"] {
-    href: url("%PUBLIC_URL%/logo-light.png");
+    href: url("/logo-light.png");
   }
 } 

@@ -5,13 +5,20 @@ import React, { useState, useEffect } from 'react';
  * based on the user's system preference.
  */
 const ThemeAwareLogo = ({ className, alt, width, height, ...props }) => {
-  const [isDarkMode, setIsDarkMode] = useState(
-    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-  );
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [baseUrl, setBaseUrl] = useState('');
 
   useEffect(() => {
     // Only run this effect in browser environment
     if (typeof window === 'undefined') return;
+    
+    // Set base URL
+    setBaseUrl(window.location.origin);
+    
+    // Set initial dark mode state
+    setIsDarkMode(
+      window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+    );
     
     const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
@@ -32,7 +39,7 @@ const ThemeAwareLogo = ({ className, alt, width, height, ...props }) => {
   }, []);
   
   // Use the appropriate logo based on the theme
-  const logoSrc = isDarkMode ? '/logo-dark.png' : '/logo-light.png';
+  const logoSrc = `${baseUrl}${isDarkMode ? '/logo-dark.png' : '/logo-light.png'}`;
   
   return (
     <img 
