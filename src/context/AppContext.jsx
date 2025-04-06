@@ -28,7 +28,7 @@ const defaultSettings = {
 
 export const AppProvider = ({ children }) => {
   // Initialize with the comprehensive default settings
-  const { isAuthReady } = useAuth(); // <-- Get isAuthReady state
+  const { isAuthReady, isAuthenticated } = useAuth(); // <-- Get both states
   const [settings, setSettings] = useState(defaultSettings);
   const [notifications, setNotifications] = useState([]);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -57,8 +57,16 @@ export const AppProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [settingsCircuitBroken]);
 
-  // Load settings on mount with circuit breaker pattern
+  // Load settings on mount with circuit breaker pattern - NOW DEPENDS ON AUTH BEING READY & AUTHENTICATED
   useEffect(() => {
+    // Only load settings if auth check is complete AND user is authenticated
+    if (!isAuthReady || !isAuthenticated) {
+      console.log(`AppContext: Skipping settings load (AuthReady: ${isAuthReady}, Authenticated: ${isAuthenticated})`);
+      // Optionally, reset settings to default if user logs out?
+      // setSettings(defaultSettings); 
+      return; 
+    }
+
     // Try to load cached settings first
     const cachedSettings = localStorage.getItem('cachedSettings');
     let parsedCachedSettings = null;
@@ -201,10 +209,10 @@ export const AppProvider = ({ children }) => {
     // Short delay before loading settings to allow other components to initialize
     const timer = setTimeout(() => {
       loadSettings();
-    }, 500);
+    }, 500); // Keep delay, or remove if isAuthReady provides enough buffer
     
     return () => clearTimeout(timer);
-  }, [settingsCircuitBroken, isAuthReady]); // <-- Add isAuthReady dependency & rerun if circuit breaker resets OR auth becomes ready
+  }, [settingsCircuitBroken, isAuthReady, isAuthenticated]); // <-- Add isAuthenticated dependency
 
   // Force reset settings circuit breaker (for debugging)
   const resetSettingsCircuitBreaker = () => {

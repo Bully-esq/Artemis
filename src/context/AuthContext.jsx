@@ -66,59 +66,76 @@ export const AuthProvider = ({ children }) => {
     // Skip auto-authentication if we're on the login page
     if (isOnLoginPage) {
       console.log('AuthContext: On login page, skipping auto-authentication');
+      // Still set ready to true if skipping
+      setIsAuthReady(true); 
       return;
     }
     
-    const savedToken = localStorage.getItem('token');
-    if (savedToken && !circuitBroken.current) {
-      console.log('AuthContext: Found saved token, attempting to restore session');
-      
-      try {
-        // Validate token format before proceeding (basic check)
-        if (typeof savedToken !== 'string' || savedToken.length < 20) {
-          console.error('AuthContext: Invalid token format found in localStorage');
-          localStorage.removeItem('token'); // Clear invalid token
-          return;
-        }
+    let initialCheckCompleted = false; // Flag to prevent setting ready multiple times
+    
+    const checkAuthStatus = async () => {
+      const savedToken = localStorage.getItem('token');
+      if (savedToken && !circuitBroken.current) {
+        console.log('AuthContext: Found saved token, attempting to restore session');
         
-        // Set token state but don't assume authenticated yet
-        setToken(savedToken);
-        
-        // Attempt to load user data, but set a flag to prevent multiple concurrent attempts
-        const loadingUserData = async () => {
-          try {
-            // Set loading state while we validate the token
+        try {
+          // Validate token format before proceeding (basic check)
+          if (typeof savedToken !== 'string' || savedToken.length < 20) {
+            console.error('AuthContext: Invalid token format found in localStorage');
+            localStorage.removeItem('token'); // Clear invalid token
+            // Don't return here, proceed to finally
+          } else {
+            // Set token state but don't assume authenticated yet
+            setToken(savedToken);
+            
+            // Attempt to load user data
             setLoading(true);
             console.log('AuthContext: Attempting to load user data from initial useEffect');
-            
-            // Try to load user data with a more generous timeout
-            await loadUserData(savedToken);
-            
-            // If we get here, authentication was successful
-            setIsAuthenticated(true);
-            console.log('AuthContext: Session restored successfully');
-          } catch (error) {
-            console.error('AuthContext: Failed to restore session in initial useEffect:', error);
-            // Clear invalid token
-            localStorage.removeItem('token');
-            setToken(null);
-            setIsAuthenticated(false);
-          } finally {
-            setLoading(false);
+            try {
+              await loadUserData(savedToken);
+              setIsAuthenticated(true); // Only set if loadUserData succeeds
+              console.log('AuthContext: Session restored successfully');
+            } catch (error) {
+              console.error('AuthContext: Failed to restore session in initial useEffect:', error);
+              // Clear invalid token if loadUserData fails (e.g., 401)
+              // logout() is likely called within loadUserData on 401, so just ensure state is clear
+              if (!isAuthenticated) { // Avoid clearing if logout() already did it
+                  localStorage.removeItem('token');
+                  setToken(null);
+                  setIsAuthenticated(false);
+              }
+            } finally {
+              setLoading(false);
+            }
           }
-        };
-        
-        loadingUserData();
-      } catch (error) {
-        console.error('AuthContext: Error during session restoration in initial useEffect:', error);
-        // Clear potentially corrupted token
-        localStorage.removeItem('token');
-        setToken(null);
+        } catch (error) {
+          console.error('AuthContext: Error during session restoration in initial useEffect:', error);
+          // Clear potentially corrupted token
+          localStorage.removeItem('token');
+          setToken(null);
+          setIsAuthenticated(false); // Ensure consistent state on error
+        }
+      } else {
+        // No token found or circuit is broken
+        console.log('AuthContext: No saved token found or circuit broken, skipping session restore.');
+        // No need to explicitly set isAuthenticated false as it defaults to false
       }
-    }
-    // Ensure readiness is set even if no token found or circuit broken
-    setIsAuthReady(true); 
-    console.log('AuthContext: Initial auth check complete.');
+      
+      // Set ready state only once after all checks/attempts are done
+      if (!initialCheckCompleted) {
+          setIsAuthReady(true); 
+          initialCheckCompleted = true;
+          console.log('AuthContext: Initial auth check complete.');
+      }
+    };
+
+    checkAuthStatus();
+
+    // Cleanup function - not strictly necessary here but good practice
+    return () => {
+        initialCheckCompleted = true; // Prevent setting ready state if component unmounts early
+    };
+    
   }, [isOnLoginPage]); // Depend on isOnLoginPage to re-run if needed
   
   // Add function to set login page status
