@@ -210,20 +210,28 @@ const PageLayout = ({ title, children, actions }) => {
       <div className="content-area">
         {/* Top header */}
         <div className="header">
-          <button
-            className="menu-button"
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Open menu"
-          >
-            <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-            </svg>
-          </button>
+          {/* Left section - Menu button */}
+          <div className="header-left">
+            <button
+              className="menu-button"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open menu"
+            >
+              <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+              </svg>
+            </button>
+          </div>
           
-          <div className="header-content">
+          {/* Center section - Title */}
+          <div className="header-center">
             <h1 className="page-title">{title}</h1>
-            <div className="header-right">
-              {actions && <div className="action-buttons">{actions}</div>}
+          </div>
+          
+          {/* Right section - Actions and Logo */}
+          <div className="header-right">
+            {actions && <div className="action-buttons">{actions}</div>}
+            <div className="header-logo-wrapper">
               <ThemeAwareLogo className="header-logo" alt="Axton's Staircases Logo" isTransparent={true} />
             </div>
           </div>
