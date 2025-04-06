@@ -2,15 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/logo-2.png?v=2" />
+    <link rel="icon" href="%PUBLIC_URL%/logo-light.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)" />
     <meta
       name="description"
       content="Axton's Staircases - Management Dashboard"
     />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo-2.png?v=2" />
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json?v=2" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo-light.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link rel="stylesheet" href="%PUBLIC_URL%/theme-aware-logo.css" />
+    <script src="%PUBLIC_URL%/theme-handler.js"></script>
     <title>Axton's Staircases</title>
   </head>
   <body>

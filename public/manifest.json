@@ -3,17 +3,17 @@
   "name": "Artemis",
   "icons": [
     {
-      "src": "logo-2.png?v=2",
+      "src": "logo-light.png",
       "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "type": "image/png"
     },
     {
-      "src": "logo-2.png?v=2",
+      "src": "logo-light.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "logo-2.png?v=2",
+      "src": "logo-light.png",
       "type": "image/png",
       "sizes": "512x512"
     }

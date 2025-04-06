@@ -1,0 +1,25 @@
+/* Theme-aware logo switching based on system color scheme preference */
+@media (prefers-color-scheme: dark) {
+  .theme-aware-icon {
+    content: url("%PUBLIC_URL%/logo-dark.png");
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  .theme-aware-icon {
+    content: url("%PUBLIC_URL%/logo-light.png");
+  }
+}
+
+/* Theme-aware favicon switching */
+@media (prefers-color-scheme: dark) {
+  link[rel="icon"] {
+    href: url("%PUBLIC_URL%/logo-dark.png");
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  link[rel="icon"] {
+    href: url("%PUBLIC_URL%/logo-light.png");
+  }
+} 
