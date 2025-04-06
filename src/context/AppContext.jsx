@@ -57,6 +57,7 @@ export const AppProvider = ({ children }) => {
       try {
         parsedCachedSettings = JSON.parse(cachedSettings);
         console.log('Using cached settings initially');
+        // Always set settings from cache first, regardless of whether we'll fetch from API
         setSettings(parsedCachedSettings);
       } catch (e) {
         console.error('Error parsing cached settings:', e);
@@ -96,11 +97,26 @@ export const AppProvider = ({ children }) => {
         });
         const data = response.data;
         
-        // Success: reset counter and cache results
-        settingsAttempts.current = 0;
-        setSettings(data);
-        localStorage.setItem('cachedSettings', JSON.stringify(data));
-        console.log('Settings loaded successfully from server');
+        // Only update settings from API if we received actual settings data
+        // This prevents API responses with just success status from clearing settings
+        if (data && typeof data === 'object' && (data.company || data.quote || data.invoice)) {
+          console.log('Valid settings data received from API, updating settings');
+          // Success: reset counter and cache results
+          settingsAttempts.current = 0;
+          setSettings(data);
+          localStorage.setItem('cachedSettings', JSON.stringify(data));
+          localStorage.setItem('axtonSettings', JSON.stringify(data)); // For backward compatibility
+          console.log('Settings loaded successfully from server');
+        } else {
+          console.warn('API returned invalid or empty settings data:', data);
+          // Don't override valid cached settings with invalid API response
+          if (parsedCachedSettings) {
+            console.log('Keeping cached settings instead of invalid API response');
+          } else {
+            console.log('No valid cached settings, using defaults');
+            setSettings(defaultSettings);
+          }
+        }
       } catch (error) {
         // Special handling for 401 Unauthorized
         if (error.response && error.response.status === 401) {

@@ -511,13 +511,120 @@ const catalog = {
 // Settings API
 export const settingsApi = {
   get: async () => {
-    const response = await apiClient.get('/settings');
-    return response.data;
+    try {
+      console.log(`Fetching settings from: ${apiClient.defaults.baseURL}/settings`);
+      const response = await apiClient.get('/settings');
+      console.log("Settings API response:", response.data);
+      
+      // Validate settings data
+      if (!response.data || typeof response.data !== 'object') {
+        console.warn("API returned invalid settings data:", response.data);
+        
+        // Try to load from localStorage as fallback
+        const cachedSettings = localStorage.getItem('cachedSettings');
+        if (cachedSettings) {
+          try {
+            const parsedSettings = JSON.parse(cachedSettings);
+            console.log("Using cached settings as fallback due to invalid API response");
+            return parsedSettings;
+          } catch (e) {
+            console.error("Error parsing cached settings:", e);
+          }
+        }
+        
+        // Return empty object instead of null to prevent errors
+        return {};
+      }
+      
+      // Check if it's just a status response without actual settings
+      if (response.data.success !== undefined && (!response.data.company && !response.data.quote && !response.data.invoice)) {
+        console.warn("API response contains only status info without settings data");
+        
+        // Try to load from localStorage as fallback
+        const cachedSettings = localStorage.getItem('cachedSettings');
+        if (cachedSettings) {
+          try {
+            const parsedSettings = JSON.parse(cachedSettings);
+            console.log("Using cached settings as fallback due to incomplete API response");
+            return parsedSettings;
+          } catch (e) {
+            console.error("Error parsing cached settings:", e);
+          }
+        }
+        
+        return {}; // Return empty object as fallback
+      }
+      
+      // Ensure VAT settings have correct types
+      if (response.data.vat) {
+        response.data.vat = {
+          ...response.data.vat,
+          enabled: Boolean(response.data.vat.enabled),
+          rate: parseFloat(response.data.vat.rate || 0),
+          number: String(response.data.vat.number || '')
+        };
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      
+      // Try to load from localStorage as fallback for any error
+      const cachedSettings = localStorage.getItem('cachedSettings');
+      if (cachedSettings) {
+        try {
+          const parsedSettings = JSON.parse(cachedSettings);
+          console.log("Using cached settings as fallback due to API error");
+          return parsedSettings;
+        } catch (e) {
+          console.error("Error parsing cached settings:", e);
+        }
+      }
+      
+      // Re-throw the error to be handled by the caller
+      throw error;
+    }
   },
   
   save: async (settings) => {
-    const response = await apiClient.post('/settings', { settings });
-    return response.data;
+    try {
+      // Save to localStorage immediately as a backup
+      localStorage.setItem('cachedSettings', JSON.stringify(settings));
+      
+      console.log(`Saving settings to: ${apiClient.defaults.baseURL}/settings`);
+      console.log("Settings payload:", { settings });
+      
+      const response = await apiClient.post('/settings', { settings });
+      console.log("Settings save response:", response.data);
+      
+      // Validate response
+      if (!response.data || typeof response.data !== 'object') {
+        console.warn("API returned empty or invalid data after saving settings");
+        // Return the settings we sent as fallback
+        return settings;
+      }
+      
+      // Check if response is just a success status without actual settings
+      if (response.data.success !== undefined && (!response.data.company && !response.data.quote && !response.data.invoice)) {
+        console.warn("API returned only status without settings data");
+        return settings; // Return our original settings
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      // Log detailed error information
+      if (error.response) {
+        console.error("Server error response:", {
+          status: error.response.status,
+          data: error.response.data
+        });
+      }
+      
+      // Re-throw the error to be handled by the caller, but also return our settings as a last resort
+      error.originalSettings = settings;
+      throw error;
+    }
   }
 };
 
