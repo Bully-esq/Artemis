@@ -1,78 +1,84 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+// Remove useLocalStorage as theme preference comes from AppContext now
+// import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useAppContext } from './AppContext'; // Import AppContext
 
 const ThemeContext = createContext();
 
 export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }) => {
-  const [themePreference, setThemePreference] = useLocalStorage('themePreference', 'system'); // 'light', 'dark', 'system' (default now)
-  const [actualTheme, setActualTheme] = useState('light'); // 'light', 'dark'
+  // Get settings from AppContext
+  const { settings } = useAppContext();
+  // Determine the preference from settings, defaulting to 'system'
+  const themePreference = settings?.general?.theme || 'system'; 
+  
+  // Actual theme ('light' or 'dark') applied to the app
+  const [actualTheme, setActualTheme] = useState('light'); 
 
-  // Calculate theme based on preference
+  // Calculate theme based on preference and system setting
   const calculateTheme = useCallback(() => {
-    // For backward compatibility: treat 'auto' the same as 'system'
-    const preference = themePreference === 'auto' ? 'system' : themePreference;
+    // System preference check
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     
-    if (preference === 'system') {
-      // Check system preference
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    if (themePreference === 'system') {
+      return prefersDark ? 'dark' : 'light';
     }
-    return preference;
-  }, [themePreference]);
+    // If preference is explicitly 'light' or 'dark', use that
+    return themePreference;
+  }, [themePreference]); // Depends only on the preference derived from settings
 
+  // Effect to apply the calculated theme to the document
   useEffect(() => {
     const newActualTheme = calculateTheme();
     setActualTheme(newActualTheme);
+    // Apply the theme class to the root HTML element
     document.documentElement.setAttribute('data-theme', newActualTheme);
-  }, [themePreference, calculateTheme]);
+    console.log(`ThemeProvider: Applied data-theme='${newActualTheme}' based on preference '${themePreference}'`);
 
-  // Listen for system theme changes if using 'system' or legacy 'auto' preference
+  }, [themePreference, calculateTheme]); // Recalculate when preference changes
+
+  // Effect to listen for system theme changes ONLY if preference is 'system'
   useEffect(() => {
-    if (themePreference === 'system' || themePreference === 'auto') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      
-      // Initial check
-      setActualTheme(mediaQuery.matches ? 'dark' : 'light');
-      document.documentElement.setAttribute('data-theme', mediaQuery.matches ? 'dark' : 'light');
+    let mediaQuery;
+    let handleChange = () => {}; // Define handleChange outside the if block
+
+    if (themePreference === 'system') {
+      mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       
       // Define listener function
-      const handleChange = (e) => {
+      handleChange = (e) => {
         const newTheme = e.matches ? 'dark' : 'light';
         setActualTheme(newTheme);
         document.documentElement.setAttribute('data-theme', newTheme);
+        console.log(`ThemeProvider: System theme changed, applied data-theme='${newTheme}'`);
       };
       
-      // Add listener with appropriate method based on browser support
+      // Initial check is handled by the first useEffect
+      // Add listener
       if (mediaQuery.addEventListener) {
         mediaQuery.addEventListener('change', handleChange);
       } else {
-        // Fallback for older browsers
-        mediaQuery.addListener(handleChange);
+        mediaQuery.addListener(handleChange); // Fallback
       }
-      
-      // Clean up
-      return () => {
+    }
+    
+    // Clean up listener if it was added
+    return () => {
+      if (mediaQuery && themePreference === 'system') { // Ensure mediaQuery exists and preference is still system
         if (mediaQuery.removeEventListener) {
           mediaQuery.removeEventListener('change', handleChange);
         } else {
-          mediaQuery.removeListener(handleChange);
+          mediaQuery.removeListener(handleChange); // Fallback
         }
-      };
-    }
-  }, [themePreference]);
+      }
+    };
+  }, [themePreference]); // Re-run listener setup if preference changes to/from 'system'
 
-  // Wrapper for setThemePreference that handles migration from 'auto' to 'system'
-  const setThemePreferenceWrapper = (newPreference) => {
-    // If user or code tries to set 'auto', convert it to 'system'
-    const preference = newPreference === 'auto' ? 'system' : newPreference;
-    setThemePreference(preference);
-  };
-
+  // We no longer expose setThemePreference; it's handled via AppContext/Settings page
   const value = {
-    themePreference,
-    setThemePreference: setThemePreferenceWrapper,
-    actualTheme,
+    // themePreference, // No longer directly needed by consumers
+    actualTheme, // Consumers might want to know the current actual theme
   };
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

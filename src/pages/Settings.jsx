@@ -11,9 +11,19 @@ import { useAppContext } from '../context/AppContext';
 import api from '../services/api';
 import { deepMerge } from '../utils/deepMerge';
 
+// Helper function to apply theme attribute for preview
+const applyThemePreview = (preference) => {
+  let themeToApply = preference;
+  if (preference === 'system') {
+    themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  document.documentElement.setAttribute('data-theme', themeToApply);
+  console.log(`Settings Preview: Applied data-theme='${themeToApply}' for preference '${preference}'`);
+};
+
 const Settings = () => {
   const { settings, updateSettings, addNotification } = useAppContext();
-  const [activeTab, setActiveTab] = useState('company');
+  const [activeTab, setActiveTab] = useState('general');
   const [isLoading, setIsLoading] = useState(true);
   const [localSettings, setLocalSettings] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -42,6 +52,12 @@ const Settings = () => {
       newSettings[section][field] = value;
       
       console.log(`New settings state for ${section}.${field}:`, newSettings[section]);
+      
+      // Apply theme preview immediately if changing the theme setting
+      if (section === 'general' && field === 'theme') {
+        applyThemePreview(value);
+      }
+      
       return newSettings;
     });
   };
@@ -84,6 +100,9 @@ const Settings = () => {
       // Parse number values before saving
       const processedSettings = {
         ...newSettings,
+        general: newSettings.general ? { // Include general settings
+          ...newSettings.general
+        } : { theme: 'system' }, // Default general structure if missing
         quote: newSettings.quote ? {
           ...newSettings.quote,
           defaultMarkup: parseFloat(newSettings.quote.defaultMarkup) || 0, // Use parseFloat for potential decimals
@@ -123,6 +142,7 @@ const Settings = () => {
     if (settings && !isInitialized) {
       // Define the default structure, including nested objects
       const defaultStructure = {
+        general: { theme: 'system' }, // Add general section default
         company: { name: '', contactName: '', email: '', phone: '', website: '', address: '', logo: null },
         quote: { defaultMarkup: 0, prefix: 'Q-', validityPeriod: 30, defaultTerms: '1' },
         invoice: { prefix: 'INV-', defaultPaymentTerms: 30, notesTemplate: '', footer: '' },
@@ -149,10 +169,24 @@ const Settings = () => {
     }
   }, [settings, isInitialized]);
 
+  // Effect to revert theme preview on unmount if changes weren't saved
+  useEffect(() => {
+    // This function runs when the component unmounts
+    return () => {
+      // Re-apply the theme based on the *saved* settings from the context
+      const savedPreference = settings?.general?.theme || 'system';
+      applyThemePreview(savedPreference); // Use the same helper to apply the saved theme
+      console.log('Settings Unmount: Reverted theme to saved preference:', savedPreference);
+    };
+  }, [settings]); // Depend on settings from context
+
   // Show loading indicator if still loading OR if localSettings is null
   if (isLoading || localSettings === null) {
     return <Loading fullScreen message="Loading settings..." />;
   }
+
+  // Log the theme value being used for this render
+  console.log("Rendering Settings component with theme:", localSettings?.general?.theme);
 
   return (
     <PageLayout title="Settings">
@@ -165,6 +199,7 @@ const Settings = () => {
         <div className="card-content">
           <Tabs
             tabs={[
+              { id: 'general', label: 'General Settings' },
               { id: 'company', label: 'Company Details' },
               { id: 'quote', label: 'Quote Settings' },
               { id: 'invoice', label: 'Invoice Settings' },
@@ -178,6 +213,51 @@ const Settings = () => {
             className="settings-tabs"
             style={{ gap: '2rem', display: 'flex' }}
           />
+
+          {/* General Settings */}
+          {activeTab === 'general' && (
+            <div className="settings-section">
+              <h2>Theme Settings</h2>
+              <p className="helper-text">Select your preferred application theme.</p>
+              
+              <div className="form-field-radio-group" style={{ marginTop: '1rem' }}>
+                <label className="radio-label">
+                  Light Mode
+                  <input 
+                    type="radio" 
+                    name="theme" 
+                    value="light" 
+                    checked={localSettings.general?.theme === 'light'} 
+                    onChange={() => handleChange('general', 'theme', 'light')} 
+                  />
+                </label>
+                <label className="radio-label">
+                  Dark Mode
+                  <input 
+                    type="radio" 
+                    name="theme" 
+                    value="dark" 
+                    checked={localSettings.general?.theme === 'dark'} 
+                    onChange={() => handleChange('general', 'theme', 'dark')} 
+                  />
+                </label>
+                <label className="radio-label">
+                  Match System Theme
+                  <input 
+                    type="radio" 
+                    name="theme" 
+                    value="system" 
+                    checked={localSettings.general?.theme === 'system'} 
+                    onChange={() => handleChange('general', 'theme', 'system')} 
+                  />
+                </label>
+              </div>
+              {/* Add a visual separator */}
+              <hr style={{ margin: '2rem 0' }} /> 
+              {/* Placeholder for future general settings */}
+              <p><i>More general settings can be added here later.</i></p>
+            </div>
+          )}
 
           {/* Company Details */}
           {activeTab === 'company' && (

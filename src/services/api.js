@@ -1,10 +1,22 @@
 import axios from 'axios';
 
-// Get API URL from sessionStorage (if user selected one) or use the default
+// Get API URL based on environment
 const getApiUrl = () => {
-  return sessionStorage.getItem('apiBaseUrl') || 
-         process.env.REACT_APP_API_URL || 
-         'https://app.uncharted.social/api';
+  // In development, use a relative path for the proxy unless overridden
+  if (process.env.NODE_ENV === 'development') {
+    const userOverrideUrl = sessionStorage.getItem('apiBaseUrl') || process.env.REACT_APP_API_URL;
+    // If user explicitly sets a full URL, use that (e.g., for local testing)
+    if (userOverrideUrl) {
+      return userOverrideUrl; 
+    }
+    // Default to relative path for CRA proxy
+    return '/api'; 
+  } else {
+    // In production, use the full absolute URL
+    return sessionStorage.getItem('apiBaseUrl') || 
+           process.env.REACT_APP_API_URL || 
+           'https://app.uncharted.social/api'; // Production default
+  }
 };
 
 // Create axios instance with dynamic baseURL and improved default timeout
