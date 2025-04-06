@@ -78,15 +78,15 @@ const Users = () => {
   if (currentUser?.role !== 'admin') {
     return (
       <PageLayout title="Users">
-        <div className="bg-white rounded-lg shadow p-8 max-w-md mx-auto mt-10">
+        <div className="card max-w-md mx-auto mt-10">
           <div className="text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-              <svg className="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full status-badge-danger mb-4">
+              <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-            <p className="text-gray-600">You don't have permission to access this page.</p>
+            <h2 className="text-xl font-semibold mb-2 list-item-title">Access Denied</h2>
+            <p className="list-item-subtitle">You don't have permission to access this page.</p>
           </div>
         </div>
       </PageLayout>
@@ -97,12 +97,12 @@ const Users = () => {
     return (
       <PageLayout title="Users">
         <div className="p-4">
-          <div className="bg-white rounded-lg shadow p-4 mb-4 w-full">
+          <div className="card w-full">
             <div className="animate-pulse space-y-4">
-              <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-              <div className="h-4 bg-gray-200 rounded w-full"></div>
-              <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-              <div className="h-64 bg-gray-200 rounded w-full"></div>
+              <div className="h-8 bg-skeleton rounded w-1/4"></div>
+              <div className="h-4 bg-skeleton rounded w-full"></div>
+              <div className="h-4 bg-skeleton rounded w-5/6"></div>
+              <div className="h-64 bg-skeleton rounded w-full"></div>
             </div>
           </div>
         </div>
@@ -114,14 +114,14 @@ const Users = () => {
     return (
       <PageLayout title="Users">
         <div className="p-4">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center text-red-600 mb-4">
+          <div className="card">
+            <div className="flex items-center status-badge-danger mb-4">
               <svg className="h-6 w-6 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <h3 className="text-lg font-medium">Error Loading Users</h3>
             </div>
-            <p className="text-gray-700">{error.message}</p>
+            <p className="list-item-subtitle">{error.message}</p>
           </div>
         </div>
       </PageLayout>
@@ -148,11 +148,11 @@ const Users = () => {
       <div className="p-4">
         <div className="card">
           <div className="card-body">
-            <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
+            <div className="px-4 py-5 border-b border-color-light sm:px-6">
+              <h3 className="text-lg leading-6 font-medium card-title">
                 User Management
               </h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm list-item-subtitle">
                 View and manage user accounts and permissions
               </p>
             </div>
@@ -239,7 +239,7 @@ const Users = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="6" className="text-center py-4 text-gray-500">
+                        <td colSpan="6" className="text-center py-4 empty-state-description">
                           No users found
                         </td>
                       </tr>
@@ -250,9 +250,9 @@ const Users = () => {
             </div>
             
             {users && users.length > 0 && (
-              <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 sm:px-6">
-                <div className="text-sm text-gray-700">
-                  Showing <span className="font-medium">{users.length}</span> users
+              <div className="px-4 py-3 table-footer border-t border-color-light sm:px-6">
+                <div className="text-sm list-item-subtitle">
+                  Showing <span className="font-medium list-item-title">{users.length}</span> users
                 </div>
               </div>
             )}

@@ -13,14 +13,16 @@
 }
 
 .dialog {
-  background-color: var(--bg-white);
+  background-color: var(--card-background);
+  color: var(--text-primary);
   border-radius: var(--border-radius);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
   max-width: 90vw;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 .dialog-sm {
@@ -41,7 +43,7 @@
 
 .dialog-header {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -49,8 +51,8 @@
 
 .dialog-title {
   font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--text);
+  font-weight: 500;
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -64,11 +66,12 @@
 .dialog-body {
   padding: 1.5rem;
   overflow-y: auto;
+  color: var(--text-secondary);
 }
 
 .dialog-footer {
   padding: 1rem 1.5rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -110,11 +113,11 @@
 
 .dialog-panel {
   position: relative;
-  background-color: white;
+  background-color: var(--card-background);
   border-radius: 0.5rem;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   transform: translateY(0);
-  transition: transform 0.2s ease-in-out;
+  transition: transform 0.2s ease-in-out, background-color 0.3s ease;
   overflow: hidden;
   width: 100%;
   margin: 1rem;
@@ -142,7 +145,7 @@
   position: absolute;
   top: 1rem;
   right: 1rem;
-  color: #9ca3af;
+  color: var(--text-muted);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -150,7 +153,7 @@
 }
 
 .dialog-close-button:hover {
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .dialog-close-icon {
@@ -166,7 +169,7 @@
 .dialog-title {
   font-size: 1.125rem;
   font-weight: 500;
-  color: #1f2937;
+  color: var(--text-primary);
 }
 
 .dialog-content {
@@ -191,7 +194,7 @@
 
 .email-dialog-content {
   padding: 1rem;
-  background-color: white;
+  background-color: var(--card-background);
   border-radius: 0.5rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   max-width: 28rem;
@@ -201,7 +204,7 @@
 .email-description {
   margin-bottom: 1rem;
   margin-top: 0;
-  color: #4b5563;
+  color: var(--text-secondary);
 }
 
 .email-actions-container {
@@ -249,6 +252,6 @@
 .contacts-dialog .dialog-footer {
   position: sticky;
   bottom: 0;
-  background: white;
+  background-color: var(--card-background);
   z-index: 5;
 }

@@ -1,0 +1,26 @@
+[data-theme='dark'] {
+  --background-primary: #1a1a1a;
+  --background-secondary: #2c2c2c;
+  --background-tertiary: #3a3a3a;
+  
+  /* Improved text colors for better contrast on dark backgrounds */
+  --text-primary: #ffffff;     /* Brighter white for main text */
+  --text-secondary: #d0d0d0;   /* Lighter gray for secondary text */
+  --text-muted: #9e9e9e;       /* Lighter muted text for better visibility */
+  
+  --border-color: #495057;
+  --card-background: #2c2c2c;
+  --card-border: #495057;
+  --input-background: #3a3a3a;
+  --input-border: #6c757d;
+  --input-text: #ffffff;       /* Brighter text in inputs */
+  --link-color: #90caf9;       /* Even lighter blue for links in dark mode */
+  --primary-accent: #64b5f6;
+  --secondary-accent: #adb5bd;
+  --success-color: #66bb6a;    /* Brighter green */
+  --warning-color: #ffb74d;    /* Brighter yellow/orange */
+  --danger-color: #ef5350;     /* Brighter red */
+  --info-color: #4fc3f7;       /* Brighter cyan */
+
+  /* Button colors are intentionally NOT overridden here */
+}

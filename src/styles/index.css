@@ -1,6 +1,8 @@
 /* Import base styles */
 @import './base/variables.css';
 @import './base/reset.css';
+@import './themes/light.css'; /* Light theme defaults */
+@import './themes/dark.css';  /* Dark theme overrides */
 @import './base/typography.css';
 @import './base/layout.css';
 
@@ -32,3 +34,14 @@
 
 /* Import mobile styles (should be last to override other styles) */
 @import './mobile.css';
+
+body {
+  background-color: var(--background-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Add other global styles that need theme variables */
+a {
+  color: var(--link-color);
+}

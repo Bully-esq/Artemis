@@ -182,8 +182,8 @@ const Dashboard = () => {
   return (
     <PageLayout title="Dashboard">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Welcome to your Dashboard</h1>
-        <p className="text-gray-600">Here's what's happening with your business</p>
+        <h1 className="text-2xl font-bold mb-2 card-title">Welcome to your Dashboard</h1>
+        <p className="list-item-subtitle">Here's what's happening with your business</p>
       </div>
 
       {/* Period selector */}
@@ -214,49 +214,49 @@ const Dashboard = () => {
       <div className="dashboard-stats">
         <div className="stat-card">
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+            <div className="stat-icon stat-icon-green">
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
-              <p className="text-gray-500 text-sm font-medium">Invoiced</p>
+              <p className="stat-label">Invoiced</p>
               <p className="stat-number">{formatCurrency(metrics.totalInvoiced)}</p>
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-4">{metrics.invoiceCount} invoices this {period}</p>
+          <p className="stat-detail">{metrics.invoiceCount} invoices this {period}</p>
         </div>
 
         <div className="stat-card">
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+            <div className="stat-icon stat-icon-blue">
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
             <div>
-              <p className="text-gray-500 text-sm font-medium">Outstanding</p>
+              <p className="stat-label">Outstanding</p>
               <p className="stat-number">{formatCurrency(metrics.totalOutstanding)}</p>
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-4">
+          <p className="stat-detail">
             {(metrics.totalPaid / metrics.totalInvoiced * 100 || 0).toFixed(1)}% collection rate
           </p>
         </div>
 
         <div className="stat-card">
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+            <div className="stat-icon stat-icon-purple">
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
             <div>
-              <p className="text-gray-500 text-sm font-medium">Quotes Created</p>
+              <p className="stat-label">Quotes Created</p>
               <p className="stat-number">{metrics.quoteCount}</p>
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-4">
+          <p className="stat-detail">
             {metrics.conversionRate.toFixed(1)}% conversion rate
           </p>
         </div>
@@ -322,15 +322,15 @@ const Dashboard = () => {
                 >
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium list-item-title">
                         {quote.clientName || 'Unnamed Client'}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm list-item-subtitle">
                         {quote.name || `Quote #${quote.id.substring(0, 8)}`}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium list-item-title">
                         {quote.date ? new Date(quote.date).toLocaleDateString() : 'No date'}
                       </p>
                     </div>
@@ -338,7 +338,7 @@ const Dashboard = () => {
                 </div>
               ))
             ) : (
-              <div className="text-center text-gray-500 py-4">
+              <div className="text-center empty-state-description py-4">
                 No recent quotes found
               </div>
             )}
@@ -366,30 +366,30 @@ const Dashboard = () => {
                 >
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium list-item-title">
                         {invoice.clientName || 'Unnamed Client'}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm list-item-subtitle">
                         {invoice.invoiceNumber || `Invoice #${invoice.id.substring(0, 8)}`}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium list-item-title">
                         {formatCurrency(invoice.amount)}
                       </p>
-                      <p className={`text-sm ${
+                      <span className={`status-badge ${
                         invoice.status === 'paid' 
-                          ? 'text-green-600' 
-                          : 'text-yellow-600'
+                          ? 'status-badge-success' 
+                          : 'status-badge-warning'
                       }`}>
                         {invoice.status === 'paid' ? 'Paid' : 'Outstanding'}
-                      </p>
+                      </span>
                     </div>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center text-gray-500 py-4">
+              <div className="text-center empty-state-description py-4">
                 No recent invoices found
               </div>
             )}

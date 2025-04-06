@@ -9,6 +9,7 @@ import { ReactQueryDevtools } from 'react-query/devtools';
 // Context providers
 import { AppProvider } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext'; // Import ThemeProvider
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -71,96 +72,98 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AppProvider>
-          <Router>
-            <div className="app-container">
-              <Notifications />
-              <NetworkStatus />
-              
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
+          <ThemeProvider> {/* Wrap app with ThemeProvider */}
+            <Router>
+              <div className="app-container">
+                <Notifications />
+                <NetworkStatus />
                 
-                {/* Protected Routes */}
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Quotes */}
-                <Route path="/quotes" element={
-                  <ProtectedRoute>
-                    <Quotes />
-                  </ProtectedRoute>
-                } />
-                <Route path="/quotes/new" element={
-                  <ProtectedRoute>
-                    <QuoteBuilder />
-                  </ProtectedRoute>
-                } />
-                <Route path="/quotes/:id" element={
-                  <ProtectedRoute>
-                    <QuoteBuilder />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Invoices */}
-                <Route path="/invoices" element={
-                  <ProtectedRoute>
-                    <InvoiceList />
-                  </ProtectedRoute>
-                } />
-                <Route path="/invoices/new" element={
-                  <ProtectedRoute>
-                    <InvoiceBuilder />
-                  </ProtectedRoute>
-                } />
-                <Route path="/invoices/:id" element={
-                  <ProtectedRoute>
-                    <InvoiceBuilder />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Contacts */}
-                <Route path="/contacts" element={
-                  <ProtectedRoute>
-                    <ContactList />
-                  </ProtectedRoute>
-                } />
-                <Route path="/contacts/:id" element={
-                  <ProtectedRoute>
-                    <ContactDetails />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Suppliers */}
-                <Route path="/suppliers" element={
-                  <ProtectedRoute>
-                    <SupplierList />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Settings */}
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Users */}
-                <Route path="/users" element={
-                  <ProtectedRoute>
-                    <Users />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Not Found */}
-                <Route path="/404" element={<NotFound />} />
-                <Route path="*" element={<Navigate replace to="/404" />} />
-              </Routes>
-            </div>
-          </Router>
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  
+                  {/* Protected Routes */}
+                  <Route path="/" element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Quotes */}
+                  <Route path="/quotes" element={
+                    <ProtectedRoute>
+                      <Quotes />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/quotes/new" element={
+                    <ProtectedRoute>
+                      <QuoteBuilder />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/quotes/:id" element={
+                    <ProtectedRoute>
+                      <QuoteBuilder />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Invoices */}
+                  <Route path="/invoices" element={
+                    <ProtectedRoute>
+                      <InvoiceList />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/invoices/new" element={
+                    <ProtectedRoute>
+                      <InvoiceBuilder />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/invoices/:id" element={
+                    <ProtectedRoute>
+                      <InvoiceBuilder />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Contacts */}
+                  <Route path="/contacts" element={
+                    <ProtectedRoute>
+                      <ContactList />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/contacts/:id" element={
+                    <ProtectedRoute>
+                      <ContactDetails />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Suppliers */}
+                  <Route path="/suppliers" element={
+                    <ProtectedRoute>
+                      <SupplierList />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Settings */}
+                  <Route path="/settings" element={
+                    <ProtectedRoute>
+                      <Settings />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Users */}
+                  <Route path="/users" element={
+                    <ProtectedRoute>
+                      <Users />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Not Found */}
+                  <Route path="/404" element={<NotFound />} />
+                  <Route path="*" element={<Navigate replace to="/404" />} />
+                </Routes>
+              </div>
+            </Router>
+          </ThemeProvider> {/* Close ThemeProvider */}
         </AppProvider>
       </AuthProvider>
       

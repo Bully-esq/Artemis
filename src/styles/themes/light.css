@@ -1,0 +1,36 @@
+:root {
+      --background-primary: #ffffff;
+      --background-secondary: #f8f9fa;
+      --background-tertiary: #e9ecef;
+      --text-primary: #212529;
+      --text-secondary: #6c757d;
+      --text-muted: #adb5bd;
+      --border-color: #dee2e6;
+      --card-background: #ffffff;
+      --card-border: #dee2e6;
+      --input-background: #ffffff;
+      --input-border: #ced4da;
+      --input-text: #495057;
+      --link-color: #007bff;
+      --primary-accent: #007bff;
+      --secondary-accent: #6c757d;
+      --success-color: #28a745;
+      --warning-color: #ffc107;
+      --danger-color: #dc3545;
+      --info-color: #17a2b8;
+
+      /* --- Button Colors (Consistent) --- */
+      --button-primary-bg: #007bff;
+      --button-primary-text: #ffffff;
+      --button-primary-hover-bg: #0056b3;
+      --button-secondary-bg: #6c757d;
+      --button-secondary-text: #ffffff;
+      --button-secondary-hover-bg: #5a6268;
+      --button-danger-bg: #dc3545;
+      --button-danger-text: #ffffff;
+      --button-danger-hover-bg: #c82333;
+      --button-disabled-bg: #e9ecef;
+      --button-disabled-text: #6c757d;
+      /* --- End Button Colors --- */
+    }
+    

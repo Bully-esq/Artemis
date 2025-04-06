@@ -74,12 +74,12 @@
 
 .item-title {
   font-weight: 500;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .item-subtitle {
   font-size: 0.875rem;
-  color: var(--text-light);
+  color: var(--text-secondary);
 }
 
 .item-actions {
@@ -88,6 +88,7 @@
 
 .item-detail {
   font-weight: 500;
+  color: var(--text-primary);
 }
 
 .item-badges {

@@ -9,12 +9,12 @@
 }
 
 .item-notes {
-  background-color: var(--bg-light);
+  background-color: var(--background-tertiary);
   border-radius: 0.25rem;
   padding: 0.75rem;
   margin-top: 0.5rem;
   font-size: 0.875rem;
-  color: var(--text-light);
+  color: var(--text-secondary);
 }
 
 .search-container {
@@ -27,6 +27,30 @@
   gap: 1rem;
 }
 
+/* Form column styling for catalog items */
+.form-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.form-column .form-label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.form-column select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--input-border);
+  border-radius: var(--border-radius);
+  background-color: var(--input-background);
+  color: var(--input-text);
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
 /* Catalog dialog styles */
 .catalog-items-list {
   max-height: 24rem;
@@ -35,18 +59,18 @@
 }
 
 .catalog-items {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-color);
 }
 
 .catalog-item {
   padding: 0.75rem;
   cursor: pointer;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-color);
   transition: background-color 0.2s;
 }
 
 .catalog-item:hover {
-  background-color: var(--bg-light);
+  background-color: var(--background-tertiary);
 }
 
 .catalog-item-content {
@@ -58,16 +82,17 @@
 .catalog-item-name {
   font-weight: 500;
   margin-bottom: 0.25rem;
+  color: var(--text-primary);
 }
 
 .catalog-item-supplier {
   font-size: 0.875rem;
-  color: var(--text-light);
+  color: var(--text-secondary);
 }
 
 .catalog-item-description {
   font-size: 0.875rem;
-  color: var(--text);
+  color: var(--text-primary);
   margin-top: 0.25rem;
 }
 
@@ -77,11 +102,12 @@
 
 .price-value {
   font-weight: 500;
+  color: var(--text-primary);
 }
 
 .category-label {
   font-size: 0.75rem;
-  color: var(--text-light);
+  color: var(--text-secondary);
 }
 
 .dialog-actions {
@@ -96,23 +122,23 @@
 }
 
 .catalog-item-row:nth-child(odd) {
-  background-color: #f9f9f9; /* Light grey for odd rows */
+  background-color: var(--background-secondary); /* Light background for odd rows */
 }
 
 .catalog-item-row:nth-child(even) {
-  background-color: #ffffff; /* Explicitly white for even rows, optional */
+  background-color: var(--card-background); /* Card background for even rows */
 }
 
 /* Optional: Add a subtle hover effect */
 .catalog-item-row:hover {
-  background-color: #f0f0f0; 
+  background-color: var(--background-tertiary);
 }
 
 /* Supplier sidebar styles */
 .supplier-sidebar {
   width: 280px;
-  background-color: var(--bg-white);
-  border-right: 1px solid var(--border);
+  background-color: var(--card-background);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -121,15 +147,15 @@
 
 .supplier-sidebar-header {
   padding: 1rem;
-  border-bottom: 1px solid var(--border);
-  background-color: var(--primary-light);
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--background-secondary);
 }
 
 .supplier-tabs {
   display: flex;
   padding: 0.5rem;
-  border-bottom: 1px solid var(--border);
-  background-color: var(--bg-white);
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--card-background);
   overflow-x: auto;
 }
 
@@ -145,26 +171,28 @@
 }
 
 .supplier-tab.active {
-  background-color: var(--primary);
+  background-color: var(--primary-accent);
   color: white;
 }
 
 .supplier-tab:not(.active) {
-  background-color: var(--bg-light);
-  color: var(--text);
+  background-color: var(--background-tertiary);
+  color: var(--text-primary);
 }
 
 .supplier-search {
   padding: 0.75rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .supplier-search input {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   font-size: 0.875rem;
+  background-color: var(--input-background);
+  color: var(--input-text);
 }
 
 .supplier-items-container {
@@ -176,15 +204,15 @@
 .supplier-item {
   margin-bottom: 0.5rem;
   padding: 0.75rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
-  background-color: var(--bg-white);
+  background-color: var(--card-background);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .supplier-item:hover {
-  border-color: var(--primary);
+  border-color: var(--primary-accent);
   box-shadow: var(--shadow);
   transform: translateY(-1px);
 }
@@ -197,20 +225,41 @@
 
 .supplier-item-name {
   font-weight: 500;
+  color: var(--text-primary);
 }
 
 .supplier-item-price {
   font-weight: 600;
-  color: var(--primary);
+  color: var(--primary-accent);
 }
 
 .supplier-item-description {
   font-size: 0.75rem;
-  color: var(--text-light);
+  color: var(--text-secondary);
   margin-bottom: 0.25rem;
 }
 
 .supplier-item-footer {
   display: flex;
   align-items: center;
+}
+
+/* Catalog checkbox styling */
+.form-checkbox {
+  display: flex;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.checkbox {
+  margin-right: 0.5rem;
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--primary-accent);
+}
+
+.checkbox-label {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  cursor: pointer;
 }

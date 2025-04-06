@@ -4,35 +4,41 @@
   border-collapse: separate;
   border-spacing: 0;
   margin-bottom: 1rem;
+  color: var(--text-primary);
 }
 
 .table th,
 .table td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-color);
   text-align: left;
+  color: var(--text-primary);
 }
 
 .table th {
   font-weight: 600;
-  background-color: var(--bg-light);
+  background-color: var(--background-secondary);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-light);
+  color: var(--text-secondary);
+}
+
+.table thead th {
+  background-color: var(--background-secondary);
 }
 
 .table tr {
-  background-color: var(--bg-white);
-  transition: background-color 0.2s;
+  background-color: var(--card-background);
+  transition: background-color 0.3s ease;
 }
 
-.table tr:hover {
-  background-color: var(--bg-light);
+.table tbody tr:hover {
+  background-color: var(--background-tertiary);
 }
 
 .table-striped tbody tr:nth-of-type(odd) {
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: var(--background-secondary);
 }
 
 /* Table spacing improvements */
@@ -67,25 +73,25 @@ table.spaced-table td .cell-content {
 }
 
 .quote-table th {
-  background-color: var(--bg-light);
+  background-color: var(--background-tertiary);
   padding: 0.75rem;
   text-align: left;
   font-weight: 600;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
 }
 
 .quote-table td {
   padding: 0.75rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
 }
 
 .quote-table tr:nth-child(even) {
-  background-color: var(--bg-light);
+  background-color: var(--background-tertiary);
 }
 
 .quote-table-total {
   font-weight: 600;
-  background-color: var(--primary-light) !important;
+  background-color: var(--background-secondary) !important;
 }
 
 /* Invoice Table */
@@ -107,22 +113,22 @@ table.spaced-table td .cell-content {
 }
 
 .labour-row {
-  background-color: var(--bg-light);
+  background-color: var(--background-tertiary);
 }
 
 .subtotal-row {
-  background-color: var(--bg-light);
+  background-color: var(--background-tertiary);
   font-weight: 500;
 }
 
 .cis-deduction-row {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: rgba(239, 83, 80, 0.15); /* Use semi-transparent version of danger color */
+  color: var(--danger-color);
   font-style: italic;
 }
 
 .total-row {
-  background-color: var(--bg-light);
+  background-color: var(--background-secondary);
   font-weight: 700;
 }
 
@@ -193,4 +199,15 @@ table.spaced-table td .cell-content {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Table footer */
+.table-footer {
+  background-color: var(--background-secondary);
+  transition: background-color 0.3s ease;
+}
+
+/* Border color light */
+.border-color-light {
+  border-color: var(--border-color);
 }

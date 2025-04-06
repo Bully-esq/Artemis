@@ -87,3 +87,20 @@
     transform: rotate(360deg);
   }
 }
+
+/* Addition to loaders.css */
+.bg-skeleton {
+  background-color: var(--background-tertiary);
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
