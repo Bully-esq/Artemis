@@ -30,6 +30,8 @@ const SupplierList = () => {
   const [currentSupplier, setCurrentSupplier] = useState(null);
   const [activeTab, setActiveTab] = useState('suppliers');
   const [showCatalogItemDialog, setShowCatalogItemDialog] = useState(false);
+  const [showPriceUpdateDialog, setShowPriceUpdateDialog] = useState(false);
+  const [priceUpdatePercentage, setPriceUpdatePercentage] = useState('');
   const [catalogItemForm, setCatalogItemForm] = useState({
     id: '',
     name: '',
@@ -346,6 +348,79 @@ const SupplierList = () => {
     });
   };
 
+  // Add mutation for updating catalog items
+  const updateCatalogItemsMutation = useMutation(
+    (updatedItems) => api.catalog.update(updatedItems),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('catalog');
+        addNotification('Prices updated successfully', 'success');
+        setShowPriceUpdateDialog(false);
+      },
+      onError: (error) => {
+        addNotification(`Error updating prices: ${error.message}`, 'error');
+      }
+    }
+  );
+
+  // Handle opening the price update dialog
+  const handleUpdatePrices = (supplier) => {
+    setCurrentSupplier(supplier);
+    setPriceUpdatePercentage('');
+    setShowPriceUpdateDialog(true);
+  };
+
+  // Handle applying the price update
+  const handleApplyPriceUpdate = async () => {
+    if (!currentSupplier) {
+      addNotification('No supplier selected', 'error');
+      return;
+    }
+
+    // Validate percentage input
+    const percentage = parseFloat(priceUpdatePercentage);
+    if (isNaN(percentage)) {
+      addNotification('Please enter a valid percentage', 'error');
+      return;
+    }
+
+    try {
+      // Get catalog items
+      const catalogItems = await queryClient.fetchQuery('catalog', api.catalog.getAll);
+      
+      // Find items for this supplier
+      const supplierItems = catalogItems.filter(item => item.supplier === currentSupplier.id);
+      
+      if (supplierItems.length === 0) {
+        addNotification(`No catalog items found for ${currentSupplier.name}`, 'warning');
+        setShowPriceUpdateDialog(false);
+        return;
+      }
+      
+      // Calculate the multiplier (e.g., 5% increase = 1.05, -5% decrease = 0.95)
+      const multiplier = 1 + (percentage / 100);
+      
+      // Update prices
+      const updatedCatalogItems = catalogItems.map(item => {
+        if (item.supplier === currentSupplier.id) {
+          // Apply percentage increase/decrease
+          const newCost = item.cost * multiplier;
+          return {
+            ...item,
+            cost: parseFloat(newCost.toFixed(2)) // Round to 2 decimal places
+          };
+        }
+        return item;
+      });
+      
+      // Save updated items
+      updateCatalogItemsMutation.mutate(updatedCatalogItems);
+      
+    } catch (error) {
+      addNotification(`Error updating prices: ${error.message}`, 'error');
+    }
+  };
+
   if (isLoading) {
     return (
       <PageLayout title="Suppliers & Catalog">
@@ -477,6 +552,16 @@ const SupplierList = () => {
                       <div className="item-actions">
                         <p className="item-detail">{supplier.phone || ''}</p>
                         <div className="status-button-container">
+                          <Button
+                            className="btn-list-item btn-list-item--update"
+                            style={{ backgroundColor: '#28a745', color: 'white', marginRight: '8px' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUpdatePrices(supplier);
+                            }}
+                          >
+                            Update Prices
+                          </Button>
                           <Button
                             className="btn-list-item btn-list-item--primary"
                             style={{ backgroundColor: '#0073cf', color: 'white' }}
@@ -705,6 +790,64 @@ const SupplierList = () => {
             <p className="confirm-warning">
               This action cannot be undone. This will permanently delete the supplier and remove it from all associated catalog items.
             </p>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Add this price update dialog */}
+      {showPriceUpdateDialog && (
+        <Dialog
+          title="Update Prices"
+          onClose={() => setShowPriceUpdateDialog(false)}
+          footer={
+            <div className="dialog-footer">
+              <Button 
+                variant="secondary" 
+                onClick={() => setShowPriceUpdateDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="primary" 
+                onClick={handleApplyPriceUpdate}
+                isLoading={updateCatalogItemsMutation.isLoading}
+              >
+                Apply Price Update
+              </Button>
+            </div>
+          }
+        >
+          <div className="form-container">
+            <p className="price-update-info">
+              This will update the prices of all catalog items from <strong>{currentSupplier?.name}</strong>.
+            </p>
+            
+            <FormField
+              label="Percentage Change"
+              name="percentage"
+              type="number"
+              step="0.1"
+              value={priceUpdatePercentage}
+              onChange={(e) => setPriceUpdatePercentage(e.target.value)}
+              placeholder="Enter percentage (e.g., 5 for 5% increase, -5 for 5% decrease)"
+            />
+            
+            <div className="price-update-preview">
+              <p>
+                {parseFloat(priceUpdatePercentage) > 0 
+                  ? `Prices will increase by ${parseFloat(priceUpdatePercentage)}%` 
+                  : parseFloat(priceUpdatePercentage) < 0 
+                    ? `Prices will decrease by ${Math.abs(parseFloat(priceUpdatePercentage))}%` 
+                    : priceUpdatePercentage === '' 
+                      ? 'Enter a percentage to see preview' 
+                      : 'No change to prices'}
+              </p>
+              {priceUpdatePercentage !== '' && (
+                <p className="price-update-example">
+                  Example: £100.00 → £{(100 * (1 + (parseFloat(priceUpdatePercentage) / 100))).toFixed(2)}
+                </p>
+              )}
+            </div>
           </div>
         </Dialog>
       )}

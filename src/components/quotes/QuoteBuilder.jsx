@@ -1771,92 +1771,108 @@ const QuoteBuilder = () => {
           onClose={() => setShowItemDialog(false)}
           title="Add Item to Quote"
         >
+          {/* Outer wrapper with padding */}
           <div style={{ 
             width: '100%',
             maxWidth: '800px',
-            padding: '0 16px',
-            boxSizing: 'border-box'
+            // Removed padding here, will be handled by inner elements or dialog-content
+            boxSizing: 'border-box',
+            display: 'flex', // Use flexbox for overall layout
+            flexDirection: 'column', // Stack header, body, footer
+            height: '100%' // Allow flex children to grow/shrink
           }}>
-            <div className="form-field">
-              <label className="form-label">
-                Search
-              </label>
-              <input
-                type="text"
-                value={itemSearchTerm}
-                onChange={(e) => setItemSearchTerm(e.target.value)}
-                placeholder="Search by name or description..."
-                className="form-input"
-              />
-            </div>
-            
-            <div className="form-field">
-              <label className="form-label">
-                Category
-              </label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="form-select"
-              >
-                <option value="all">All Categories</option>
-                {Array.from(new Set(catalogItems.map(item => item.category)))
-                  .filter(Boolean)
-                  .sort()
-                  .map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-              </select>
-            </div>
-            
-            <div className="catalog-items-list" style={{ maxHeight: '50vh', overflow: 'auto' }}>
-              {filteredCatalogItems.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-                  No items match your search criteria
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gap: '10px' }}>
-                  {filteredCatalogItems.map(item => (
-                    <div
-                      key={item.id}
-                      style={{ 
-                        padding: '10px', 
-                        border: '1px solid #ddd',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        overflow: 'hidden'
-                      }}
-                      onClick={() => {
-                        handleAddItem(item);
-                        setShowItemDialog(false);
-                      }}
-                    >
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between',
-                        width: '100%'
-                      }}>
-                        <div style={{ flexGrow: 1, minWidth: 0, paddingRight: '10px', maxWidth: '70%' }}>
-                          <h3 style={{ margin: '0 0 5px 0', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</h3>
-                          <p style={{ margin: '0 0 5px 0', color: '#666' }}>{getSupplierName(item.supplier)}</p>
-                          {item.description && (
-                            <p style={{ margin: '0', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.description}</p>
-                          )}
-                        </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0, minWidth: '80px' }}>
-                          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{formatCurrency(item.cost)}</p>
-                          {item.category && (
-                            <p style={{ margin: '0', fontSize: '12px', color: '#666' }}>{item.category}</p>
-                          )}
+            {/* New wrapper for the scrollable body content */}
+            <div className="dialog-body-content" style={{ flexGrow: 1, overflowY: 'auto', minHeight: 0, padding: '0 16px' /* Restore padding here */ }}>
+              {/* Search Field */}
+              <div className="form-field">
+                <label className="form-label">
+                  Search
+                </label>
+                <input
+                  type="text"
+                  value={itemSearchTerm}
+                  onChange={(e) => setItemSearchTerm(e.target.value)}
+                  placeholder="Search by name or description..."
+                  className="form-input"
+                />
+              </div>
+              
+              {/* Category Select */}
+              <div className="form-field">
+                <label className="form-label">
+                  Category
+                </label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="form-select"
+                >
+                  <option value="all">All Categories</option>
+                  {Array.from(new Set(catalogItems.map(item => item.category)))
+                    .filter(Boolean)
+                    .sort()
+                    .map(category => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                </select>
+              </div>
+              
+              {/* Item List - Removed inline maxHeight and overflow */}
+              <div className="catalog-items-list"> 
+                {filteredCatalogItems.length === 0 ? (
+                  <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                    No items match your search criteria
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {filteredCatalogItems.map(item => (
+                      <div
+                        key={item.id}
+                        style={{ 
+                          // Keep existing base styles for desktop
+                          padding: '10px', 
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          overflow: 'hidden'
+                        }}
+                        // Add the new class for mobile targeting
+                        className="catalog-item-mobile" 
+                        onClick={() => {
+                          handleAddItem(item);
+                          setShowItemDialog(false);
+                        }}
+                      >
+                        <div style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between',
+                          width: '100%'
+                        }}>
+                          {/* Add class to left side */}
+                          <div className="item-details-left" style={{ flexGrow: 1, minWidth: 0, paddingRight: '10px', maxWidth: '70%' }}>
+                            <h3 style={{ margin: '0 0 5px 0', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</h3>
+                            <p style={{ margin: '0 0 5px 0', color: '#666' }}>{getSupplierName(item.supplier)}</p>
+                            {item.description && (
+                              <p style={{ margin: '0', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.description}</p>
+                            )}
+                          </div>
+                          {/* Add class to right side */}
+                          <div className="item-details-right" style={{ textAlign: 'right', flexShrink: 0, minWidth: '80px' }}>
+                            <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{formatCurrency(item.cost)}</p>
+                            {item.category && (
+                              <p style={{ margin: '0', fontSize: '12px', color: '#666' }}>{item.category}</p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div> {/* End of dialog-body-content */}
             
-            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+            {/* Actions/Footer - Added class */}
+            <div className="dialog-actions" style={{ marginTop: '20px', textAlign: 'right', padding: '0 16px 16px', flexShrink: 0 /* Prevent footer shrinking */ }}>
               <Button
                 variant="secondary"
                 onClick={() => setShowItemDialog(false)}
@@ -1865,7 +1881,7 @@ const QuoteBuilder = () => {
                 Cancel
               </Button>
             </div>
-          </div>
+          </div> {/* End of outer wrapper */}
         </Dialog>
       )}
       
@@ -1957,12 +1973,15 @@ const QuoteBuilder = () => {
                     <div
                       key={item.id}
                       style={{ 
+                        // Keep existing base styles for desktop
                         padding: '10px', 
                         border: '1px solid #ddd',
                         borderRadius: '4px',
                         cursor: 'pointer',
                         overflow: 'hidden'
                       }}
+                      // Add the new class for mobile targeting
+                      className="catalog-item-mobile" 
                       onClick={() => {
                         handleAddItem(item);
                         setShowItemDialog(false);
@@ -1973,14 +1992,16 @@ const QuoteBuilder = () => {
                         justifyContent: 'space-between',
                         width: '100%'
                       }}>
-                        <div style={{ flexGrow: 1, minWidth: 0, paddingRight: '10px', maxWidth: '70%' }}>
+                        {/* Add class to left side */}
+                        <div className="item-details-left" style={{ flexGrow: 1, minWidth: 0, paddingRight: '10px', maxWidth: '70%' }}>
                           <h3 style={{ margin: '0 0 5px 0', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</h3>
                           <p style={{ margin: '0 0 5px 0', color: '#666' }}>{getSupplierName(item.supplier)}</p>
                           {item.description && (
                             <p style={{ margin: '0', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.description}</p>
                           )}
                         </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0, minWidth: '80px' }}>
+                        {/* Add class to right side */}
+                        <div className="item-details-right" style={{ textAlign: 'right', flexShrink: 0, minWidth: '80px' }}>
                           <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{formatCurrency(item.cost)}</p>
                           {item.category && (
                             <p style={{ margin: '0', fontSize: '12px', color: '#666' }}>{item.category}</p>

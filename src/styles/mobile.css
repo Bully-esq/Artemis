@@ -403,6 +403,213 @@
     font-size: 0.95rem !important; /* Make the text slightly larger for better readability */
   }
   /* End checkbox filter optimizations */
+
+  /* Quote Builder Add Item Dialog Optimizations */
+  .dialog-overlay {
+    align-items: center !important; /* Center dialog vertically */
+    padding-top: 0 !important; /* Remove top padding */
+  }
+
+  .dialog-overlay .dialog-content {
+    width: 95% !important; 
+    max-width: 95% !important;
+    padding: 0 !important;
+    max-height: 60vh !important; /* Much shorter dialog */
+    margin: 0 auto !important; 
+    overflow: hidden !important;
+    display: flex !important; 
+    flex-direction: column !important; 
+  }
+
+  .dialog-header {
+    padding: 8px 10px !important;
+    margin-bottom: 0 !important;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0; 
+    display: flex !important;
+    flex-direction: row !important; /* Force row layout */
+    justify-content: space-between !important; /* Space between title and button */
+    align-items: center !important;
+    width: 100% !important; /* Ensure full width */
+  }
+
+  .dialog-title {
+    font-size: 1.1rem !important;
+    margin: 0 !important;
+    text-align: left !important;
+    order: 1 !important; /* Ensure title is first */
+  }
+
+  /* Even more specific targeting for the close button */
+  .dialog-close-button,
+  button.dialog-close-button,
+  .dialog-header > button,
+  .dialog-header button[aria-label="Close"],
+  .dialog-header button:last-child {
+    order: 2 !important; /* Place at the end */
+    margin-left: auto !important; /* Push to the far right */
+    font-size: 1.3rem !important;
+    padding: 4px !important;
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    min-height: 30px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #333 !important;
+    background: transparent !important;
+    border: none !important;
+    position: relative !important; /* Reset any absolute positioning */
+    right: 0 !important; /* Align to right edge */
+    top: auto !important; /* Reset top position */
+    transform: none !important; /* Reset transforms */
+  }
+
+  /* Add a hover state for feedback */
+  .dialog-close-button:hover,
+  button.dialog-close-button:hover,
+  .dialog-header button:hover {
+    background-color: rgba(0,0,0,0.05) !important;
+  }
+
+  /* This is the scrollable body */
+  .dialog-body-content { 
+      flex-grow: 1;
+      overflow-y: auto;
+      min-height: 0;
+      padding: 8px !important; /* Much less padding */
+  }
+
+  /* Form field adjustments */
+  .dialog-body-content .form-field {
+    margin-bottom: 6px !important; /* Reduce space between fields */
+  }
+
+  .dialog-body-content .form-label {
+    margin-bottom: 2px !important;
+    font-size: 0.85rem !important; /* Smaller label text */
+    display: inline-block !important;
+  }
+
+  .dialog-body-content .form-input,
+  .dialog-body-content .form-select {
+    padding: 4px 8px !important; /* Smaller input fields */
+    height: 30px !important; /* Fixed height */
+    font-size: 0.9rem !important;
+  }
+
+  .catalog-items-list {
+    margin-top: 6px !important; /* Reduced margin */
+  }
+
+  /* Make grid layout more compact */
+  .catalog-items-list > div {
+    gap: 6px !important; /* Smaller gap between items */
+  }
+
+  /* Fix catalog items to ensure names and prices are visible */
+  .catalog-item-mobile {
+    padding: 8px !important; /* Slightly increase padding */
+    margin-bottom: 0 !important;
+    border-radius: 3px !important;
+    display: flex !important; /* Ensure flex display */
+    flex-direction: column !important; /* Stack content vertically */
+  }
+
+  /* Ensure inner container is properly laid out */
+  .catalog-item-mobile > div {
+    display: flex !important; /* Force flex display */
+    flex-direction: row !important; /* Layout left/right sections horizontally */
+    justify-content: space-between !important; /* Space between name and price */
+    width: 100% !important; /* Full width */
+    gap: 8px !important; /* Space between sections */
+  }
+
+  /* Name section styling */
+  .catalog-item-mobile .item-details-left {
+    flex: 1 1 auto !important; /* Allow growing but maintain size */
+    max-width: 70% !important; /* Prevent taking too much space */
+    width: auto !important; /* Let flex handle width */
+    overflow: hidden !important; /* Hide overflow */
+    text-align: left !important; /* Left align text */
+    padding-right: 0 !important;
+    min-width: 0 !important; /* Allow shrinking below content size if needed */
+    display: block !important; /* Ensure block display */
+  }
+
+  /* Ensure name is visible */
+  .catalog-item-mobile .item-details-left h3 {
+    font-size: 1rem !important; /* Larger, more visible font */
+    margin-bottom: 3px !important; /* More space below name */
+    white-space: nowrap !important; /* Prevent wrapping */
+    overflow: hidden !important; /* Hide overflow */
+    text-overflow: ellipsis !important; /* Show ellipsis for overflow */
+    display: block !important; /* Ensure visible */
+    font-weight: bold !important; /* Make it bold */
+    color: #000 !important; /* Ensure high contrast */
+  }
+
+  /* Supplier text */
+  .catalog-item-mobile .item-details-left p {
+    font-size: 0.8rem !important; /* Larger text */
+    margin-bottom: 2px !important;
+    white-space: nowrap !important; /* Prevent wrapping */
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important; /* Ensure visible */
+  }
+
+  /* Price section styling */
+  .catalog-item-mobile .item-details-right {
+    flex: 0 0 auto !important; /* Don't grow or shrink */
+    width: auto !important; /* Size to content */
+    text-align: right !important; /* Right align text */
+    padding: 0 !important;
+    min-width: 60px !important; /* Minimum width for price */
+  }
+
+  /* Make price more visible */
+  .catalog-item-mobile .item-details-right p {
+    font-size: 0.9rem !important; /* Larger price */
+    margin: 0 !important;
+    font-weight: bold !important; /* Bold price */
+    color: #000 !important; /* High contrast */
+    white-space: nowrap !important; /* Prevent wrapping */
+  }
+
+  /* Footer */
+  .dialog-actions {
+      padding: 8px !important; /* Less padding */
+      border-top: 1px solid #eee;
+      flex-shrink: 0;
+  }
+
+  /* Smaller buttons */
+  .dialog-actions button {
+    padding: 4px 10px !important;
+    font-size: 0.85rem !important;
+    height: auto !important;
+    min-height: 30px !important;
+  }
+
+  /* Alternative Dialog - similar compact styles */
+  .alternative-dialog-overlay {
+      align-items: center !important;
+      padding-top: 0 !important;
+  }
+
+  .alternative-dialog-content {
+    width: 95% !important;
+    max-width: 95% !important;
+    padding: 0 !important;
+    max-height: 60vh !important; /* Much shorter dialog */
+    margin: 0 auto !important; 
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  /* End Quote Builder Add Item Dialog Optimizations */
 }
 
 /* A4 format styles to override mobile styles when exporting to PDF */
