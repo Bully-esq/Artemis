@@ -852,11 +852,7 @@ const InvoiceBuilder = () => {
     <PageLayout title={id ? 'Edit Invoice' : 'Create Invoice'}>
       {/* Add ActionButtonContainer below the header */}
       <div className="action-button-container">
-        <div className="action-buttons">
-          <Link to="/quotes" className="btn btn-primary">
-            <span className="btn-icon">←</span>
-            Quotes
-          </Link>
+        <div className="invoice-builder-actions">
           
           <Button
             variant="primary"
