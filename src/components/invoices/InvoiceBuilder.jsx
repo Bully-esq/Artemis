@@ -857,6 +857,7 @@ const InvoiceBuilder = () => {
           <Button
             variant="primary"
             onClick={handleSaveInvoice}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
           >
             <span className="btn-icon">💾</span>
             Save Invoice
@@ -865,6 +866,7 @@ const InvoiceBuilder = () => {
           <Button
             variant="primary"
             onClick={handleExportPDF}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
           >
             <span className="btn-icon">📄</span>
             Export PDF
@@ -873,6 +875,7 @@ const InvoiceBuilder = () => {
           <Button
             variant="primary"
             onClick={handleEmailInvoice}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
           >
             <span className="btn-icon">✉️</span>
             Email Invoice
@@ -882,6 +885,7 @@ const InvoiceBuilder = () => {
             variant="primary"
             onClick={handleMarkAsPaid}
             disabled={invoiceDetails.status === 'paid'}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
           >
             <span className="btn-icon">✓</span>
             Paid
@@ -891,6 +895,7 @@ const InvoiceBuilder = () => {
             variant="primary"
             onClick={handleApplyCIS}
             disabled={invoiceDetails.cisApplied}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
           >
             <span className="btn-icon">🔧</span>
             Apply CIS
@@ -899,6 +904,7 @@ const InvoiceBuilder = () => {
           <Button
             variant="danger"
             onClick={handleDeleteInvoice}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
           >
             <span className="btn-icon">🗑</span>
             Delete Invoice
@@ -907,6 +913,7 @@ const InvoiceBuilder = () => {
           <Button
             variant="primary"
             onClick={() => navigate('/settings')}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
           >
             <span className="btn-icon">⚙️</span>
             Settings
