@@ -23,6 +23,7 @@
 @import './components/common/toggleSwitch.css';
 @import './components/suppliers/catalogItemList.css';
 @import './components/invoices/invoice-builder.css';
+@import './components/cis.css';
 
 /* Import page-specific styles */
 @import './pages/dashboard.css';

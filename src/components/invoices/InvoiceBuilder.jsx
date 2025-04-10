@@ -7,6 +7,7 @@ import pdfGenerator from '../../services/pdfGenerator';
 import { formatDate } from '../../utils/formatters';
 import html2pdf from 'html2pdf.js'; // Add html2pdf import
 import '../../styles/index.css'; // Updated to use modular CSS structure
+import { saveCisDeduction, deleteCisRecord } from '../../services/cisTracker'; // Import CIS tracker service
 
 // Components
 import Button from '../common/Button';
@@ -73,6 +74,10 @@ const InvoiceBuilder = () => {
     quoteTotal: quoteTotal,
     cisApplied: false,
     cisDeduction: 0,
+    originalGrossAmount: 0, // Add field to store original amount before CIS
+    laborTotal: 0,          // Add field to store calculated labor total
+    cisRecordId: null,      // Add field to store the ID of the saved CIS record
+    originalLineItemsBeforeCIS: null, // Add field to store line items before CIS
     lineItems: [],
     vatInfo: {
       enabled: vatEnabled,
@@ -90,36 +95,36 @@ const InvoiceBuilder = () => {
   const [contactSearchTerm, setContactSearchTerm] = useState('');
 
   // Fetch invoice if we have an ID
-  const { data: invoice, isLoading: isLoadingInvoice } = useQuery(
+  const { 
+    data: fetchedInvoiceData, // Rename the data variable
+    isLoading: isLoadingInvoice, 
+    isFetching: isFetchingInvoice // Add isFetching for finer loading state
+  } = useQuery(
     ['invoice', id],
     () => api.invoices.getById(id),
     {
-      enabled: !!id,
-      onSuccess: (data) => {
-        if (data) {
-          setInvoiceDetails(data);
-        }
-      },
+      enabled: !!id, // Only fetch if ID exists
+      // Remove onSuccess here, handle in useEffect
       onError: (error) => {
         addNotification(`Error loading invoice: ${error.message}`, 'error');
       }
     }
   );
   
-  // Fetch quote if we have a quoteId
+  // Log the fetched data when it changes
+  console.log("Fetched Invoice Data from useQuery:", fetchedInvoiceData);
+
+  // *** RESTORE Fetch quote if we have a quoteId ***
   const { data: quote, isLoading: isLoadingQuote } = useQuery(
-    ['quote', quoteId],
+    ['quote', quoteId], // Use the quoteId from searchParams
     () => api.quotes.getById(quoteId),
     {
-      enabled: !!quoteId && !id,
+      enabled: !!quoteId && !id, // Only fetch if quoteId exists AND we are not editing an existing invoice (id is null)
       onSuccess: (data) => {
-        if (data) {
-          console.log("Loaded quote data for invoice:", data);
-          
-          // Extract line items and identify labor items
+        if (data && !id) { // Ensure we only pre-fill for NEW invoices from quotes
+          console.log("Loaded quote data for new invoice:", data);
+          // Pre-fill details from quote only when creating a new invoice
           const quoteLineItems = data.lineItems || [];
-          
-          // Find all labor items in the quote
           const laborItems = quoteLineItems.filter(item => 
             (item.description && (
               item.description.toLowerCase().includes('labour') || 
@@ -128,14 +133,9 @@ const InvoiceBuilder = () => {
             item.category === 'labour' ||
             item.isLabour === true
           );
-          
-          // Calculate total labor amount
           const totalLaborAmount = laborItems.reduce(
-            (sum, item) => sum + (parseFloat(item.amount) || 0), 
-            0
+            (sum, item) => sum + (parseFloat(item.amount) || 0), 0
           );
-          
-          // Process line items, marking labor items
           const processedLineItems = laborItems.map(item => ({
             id: item.id || `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             description: item.description || 'Labor',
@@ -143,23 +143,14 @@ const InvoiceBuilder = () => {
             quantity: parseFloat(item.quantity) || 1,
             isLabour: true
           }));
-          
-          // Calculate invoice amount based on type
-          let invoiceAmount = amount;
+          let invoiceAmount = amount; // Use amount from searchParams if available
           if (!invoiceAmount && data.grandTotal) {
-            // If no amount specified, calculate based on invoice type
-            if (invoiceType.includes('50%')) {
-              invoiceAmount = data.grandTotal * 0.5;
-            } else if (invoiceType.includes('25%')) {
-              invoiceAmount = data.grandTotal * 0.25;
-            } else if (invoiceType.includes('Full')) {
-              invoiceAmount = data.grandTotal;
-            }
+            if (invoiceType.includes('50%')) { invoiceAmount = data.grandTotal * 0.5; }
+            else if (invoiceType.includes('25%')) { invoiceAmount = data.grandTotal * 0.25; }
+            else if (invoiceType.includes('Full')) { invoiceAmount = data.grandTotal; }
           }
-            
-          // Pre-fill invoice details from quote
           setInvoiceDetails(prev => ({
-            ...prev,
+            ...prev, // Keep existing fields like invoiceNumber
             clientName: data.client?.name || data.clientName || '',
             clientCompany: data.client?.company || data.clientCompany || '',
             clientEmail: data.client?.email || data.clientEmail || '',
@@ -167,15 +158,45 @@ const InvoiceBuilder = () => {
             clientAddress: data.client?.address || data.clientAddress || '',
             description: `${invoiceType} for ${data.client?.company || data.clientCompany || 'project'}`,
             quoteId: data.id,
-            amount: invoiceAmount || prev.amount,
+            amount: invoiceAmount || prev.amount, // Use calculated or param amount
             quoteTotal: data.grandTotal || 0,
-            lineItems: processedLineItems, // Include only labor items
-            laborTotal: totalLaborAmount // Track total labor amount for CIS calculations
+            lineItems: processedLineItems, 
+            laborTotal: totalLaborAmount, 
+             // Reset CIS fields when creating from quote
+            cisApplied: false, 
+            cisRecordId: null,
+            originalLineItemsBeforeCIS: null,
+            originalGrossAmount: 0,
+            cisDeduction: 0 
           }));
         }
       }
+      // No critical onError needed here
     }
   );
+
+  // NEW: Effect to update local state when fetchedInvoiceData changes
+  useEffect(() => {
+    // Only run if we have an ID (editing existing) and fetched data is available
+    if (id && fetchedInvoiceData) {
+      console.log("useEffect running: Merging fetchedInvoiceData into state");
+
+      setInvoiceDetails(prevDetails => {
+        // Ensure fetched data has priority, especially for parsed fields from the server
+        const updatedDetails = {
+          ...prevDetails,         // Start with previous state
+          ...fetchedInvoiceData,  // Spread fetched data (should include correctly parsed arrays for lineItems and originalLineItemsBeforeCIS)
+          // Ensure boolean type for cisApplied, using the value from fetched data
+          cisApplied: Boolean(fetchedInvoiceData.cisApplied),
+          // Ensure lineItems and originalLineItemsBeforeCIS default correctly if missing in fetchedData
+          lineItems: fetchedInvoiceData.lineItems || [],
+          originalLineItemsBeforeCIS: fetchedInvoiceData.originalLineItemsBeforeCIS || null,
+        };
+        console.log("Data being merged into invoiceDetails state:", updatedDetails);
+        return updatedDetails;
+      });
+    }
+  }, [id, fetchedInvoiceData]);
   
   // Generate a unique invoice number if creating a new invoice
   useEffect(() => {
@@ -191,33 +212,37 @@ const InvoiceBuilder = () => {
   }, [id, invoiceDetails.invoiceNumber]);
   
   // Handle form submission
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, dataToSubmit = invoiceDetails) => {
     e.preventDefault();
     
-    if (!invoiceDetails.clientName) {
+    // Validate using dataToSubmit
+    if (!dataToSubmit.clientName) {
       addNotification('Client name is required', 'error');
       return;
     }
     
-    if (!invoiceDetails.amount || invoiceDetails.amount <= 0) {
+    if (!dataToSubmit.amount || dataToSubmit.amount <= 0) {
       addNotification('Amount must be greater than zero', 'error');
       return;
     }
     
     try {
       const invoiceData = {
-        ...invoiceDetails,
+        ...dataToSubmit, // Use the data passed in or current state
         id: id || Date.now().toString(),
         updatedAt: new Date().toISOString()
       };
       
-      if (!id) {
+      if (!id && !dataToSubmit.createdAt) { // Check if createdAt exists in dataToSubmit
         invoiceData.createdAt = new Date().toISOString();
       }
       
       await api.invoices.save(invoiceData);
-      addNotification('Invoice saved successfully', 'success');
-      navigate('/invoices');
+      // Avoid navigation on auto-save
+      // Only show success if not called from auto-save context (how to detect?)
+      // Maybe add a flag or check caller? For now, always show.
+      addNotification('Invoice saved successfully', 'success'); 
+      // navigate('/invoices'); // Remove navigation for auto-save
     } catch (error) {
       addNotification(`Error saving invoice: ${error.message}`, 'error');
     }
@@ -320,11 +345,18 @@ const InvoiceBuilder = () => {
   };
 
   // Handle save invoice
-  const handleSaveInvoice = async () => {
+  const handleSaveInvoice = async (invoiceDataToSave = invoiceDetails) => {
+    // Use invoiceDataToSave instead of relying solely on invoiceDetails state
     try {
-      await handleSubmit({ preventDefault: () => {} });
+      // We need to manually trigger the form submission logic
+      // but use the provided data or current state
+      const eventStub = { preventDefault: () => {} };
+      // Log the data being saved
+      console.log("Saving invoice data:", invoiceDataToSave);
+      await handleSubmit(eventStub, invoiceDataToSave); // Pass data to handleSubmit
     } catch (error) {
-      console.error('Error saving invoice:', error);
+      console.error('Error in handleSaveInvoice:', error);
+      addNotification('Auto-save failed.', 'error');
     }
   };
 
@@ -698,36 +730,128 @@ const InvoiceBuilder = () => {
             type: 'cis'
         });
 
-        // --- STEP 5: Update invoice state (Keep this, uses updated amounts) ---
-        setInvoiceDetails(prev => ({
-            ...prev,
+        // --- STEP 5: Store original line items before updating state ---
+        const originalItems = [...invoiceDetails.lineItems]; // Make a copy
+
+        // --- STEP 6: Prepare the updated state object ---
+        let updatedInvoiceState = {
+            ...invoiceDetails, // Start with current state
             lineItems: newLineItems,
             amount: netAmount,
             cisApplied: true,
             cisDeduction: cisDeduction,
-            laborTotal: totalLaborAmount, // Store the identified labour total
-            originalGrossAmount: originalGrossAmount
-        }));
+            laborTotal: totalLaborAmount,
+            originalGrossAmount: originalGrossAmount,
+            originalLineItemsBeforeCIS: originalItems, // Store original items
+            cisRecordId: null // Initialize cisRecordId
+        };
 
-        addNotification(`CIS deduction of £${cisDeduction.toFixed(2)} applied based on identified labour of £${totalLaborAmount.toFixed(2)}. Net amount is now £${netAmount.toFixed(2)}.`, 'success');
+        // --- STEP 7: Save the CIS deduction to the tracker and store its ID ---
+        let savedRecordId = null;
+        try {
+            const cisRecord = {
+                invoiceId: invoiceDetails.id || `temp-${Date.now()}`,
+                invoiceNumber: invoiceDetails.invoiceNumber || 'Draft Invoice',
+                clientName: invoiceDetails.clientName || 'Unknown Client',
+                clientCompany: invoiceDetails.clientCompany || '',
+                laborAmount: totalLaborAmount,
+                cisRate: cisRate,
+                cisDeduction: cisDeduction,
+                date: invoiceDetails.invoiceDate || new Date().toISOString()
+            };
+
+            // Save to CIS tracker and get the record ID
+            savedRecordId = saveCisDeduction(cisRecord);
+
+            if (savedRecordId) {
+              console.log('CIS deduction record saved to tracker:', savedRecordId);
+              // Add the record ID to the updated state object
+              updatedInvoiceState = {
+                  ...updatedInvoiceState,
+                  cisRecordId: savedRecordId
+              };
+            } else {
+               addNotification('Failed to save CIS record to tracker. CIS applied to invoice but not tracked.', 'warning');
+            }
+
+        } catch (trackerError) {
+            console.error('Error saving CIS deduction to tracker:', trackerError);
+            addNotification('Error saving CIS record to tracker. CIS applied to invoice but not tracked.', 'error');
+        }
+
+        // --- STEP 8: Update the actual React state ---
+        setInvoiceDetails(updatedInvoiceState);
+
+        // --- STEP 9: Add notification and trigger auto-save with the updated state ---
+        addNotification(`CIS deduction of £${cisDeduction.toFixed(2)} applied based on identified labour of £${totalLaborAmount.toFixed(2)}. Net amount is now £${netAmount.toFixed(2)}. Saving...`, 'success');
+        await handleSaveInvoice(updatedInvoiceState); // Pass the final state directly
+
     } catch (error) {
         console.error('Error applying CIS:', error);
         addNotification(`Error applying CIS: ${error.message}`, 'error');
     }
   };
 
-  // Add this function to open email client
-  const handleOpenEmailClient = () => {
-    const subject = `${invoiceDetails.client.address}`;
-    const body = `Hi ${invoiceDetails.clientName},\n\nPlease find attached your invoice (${invoiceDetails.invoiceNumber}) for ${invoiceDetails.description || 'your project'}.\n\nThe invoice is due by ${
-      invoiceDetails.dueDate ? new Date(invoiceDetails.dueDate).toLocaleDateString('en-GB') : 'the date specified'
-    }.\n\nIf you have any questions, please don't hesitate to contact me.\n\nBest regards,\n${settings.company?.name || 'Your Company'}`;
-    
-    // Open the mailto link
-    window.location.href = `mailto:${invoiceDetails.clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    
-    // Close the dialog
-    setShowEmailDialog(false);
+  // Add handleUndoCIS function
+  const handleUndoCIS = async () => { // Make async to await save
+    if (!invoiceDetails.cisApplied || !invoiceDetails.cisRecordId) {
+      addNotification('CIS has not been applied or record ID is missing. Cannot undo.', 'warning');
+      return;
+    }
+
+    // Confirm with the user
+    if (!window.confirm('Are you sure you want to undo the CIS application for this invoice? This will also remove the entry from the CIS tracker.')) {
+      return;
+    }
+
+    try {
+      // Attempt to delete the record from the tracker
+      const deleted = deleteCisRecord(invoiceDetails.cisRecordId);
+
+      if (deleted) {
+        console.log(`Deleted CIS record ${invoiceDetails.cisRecordId} from tracker.`);
+      } else {
+        // Even if deletion fails, we might still revert the UI, but warn the user
+        addNotification('Failed to delete the record from the tracker, but reverting invoice details.', 'warning');
+      }
+
+      // Revert invoice state before saving
+      const revertedState = {
+        ...invoiceDetails,
+        lineItems: invoiceDetails.originalLineItemsBeforeCIS || [], // Revert to original items
+        amount: invoiceDetails.originalGrossAmount || 0, // Revert to original amount
+        cisApplied: false,
+        cisDeduction: 0,
+        laborTotal: 0,
+        originalGrossAmount: 0,
+        cisRecordId: null,
+        originalLineItemsBeforeCIS: null
+      };
+      
+      setInvoiceDetails(revertedState);
+      
+      addNotification('CIS application undone. Saving changes...', 'info');
+
+      // Auto-save the reverted state
+      // Pass the reverted state directly to save to avoid race condition with setInvoiceDetails
+      await handleSaveInvoice(revertedState);
+
+    } catch (error) {
+      console.error('Error undoing CIS:', error);
+      addNotification(`Error undoing CIS: ${error.message}`, 'error');
+      // Attempt to revert UI state even if save fails
+      setInvoiceDetails(prev => ({
+        ...prev,
+        lineItems: prev.originalLineItemsBeforeCIS || [],
+        amount: prev.originalGrossAmount || 0,
+        cisApplied: false,
+        cisDeduction: 0,
+        laborTotal: 0,
+        originalGrossAmount: 0,
+        cisRecordId: null,
+        originalLineItemsBeforeCIS: null
+      }));
+    }
   };
 
   // Create a safer export PDF function that ensures preview is visible
@@ -783,16 +907,44 @@ const InvoiceBuilder = () => {
     // Show confirmation dialog before deletion
     if (window.confirm(`Are you sure you want to delete invoice ${invoiceDetails.invoiceNumber}? This action cannot be undone.`)) {
       try {
-        if (id) {
+        // Check if CIS was applied and we have a record ID before deleting invoice
+        const cisApplied = invoiceDetails.cisApplied;
+        const recordIdToDelete = invoiceDetails.cisRecordId;
+        console.log('Attempting delete. Invoice State ID:', invoiceDetails.id, 'CIS Applied:', cisApplied, 'Record ID:', recordIdToDelete);
+
+        // === Use invoiceDetails.id to determine if it's a saved invoice ===
+        const invoiceIdToDelete = invoiceDetails.id;
+
+        // --- MODIFIED CONDITION: Only check if ID exists in the state --- 
+        if (invoiceIdToDelete) { 
           // Delete the invoice if it exists in the database
-          await api.invoices.delete(id);
+          await api.invoices.delete(invoiceIdToDelete); // Use the ID from state
           addNotification('Invoice deleted successfully', 'success');
         } else {
-          // For new invoices just reset the form
+          // If no ID in state, treat as a draft
           addNotification('Invoice draft discarded', 'info');
         }
-        // Navigate back to the invoices list
+
+        // AFTER successful invoice deletion or discard, attempt to delete CIS record
+        if (cisApplied && recordIdToDelete) { 
+          try {
+            const deleted = deleteCisRecord(recordIdToDelete);
+            if (deleted) {
+              console.log(`Associated CIS record ${recordIdToDelete} deleted from tracker.`);
+              addNotification('Associated CIS record removed from tracker.', 'info');
+            } else {
+              console.warn(`Could not find or delete associated CIS record ${recordIdToDelete} from tracker.`);
+              addNotification('Invoice deleted, but failed to remove associated CIS record from tracker.', 'warning');
+            }
+          } catch (cisError) {
+            console.error('Error deleting associated CIS record:', cisError);
+            addNotification('Invoice deleted, but encountered an error removing associated CIS record.', 'error');
+          }
+        }
+
+        // Navigate back to the invoices list regardless of CIS deletion outcome
         navigate('/invoices');
+
       } catch (error) {
         console.error('Error deleting invoice:', error);
         addNotification(`Error deleting invoice: ${error.message}`, 'error');
@@ -877,8 +1029,27 @@ const InvoiceBuilder = () => {
     return 0;
   };
 
-  if (isLoadingInvoice || (quoteId && isLoadingQuote)) {
-    return <Loading message="Loading data..." />;
+  // Add handleOpenEmailClient function
+  const handleOpenEmailClient = () => {
+    const subject = `${invoiceDetails.client.address}`;
+    const body = `Hi ${invoiceDetails.clientName},\n\nPlease find attached your invoice (${invoiceDetails.invoiceNumber}) for ${invoiceDetails.description || 'your project'}.\n\nThe invoice is due by ${
+      invoiceDetails.dueDate ? new Date(invoiceDetails.dueDate).toLocaleDateString('en-GB') : 'the date specified'
+    }.\n\nIf you have any questions, please don't hesitate to contact me.\n\nBest regards,\n${settings.company?.name || 'Your Company'}`;
+    
+    // Open the mailto link
+    window.location.href = `mailto:${invoiceDetails.clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    // Close the dialog
+    setShowEmailDialog(false);
+  };
+
+  // UPDATED Loading check
+  // Show loading if react-query is loading/fetching OR if we are editing 
+  // an existing invoice (id exists) but invoiceDetails hasn't been populated yet
+  const showLoading = isLoadingInvoice || isFetchingInvoice || (id && !invoiceDetails.id);
+
+  if (showLoading) {
+    return <Loading message="Loading invoice data..." />;
   }
   
   return (
@@ -924,15 +1095,29 @@ const InvoiceBuilder = () => {
             Paid
           </Button>
           
-          <Button
-            variant="primary"
-            onClick={handleApplyCIS}
-            disabled={invoiceDetails.cisApplied}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
-          >
-            <span className="btn-icon">🔧</span>
-            Apply CIS
-          </Button>
+          {/* Conditional CIS Button */}
+          {invoiceDetails.cisApplied ? (
+            <Button
+              variant="warning" // Use warning color for undo
+              onClick={handleUndoCIS}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
+            >
+              <span className="btn-icon">↩️</span>
+              Undo CIS
+            </Button>
+          ) : (
+            // Only show Apply CIS button if CIS is enabled in settings
+            settings?.cis?.enabled && (
+              <Button
+                variant="primary"
+                onClick={handleApplyCIS}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
+              >
+                <span className="btn-icon">🔧</span>
+                Apply CIS
+              </Button>
+            )
+          )}
           
           <Button
             variant="danger"

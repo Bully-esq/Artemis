@@ -10,6 +10,7 @@ import ToggleSwitch from '../components/common/ToggleSwitch';
 import { useAppContext } from '../context/AppContext';
 import api from '../services/api';
 import { deepMerge } from '../utils/deepMerge';
+import CisDownloader from '../components/cis/CisDownloader';
 
 // Helper function to apply theme attribute for preview
 const applyThemePreview = (preference) => {
@@ -120,6 +121,14 @@ const Settings = () => {
           enabled: Boolean(newSettings.vat.enabled), // Ensure boolean
           number: newSettings.vat.number || ''
         } : { enabled: false, rate: 20, number: '' }, // Default VAT structure
+        // Ensure CIS enabled is saved as boolean
+        cis: newSettings.cis ? {
+          ...newSettings.cis,
+          enabled: Boolean(newSettings.cis.enabled),
+          companyName: newSettings.cis.companyName || '',
+          utr: newSettings.cis.utr || '',
+          niNumber: newSettings.cis.niNumber || '',
+        } : { enabled: false, companyName: '', utr: '', niNumber: ''}, // Default CIS structure
       };
       console.log("Processed settings:", processedSettings);
       return api.settings.save(processedSettings);
@@ -137,6 +146,33 @@ const Settings = () => {
     }
   );
 
+  // --- Auto-save CIS enabled state --- 
+  useEffect(() => {
+    // Only run if:
+    // 1. Initialization is complete (isInitialized is true)
+    // 2. localSettings is not null
+    // 3. We are not currently in the middle of a save operation triggered by this effect
+    if (isInitialized && localSettings && !saveSettingsMutation.isLoading) {
+      // We need a way to know if this effect is running due to the initial load vs. a user toggle.
+      // Using a ref to track if it's the first run after initialization for this specific setting.
+      const isInitialCisLoad = initialCisStateRef.current === undefined;
+      if (initialCisStateRef.current !== localSettings.cis?.enabled) {
+        // Update the ref to the current state
+        initialCisStateRef.current = localSettings.cis?.enabled;
+        
+        // Only save if it's NOT the initial load setting the value
+        if (!isInitialCisLoad) {
+            console.log('Auto-saving CIS enabled state:', localSettings.cis?.enabled);
+            handleSaveSettings(); // Reuse the existing save handler
+        }
+      }
+    }
+  }, [localSettings?.cis?.enabled, isInitialized, saveSettingsMutation.isLoading]); // Dependencies
+  
+  // Ref to track the initial state of cis.enabled after load
+  const initialCisStateRef = useRef(undefined);
+  // --- End Auto-save --- 
+
   // Load settings only once when component mounts and settings are available
   useEffect(() => {
     // Only initialize if settings are loaded and we haven't initialized yet
@@ -148,7 +184,7 @@ const Settings = () => {
         quote: { defaultMarkup: 0, prefix: 'Q-', validityPeriod: 30, defaultTerms: '1' },
         invoice: { prefix: 'INV-', defaultPaymentTerms: 30, notesTemplate: '', footer: '' },
         bank: { name: '', accountName: '', accountNumber: '', sortCode: '', iban: '', bic: '' },
-        cis: { companyName: '', utr: '', niNumber: '' },
+        cis: { enabled: false, companyName: '', utr: '', niNumber: '' }, // Add enabled flag
         vat: { enabled: false, rate: 20, number: '' },
       };
 
@@ -157,6 +193,8 @@ const Settings = () => {
 
       setLocalSettings(initialSettings);
       setLogoPreview(initialSettings.company?.logo || null);
+      // Set the initial state ref for CIS auto-save
+      initialCisStateRef.current = initialSettings.cis?.enabled;
       setIsInitialized(true);
       setIsLoading(false);
     }
@@ -515,35 +553,56 @@ const Settings = () => {
           {/* CIS Settings */}
           {activeTab === 'cis' && (
             <div className="settings-section">
-              <div className="notification-box warning">
-                <h3 className="notification-title">Construction Industry Scheme</h3>
-                <p className="notification-text">
-                  These settings are used for CIS tax deductions on invoices. 
-                  Make sure these details are correct to comply with HMRC regulations.
-                </p>
-              </div>
-
-              <FormField
-                label="Company Name for CIS"
-                name="cis-company-name"
-                value={localSettings.cis?.companyName || ''}
-                onChange={(e) => handleChange('cis', 'companyName', e.target.value)}
+              <ToggleSwitch
+                label="Enable CIS Features"
+                checked={Boolean(localSettings?.cis?.enabled)}
+                onChange={(isChecked) => handleChange('cis', 'enabled', isChecked)}
+                helpText="Enable to configure and use CIS features for invoicing and reporting."
+                name="cis-enabled-toggle"
               />
 
-              <FormField
-                label="UTR Number"
-                name="cis-utr"
-                value={localSettings.cis?.utr || ''}
-                onChange={(e) => handleChange('cis', 'utr', e.target.value)}
-                helpText="Your Unique Taxpayer Reference number"
-              />
+              {/* Conditionally render the rest of the CIS settings */}
+              {localSettings?.cis?.enabled && (
+                <>
+                  <div className="notification-box warning" style={{ marginTop: '1rem' }}>
+                    <h3 className="notification-title">Construction Industry Scheme</h3>
+                    <p className="notification-text">
+                      These settings are used for CIS tax deductions on invoices. 
+                      Make sure these details are correct to comply with HMRC regulations.
+                    </p>
+                  </div>
 
-              <FormField
-                label="National Insurance Number"
-                name="cis-ni-number"
-                value={localSettings.cis?.niNumber || ''}
-                onChange={(e) => handleChange('cis', 'niNumber', e.target.value)}
-              />
+                  <FormField
+                    label="Company Name for CIS"
+                    name="cis-company-name"
+                    value={localSettings.cis?.companyName || ''}
+                    onChange={(e) => handleChange('cis', 'companyName', e.target.value)}
+                  />
+
+                  <FormField
+                    label="UTR Number"
+                    name="cis-utr"
+                    value={localSettings.cis?.utr || ''}
+                    onChange={(e) => handleChange('cis', 'utr', e.target.value)}
+                    helpText="Your Unique Taxpayer Reference number"
+                  />
+
+                  <FormField
+                    label="National Insurance Number"
+                    name="cis-ni-number"
+                    value={localSettings.cis?.niNumber || ''}
+                    onChange={(e) => handleChange('cis', 'niNumber', e.target.value)}
+                  />
+
+                  <div className="mt-8 pt-5 border-t border-gray-200">
+                    <h3 className="text-lg font-medium text-gray-900 mb-3">CIS Deduction Records</h3>
+                    <p className="text-sm text-gray-500 mb-6">
+                      Download a spreadsheet of CIS deductions recorded for a selected tax year.
+                    </p>
+                    <CisDownloader />
+                  </div>
+                </>
+              )}
             </div>
           )}
 
