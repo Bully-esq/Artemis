@@ -76,6 +76,14 @@
   width: 100%; 
 }
 
+/* Ensure form and preview panels take full width (Increased Specificity) */
+.main-content .invoice-form-panel,
+.main-content .invoice-preview-panel {
+  width: 100%;
+  max-width: 100%; /* Override any potential inherited max-width */
+  box-sizing: border-box; /* Include padding/border in the element's total width */
+}
+
 /* Renamed class again */
 .invoice-builder-actions {
   display: flex;
@@ -101,4 +109,14 @@
 .invoice-builder-actions a.btn .btn-icon {
   margin-right: 0.5rem;
   vertical-align: middle; 
+}
+
+/* Styles for invoice line items (moved from inline) */
+.labour-row {
+  background-color: rgba(173, 216, 230, 0.3); /* Light blue background for labour */
+}
+
+.cis-deduction-row {
+  background-color: rgba(255, 99, 71, 0.1); /* Light red background for CIS */
+  font-style: italic;
 } 

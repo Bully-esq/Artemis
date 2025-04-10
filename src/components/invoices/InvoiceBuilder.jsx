@@ -21,6 +21,7 @@ import PageLayout from '../common/PageLayout';
 import { ActionButtonContainer } from '../common/ActionButtonContainer';  // If this exists
 
 // Custom CSS for labour items and CIS deductions
+/*
 const styles = {
   labourRow: {
     backgroundColor: 'rgba(173, 216, 230, 0.3)',
@@ -30,6 +31,7 @@ const styles = {
     fontStyle: 'italic',
   },
 };
+*/
 
 const InvoiceBuilder = () => {
   const { id } = useParams();
@@ -977,9 +979,11 @@ const InvoiceBuilder = () => {
         </div>
       </div>
       
-      <div className="invoice-layout">
+      {/* Remove the invoice-layout div which enforces side-by-side layout */}
+      {/* <div className="invoice-layout"> */}
         {/* Left column - Form */}
-        <div className="invoice-form-panel">
+        {/* Add mb-4 for margin-bottom */}
+        <div className="invoice-form-panel mb-4"> 
           <div className="card">
             <div className="card-body">
               <form onSubmit={handleSubmit}>
@@ -1184,7 +1188,6 @@ const InvoiceBuilder = () => {
                         <tr 
                           key={item.id} 
                           className={item.type === 'cis' ? 'cis-deduction-row' : (item.isLabour || item.isLabor ? 'labour-row' : '')}
-                          style={item.type === 'cis' ? styles.cisDeductionRow : (item.isLabour || item.isLabor ? styles.labourRow : {})}
                         >
                           <td>{item.description}</td>
                           <td>{item.quantity || 1}</td>
@@ -1216,10 +1219,12 @@ const InvoiceBuilder = () => {
           </div>
         </div>
         
-        {/* Right column - Preview */}
+        {/* Right column - Preview Section */}
+        {/* Preview panel now appears below the form panel */}
         <div className="invoice-preview-panel">
           {/* Invoice Preview */}
-          <div className="card">
+          {/* Add mb-4 for margin-bottom */}
+          <div className="card mb-4"> 
             <div className="card-header">
               <h2 className="card-title">Invoice Preview</h2>
             </div>
@@ -1233,7 +1238,8 @@ const InvoiceBuilder = () => {
           </div>
           
           {/* Connected Quote */}
-          <div className="card">
+          {/* Add mb-4 for margin-bottom */}
+          <div className="card mb-4"> 
             <div className="card-header">
               <h2 className="card-title">Connected Quote</h2>
             </div>
@@ -1283,7 +1289,8 @@ const InvoiceBuilder = () => {
           </div>
           
           {/* Payment Schedule */}
-          <div className="card">
+          {/* No margin needed for the last card in this section */}
+          <div className="card"> 
             <div className="card-header">
               <h2 className="card-title">Payment Schedule</h2>
             </div>
@@ -1359,7 +1366,7 @@ const InvoiceBuilder = () => {
             </div>
           </div>
         </div>
-      </div>
+      {/* </div> // End of removed invoice-layout div */}
 
       {/* Email Instructions Dialog */}
       <Dialog
