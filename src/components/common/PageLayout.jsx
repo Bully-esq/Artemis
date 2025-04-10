@@ -16,7 +16,7 @@ const PageLayout = ({ title, children, actions }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Navigation items
   const navigation = [
@@ -90,76 +90,84 @@ const PageLayout = ({ title, children, actions }) => {
   
   return (
     <div className="layout-container">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div className="mobile-sidebar-overlay">
-          <div 
-            className="sidebar-backdrop"
-            onClick={() => setSidebarOpen(false)}
-          ></div>
-          
-          {/* Mobile sidebar */}
-          <div className="mobile-sidebar">
-            <div className="sidebar-header">
-              <div className="sidebar-title">
-                <h1>Axton's Staircases</h1>
-              </div>
-              <button
-                className="close-button"
-                onClick={() => setSidebarOpen(false)}
-              >
-                <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="sidebar-content">
-              <nav className="sidebar-nav">
-                {navigation.map((item) => (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={`nav-item ${isActive(item.href) ? 'active' : ''}`}
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <div className={`nav-icon ${isActive(item.href) ? 'active' : ''}`}>
-                      {renderIcon(item.icon)}
-                    </div>
-                    {item.name}
-                  </Link>
-                ))}
-              </nav>
-            </div>
-            
-            {/* Mobile sidebar footer with logout */}
-            <div className="sidebar-footer">
-              <div className="user-info">
-                <div className="user-avatar">
+      {/* Mobile sidebar overlay (Container is always present, shown/hidden via CSS) */}
+      <div className="mobile-sidebar-overlay">
+        {/* Only render backdrop and sidebar content when open */}
+        {isSidebarOpen && (
+          <>
+            {/* Backdrop for mobile overlay */}
+            <div
+              className="sidebar-backdrop"
+              onClick={() => setIsSidebarOpen(false)}
+              style={{ /* Quick inline style for backdrop */
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+                backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 40 
+              }}
+            ></div>
+
+            {/* Mobile sidebar */}
+            <div className="mobile-sidebar">
+              <div className="sidebar-header">
+                <div className="sidebar-title">
+                  <h1>Axton's Staircases</h1>
+                </div>
+                <button
+                  className="close-button"
+                  onClick={() => setIsSidebarOpen(false)}
+                >
                   <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                </div>
-                <div className="user-details">
-                  <span className="user-name">{user?.name || 'User'}</span>
-                </div>
+                </button>
               </div>
-              <button 
-                onClick={handleLogout}
-                className="logout-button"
-              >
-                <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                <span>Logout</span>
-              </button>
+              
+              <div className="sidebar-content">
+                <nav className="sidebar-nav">
+                  {navigation.map((item) => (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className={`nav-item ${isActive(item.href) ? 'active' : ''}`}
+                      onClick={() => setIsSidebarOpen(false)}
+                    >
+                      <div className={`nav-icon ${isActive(item.href) ? 'active' : ''}`}>
+                        {renderIcon(item.icon)}
+                      </div>
+                      {item.name}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
+              
+              {/* Mobile sidebar footer with logout */}
+              <div className="sidebar-footer">
+                <div className="user-info">
+                  <div className="user-avatar">
+                    <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <div className="user-details">
+                    <span className="user-name">{user?.name || 'User'}</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={handleLogout}
+                  className="logout-button"
+                >
+                  <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  <span>Logout</span>
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
       
-      {/* Sidebar for desktop */}
-      <div className="desktop-sidebar">
+      {/* Sidebar for desktop (Always present, shown/hidden via CSS media query) */}
+      <div className={`desktop-sidebar ${!isSidebarOpen ? 'collapsed' : ''}`}>
         <div className="sidebar-inner">
           <div className="sidebar-header">
             <div className="sidebar-title">
@@ -214,8 +222,8 @@ const PageLayout = ({ title, children, actions }) => {
           <div className="header-left">
             <button
               className="menu-button"
-              onClick={() => setSidebarOpen(true)}
-              aria-label="Open menu"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              aria-label="Toggle menu"
             >
               <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />

@@ -23,4 +23,71 @@
   --info-color: #4fc3f7;       /* Brighter cyan */
 
   /* Button colors are intentionally NOT overridden here */
+
+  /* Preview Styles (Invoices & Quotes) */
+  .invoice-preview,
+  .quote-preview {
+    background-color: var(--background-secondary); /* Darker background for previews */
+    color: var(--text-primary);
+    border-color: var(--border-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); /* Adjust shadow for dark */
+  }
+
+  .invoice-preview .section-header,
+  .invoice-preview .detail-label,
+  .invoice-preview .bank-details-title,
+  .invoice-preview .cis-label,
+  .invoice-preview .table th,
+  .quote-preview .section-header,
+  .quote-preview .detail-label,
+  .quote-preview .terms-heading,
+  .quote-preview .terms-subheading,
+  .quote-preview .quote-table th {
+    color: var(--text-primary); /* Ensure headers/labels are readable */
+  }
+
+  .invoice-preview .table th,
+  .invoice-preview .table td,
+  .invoice-preview .total-row td,
+  .invoice-preview .client-contact-info,
+  .quote-preview .quote-table th,
+  .quote-preview .quote-table td,
+  .quote-preview .summary-total,
+  .quote-preview .summary-stats {
+    border-color: var(--border-color-darker); /* Use a slightly darker border */
+  }
+  
+  .invoice-preview .labour-row {
+      background-color: rgba(255, 255, 255, 0.05); /* Subtle background for labour row */
+  }
+
+  /* Ensure specific text colors have enough contrast */
+  .invoice-preview .empty-message,
+  .quote-preview .quote-reference,
+  .quote-preview .stat-label {
+    color: var(--text-secondary);
+  }
+  
+  .invoice-preview .company-name,
+  .invoice-preview .client-name,
+  .invoice-preview .total-label,
+  .invoice-preview .total-value,
+  .quote-preview .company-name,
+  .quote-preview .client-name,
+  .quote-preview .total-row td:first-child,
+  .quote-preview .total-row td:last-child {
+      font-weight: 600; /* Keep total/important names bold */
+      color: var(--text-primary); 
+  }
+  
+  /* Adjust specific components if needed */
+  .invoice-preview .cis-deduction-row {
+    color: #f87171; /* Keep danger color, ensure contrast */
+  }
+  
+  /* Ensure links are themed */
+  .invoice-preview a,
+  .quote-preview a {
+    color: var(--link-color);
+  }
 }

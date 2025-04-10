@@ -8,7 +8,22 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  transition: width 0.3s ease-in-out, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  overflow: hidden;
+}
+
+/* Re-add collapsed state for desktop sidebar */
+.desktop-sidebar.collapsed {
+  width: 0;
+  border-right: none;
+  overflow: hidden; /* Ensure content doesn't spill */
+}
+
+/* Hide inner content when collapsed */
+.desktop-sidebar.collapsed .sidebar-inner {
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0s 0.3s, opacity 0.3s ease-in-out;
 }
 
 .sidebar-inner {
@@ -102,53 +117,36 @@
 /* Mobile sidebar */
 .mobile-sidebar-overlay {
   display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
 }
 
-@media (max-width: 767px) {
-  .desktop-sidebar {
-    display: none;
-  }
-  
-  .mobile-sidebar-overlay {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 40;
-  }
+.mobile-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 270px;
+  max-width: 80vw;
+  height: 100vh;
+  background-color: var(--background-secondary);
+  z-index: 41;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out;
+}
 
-  .sidebar-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-  }
-
-  .mobile-sidebar {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 270px;
-    max-width: 80vw;
-    height: 100vh;
-    background-color: var(--background-secondary);
-    z-index: 41;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .close-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 8px;
-  }
+.close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
 }
 
 /* Header */
@@ -160,19 +158,14 @@
 }
 
 .menu-button {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   padding: 0 16px;
   cursor: pointer;
   color: var(--text-light);
-}
-
-@media (max-width: 767px) {
-  .menu-button {
-    display: block;
-    border-right: 1px solid var(--border);
-  }
 }
 
 .header-content {
@@ -199,4 +192,16 @@
 .action-buttons .btn-sm {
   position: relative;
   top: -2px; /* Adjust this value to move the small button up as needed */
+}
+
+/* Add Media Queries to control sidebar visibility */
+
+/* On Mobile (<= 767px): Show mobile overlay, hide desktop sidebar */
+@media (max-width: 767px) {
+  .desktop-sidebar {
+    display: none;
+  }
+  .mobile-sidebar-overlay {
+    display: block; /* Show the container on mobile */
+  }
 }
