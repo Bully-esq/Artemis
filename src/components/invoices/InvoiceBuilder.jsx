@@ -52,7 +52,6 @@ const InvoiceBuilder = () => {
   const [newItemName, setNewItemName] = useState('');
   const [newItemAmount, setNewItemAmount] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState(1);
-  const [isNewItemLabour, setIsNewItemLabour] = useState(false); // Add state for quick add labour
 
   // Update the useState section to use these parameters 
   const [invoiceDetails, setInvoiceDetails] = useState({
@@ -486,7 +485,6 @@ const InvoiceBuilder = () => {
       description: newItemName,
       amount: parseFloat(newItemAmount),
       quantity: parseInt(newItemQuantity) || 1,
-      isLabour: isNewItemLabour // Add labour flag from state
     };
     
     console.log('Adding item:', newItem); // DEBUG: Log the item being added
@@ -512,7 +510,6 @@ const InvoiceBuilder = () => {
     setNewItemName('');
     setNewItemAmount('');
     setNewItemQuantity(1);
-    setIsNewItemLabour(false); // Reset the checkbox state
   };
 
   // Handle removing items from the invoice
@@ -539,8 +536,10 @@ const InvoiceBuilder = () => {
         return;
     }
 
-    // Capture the original gross amount
+    // Capture the original gross amount BEFORE any modifications
     const originalGrossAmount = invoiceDetails.amount || 0;
+    console.log("DEBUG - Original Gross Amount:", originalGrossAmount);
+
 
     if (originalGrossAmount <= 0) {
         addNotification('Invoice amount must be greater than zero to apply CIS.', 'warning');
@@ -548,75 +547,42 @@ const InvoiceBuilder = () => {
     }
 
     try {
-        // --- STEP 0: Calculate labor total from existing quick-add line items ---
-        // Check both isLabour and isLabor for compatibility
-        const quickAddLabourItems = (invoiceDetails.lineItems || [])
-            .filter(item => item.isLabour === true || item.isLabor === true);
-            
-        console.log("DEBUG - Labour Items Found:", quickAddLabourItems);
-        
-        const quickAddLabourTotal = quickAddLabourItems
-            .reduce((sum, item) => {
-                const itemAmount = parseFloat(item.amount || 0);
-                const itemQuantity = parseFloat(item.quantity || 1);
-                return sum + (itemAmount * itemQuantity);
-            }, 0);
-        console.log("DEBUG - Quick Add Labour Total Calculated:", quickAddLabourTotal);
-
-        // --- STEP 1: Find all labor items in the connected quote ---
+        // --- STEP 1: Find all labor items in the connected quote (Keep this) ---
         let quoteLabourItems = [];
-        let quoteLabourTotal = 0; // Renamed from totalLaborAmount
+        let quoteLabourTotal = 0;
         let quoteData = null;
 
         if (invoiceDetails.quoteId) {
-            // Fetch the quote to analyze items
             quoteData = await api.quotes.getById(invoiceDetails.quoteId);
             console.log("Quote data for CIS analysis:", quoteData);
 
             if (quoteData) {
-                // Get items from the quote (use selectedItems if available, otherwise lineItems)
                 const quoteItems = quoteData.selectedItems || quoteData.lineItems || [];
-
-                // First pass - look for items explicitly marked as labor
+                // Labour identification logic for quote items (keep as is)
                 quoteLabourItems = quoteItems.filter(item =>
                     item.category === 'labour' ||
                     item.isLabour === true ||
                     (item.type && item.type.toLowerCase() === 'labour')
                 );
-
-                // If no explicit labor items, check descriptions for labor-related terms
                 if (quoteLabourItems.length === 0) {
                     quoteLabourItems = quoteItems.filter(item =>
                         (item.description && (
                             item.description.toLowerCase().includes('labour') ||
-                            item.description.toLowerCase().includes('labor')
+                            item.description.toLowerCase().includes('labor') ||
+                            item.description.toLowerCase().includes('install') ||
+                            item.description.toLowerCase().includes('fitting')
                         )) ||
                         (item.name && (
                             item.name.toLowerCase().includes('labour') ||
-                            item.name.toLowerCase().includes('labor')
-                        ))
-                    );
-                }
-
-                // If still no labor items, check for installation terms (like in the HTML version)
-                if (quoteLabourItems.length === 0) {
-                    quoteLabourItems = quoteItems.filter(item =>
-                        (item.description && (
-                            item.description.toLowerCase().includes('install') ||
-                            item.description.toLowerCase().includes('fitting') ||
-                            item.description.toLowerCase().includes('fitter')
-                        )) ||
-                        (item.name && (
+                            item.name.toLowerCase().includes('labor') ||
                             item.name.toLowerCase().includes('install') ||
-                            item.name.toLowerCase().includes('fitting') ||
-                            item.name.toLowerCase().includes('fitter')
+                            item.name.toLowerCase().includes('fitting')
                         ))
                     );
                 }
 
                 console.log("Quote Labor items found:", quoteLabourItems);
 
-                // Calculate total labor amount from quote items
                 quoteLabourTotal = quoteLabourItems.reduce((sum, item) => {
                     const itemAmount = parseFloat(item.cost || item.amount || 0);
                     const itemQuantity = parseFloat(item.quantity || 1);
@@ -627,72 +593,83 @@ const InvoiceBuilder = () => {
             }
         }
 
-        // --- STEP 2: Determine the final labor amount to use ---
-        let totalLaborAmount = 0; // Initialize final labor amount
+        // --- ADDED: Identify labour in current manual invoice items ---
+        const manualLineItems = invoiceDetails.lineItems || [];
+        const manualLabourItems = manualLineItems.filter(item =>
+            !item.type || item.type !== 'cis' // Exclude previous CIS deductions/adjustments
+        ).filter(item =>
+            // Check description for keywords
+            (item.description && (
+                item.description.toLowerCase().includes('labour') ||
+                item.description.toLowerCase().includes('labor') ||
+                item.description.toLowerCase().includes('install') ||
+                item.description.toLowerCase().includes('fitting')
+            )) ||
+            // Check name for keywords (if name property exists on manual items)
+            (item.name && (
+                item.name.toLowerCase().includes('labour') ||
+                item.name.toLowerCase().includes('labor') ||
+                item.name.toLowerCase().includes('install') ||
+                item.name.toLowerCase().includes('fitting')
+            ))
+            // Note: No category or isLabour check needed/available for typical quick-add items now
+        );
 
-        if (quoteLabourTotal > 0) {
-            totalLaborAmount = quoteLabourTotal;
-            console.log("DEBUG - Using labour amount from connected quote:", totalLaborAmount);
-        } else if (quickAddLabourTotal > 0) {
-            totalLaborAmount = quickAddLabourTotal;
-            console.log("DEBUG - Using labour amount from quick-add items:", totalLaborAmount);
-        } else {
-            console.log("DEBUG - No specific labour items found. Asking user for confirmation/input.");
-            // If no labor found, ask user for confirmation
-            if (window.confirm('No labour items were found in the quote or marked manually. Do you want to treat the entire invoice amount as labor for CIS calculation?')) {
-                // User confirmed to treat everything as labor
-                totalLaborAmount = originalGrossAmount;
-                console.log("DEBUG - User confirmed treating entire amount as labor:", totalLaborAmount);
-            } else {
-                // User declined - allow manual labor entry via a prompt
-                const manualLabor = window.prompt('Enter the labour portion of the invoice amount:', `${(originalGrossAmount * 0.5).toFixed(2)}`);
-                if (manualLabor === null) {
-                    // User cancelled the prompt
-                    return;
-                }
-                totalLaborAmount = parseFloat(manualLabor) || 0;
+        console.log("DEBUG - Manual Labour Items Found in Invoice:", manualLabourItems);
 
-                if (totalLaborAmount <= 0) {
-                    addNotification('Invalid labour amount. CIS not applied.', 'error');
-                    return;
-                }
+        const manualLabourTotal = manualLabourItems.reduce((sum, item) => {
+            const itemAmount = parseFloat(item.amount || 0);
+            const itemQuantity = parseFloat(item.quantity || 1);
+            // Ensure we don't double-count negative CIS lines if filtering failed
+            return sum + (itemAmount > 0 ? (itemAmount * itemQuantity) : 0);
+        }, 0);
 
-                console.log("DEBUG - User entered manual labour amount:", totalLaborAmount);
-            }
+        console.log("DEBUG - Manual Labour Total Calculated:", manualLabourTotal);
+
+
+        // --- STEP 2: Determine the final labor amount to use (REVISED) ---
+        // Combine labour found in quote and manually added items
+        let totalLaborAmount = quoteLabourTotal + manualLabourTotal;
+        console.log(`DEBUG - Combined Labour Total (Quote: ${quoteLabourTotal.toFixed(2)}, Manual: ${manualLabourTotal.toFixed(2)}): ${totalLaborAmount.toFixed(2)}`);
+
+        // --- ADDED: Check if any labour was found ---
+        if (totalLaborAmount <= 0.01) { // Use threshold for float comparison
+            addNotification('No labour items found in quote or invoice line items based on keywords (labour, install, fitting). CIS not applied.', 'warning');
+            return; // Exit the function if no labour identified
         }
 
-        // Sanity check: labor amount cannot exceed the original gross amount
+        // --- Sanity check (Keep this) ---
         console.log("DEBUG - Final Labour Amount before Sanity Check:", totalLaborAmount);
         if (totalLaborAmount > originalGrossAmount) {
-            console.warn(`Labour amount (£${totalLaborAmount.toFixed(2)}) exceeds invoice gross amount (£${originalGrossAmount.toFixed(2)}). Clamping to gross amount.`);
+            console.warn(`Combined Labour amount (£${totalLaborAmount.toFixed(2)}) exceeds invoice gross amount (£${originalGrossAmount.toFixed(2)}). Clamping to gross amount.`);
             totalLaborAmount = originalGrossAmount;
         }
         console.log("DEBUG - Final Labour Amount after Sanity Check:", totalLaborAmount);
 
-        // --- STEP 3: Calculate CIS deduction (exactly like in HTML version) ---
+
+        // --- STEP 3: Calculate CIS deduction (Keep this, uses updated totalLaborAmount) ---
         const nonLaborAmount = originalGrossAmount - totalLaborAmount;
-        const cisRate = 0.20; // 20% like in the HTML version
+        const cisRate = 0.20;
         const cisDeduction = totalLaborAmount * cisRate;
         const netAmount = originalGrossAmount - cisDeduction;
 
         console.log(`
             Original Gross: £${originalGrossAmount.toFixed(2)}
-            Labour Amount: £${totalLaborAmount.toFixed(2)}
-            Non-Labor Amount: £${nonLaborAmount.toFixed(2)}
+            Total Identified Labour: £${totalLaborAmount.toFixed(2)}
+            Calculated Non-Labor: £${nonLaborAmount.toFixed(2)}
             CIS Rate: ${(cisRate * 100).toFixed(0)}%
             CIS Deduction: £${cisDeduction.toFixed(2)}
             Net Amount: £${netAmount.toFixed(2)}
-            (Using Labour Amount: £${totalLaborAmount.toFixed(2)})
         `);
 
-        // --- STEP 4: Create new line items with labor, non-labor and CIS deduction ---
+        // --- STEP 4: Create new line items (Keep this structure) ---
         const newLineItems = [];
 
         // Add non-labor item if applicable
-        if (nonLaborAmount > 0.01) { // Use a small threshold for floating-point comparison
+        if (nonLaborAmount > 0.01) {
             newLineItems.push({
                 id: `nonlabor-${Date.now()}`,
-                description: "Materials/Non-Labour", // Updated description
+                description: "Materials/Non-Labour",
                 amount: nonLaborAmount,
                 quantity: 1
             });
@@ -702,11 +679,11 @@ const InvoiceBuilder = () => {
         if (totalLaborAmount > 0.01) {
             newLineItems.push({
                 id: `labour-${Date.now()}`,
-                description: "Labour Charges",
+                description: "Labour Charges", // Standardized description
                 amount: totalLaborAmount,
                 quantity: 1,
-                isLabour: true, // Ensure labor item is marked as such
-                category: 'labour'
+                // isLabour: true, // Can optionally add this back for styling/display purposes if needed
+                // category: 'labour' // Can optionally add this back
             });
         }
 
@@ -714,23 +691,23 @@ const InvoiceBuilder = () => {
         newLineItems.push({
             id: `cis-${Date.now()}`,
             description: `CIS Deduction (${(cisRate * 100).toFixed(0)}%)`,
-            amount: -cisDeduction, // Negative to show as a deduction
+            amount: -cisDeduction,
             quantity: 1,
             type: 'cis'
         });
 
-        // --- STEP 5: Update invoice state with new details ---
+        // --- STEP 5: Update invoice state (Keep this, uses updated amounts) ---
         setInvoiceDetails(prev => ({
             ...prev,
             lineItems: newLineItems,
             amount: netAmount,
             cisApplied: true,
             cisDeduction: cisDeduction,
-            laborTotal: totalLaborAmount, // Use the final calculated labor amount
-            originalGrossAmount: originalGrossAmount // Store the original amount
+            laborTotal: totalLaborAmount, // Store the identified labour total
+            originalGrossAmount: originalGrossAmount
         }));
 
-        addNotification(`CIS deduction of £${cisDeduction.toFixed(2)} applied. Net amount is now £${netAmount.toFixed(2)}.`, 'success');
+        addNotification(`CIS deduction of £${cisDeduction.toFixed(2)} applied based on identified labour of £${totalLaborAmount.toFixed(2)}. Net amount is now £${netAmount.toFixed(2)}.`, 'success');
     } catch (error) {
         console.error('Error applying CIS:', error);
         addNotification(`Error applying CIS: ${error.message}`, 'error');
@@ -1178,19 +1155,6 @@ const InvoiceBuilder = () => {
                       onChange={(e) => setNewItemQuantity(e.target.value)}
                     />
                   </div>
-                </div>
-                {/* Add Checkbox for Labour */}
-                <div className="form-field form-check mb-3">
-                  <input
-                    type="checkbox"
-                    id="isNewItemLabour"
-                    className="form-check-input mr-2" // Added margin-right
-                    checked={isNewItemLabour}
-                    onChange={(e) => setIsNewItemLabour(e.target.checked)}
-                  />
-                  <label htmlFor="isNewItemLabour" className="form-check-label">
-                    Mark as Labour (for CIS)
-                  </label>
                 </div>
                 <Button
                   variant="primary"
