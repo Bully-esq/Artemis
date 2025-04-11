@@ -177,6 +177,18 @@
   
   /* End of catch-all CSS */
 
+  /* Ensure settings tabs container can scroll horizontally */
+  .settings-card .card-content {
+    overflow-x: visible !important; /* Allow children like tabs to scroll */
+  }
+
+  /* Re-affirm scrolling for settings tabs, overriding general card rules if necessary */
+  .settings-tabs.tabs {
+    overflow-x: auto !important; /* Ensure horizontal scrolling for tabs */
+    /* Add some padding to the right to avoid scrollbar cutting off last tab */
+    padding-right: 1rem; 
+  }
+
   /* General layout adjustments */
   .container, .page-container {
     padding: 0;
