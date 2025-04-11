@@ -82,7 +82,7 @@
     overflow: visible !important; /* Ensure content isn't cut off by overflow */
   }
   
-  /* Fix form fields inside cards to prevent cutoff */
+  /* Fix form fields inside cards: Adjust margins and box-sizing for all */
   .card input, 
   .card select, 
   .card textarea,
@@ -95,10 +95,33 @@
   div[class*="card"] .form-field {
     margin-top: 4px !important;
     margin-bottom: 8px !important;
-    width: 100% !important;
     box-sizing: border-box !important;
   }
   
+  /* Force ONLY inputs/selects/textareas inside cards to be full width */
+  .card input, 
+  .card select, 
+  .card textarea,
+  div[class*="card"] input,
+  div[class*="card"] select,
+  div[class*="card"] textarea {
+    width: 100% !important;
+  }
+
+  /* Diagnostic: Prevent the field wrapper from stretching */
+  .toggle-switch-field {
+    width: auto !important;     /* Try to force natural width */
+    flex-grow: 0 !important;    /* Prevent growing in flex contexts */
+    flex-shrink: 0 !important;  /* Prevent shrinking (might help stability) */
+    align-self: flex-start !important; /* Align self to start if parent is flex */
+  }
+
+  /* Force the SLIDER itself to the correct width, overriding its stretch */
+  .toggle-switch-slider {
+    width: 50px !important;  /* Explicit width */
+    right: auto !important; /* Override the base 'right: 0' which causes stretch */
+  }
+
   /* Force any nested grid elements to be single-column regardless of inline styles */
   body .form-row[style*="display: grid"] *,
   body div[style*="display: grid"] *,
@@ -112,6 +135,16 @@
   html, body {
     max-width: 100% !important;
     overflow-x: hidden !important;
+  }
+
+  /* Remove padding from main content area on mobile to maximize space */
+  .main-content {
+    padding: 0 !important; 
+  }
+
+  /* Ensure the main layout container uses the primary background on mobile */
+  .layout-container {
+    background-color: var(--background-primary) !important;
   }
 
   /* Add this strong catch-all CSS at the beginning of the media query */
@@ -1288,6 +1321,47 @@
     max-width: 100% !important;
     box-sizing: border-box !important;
   }
+
+  /* Mobile Notification Adjustments */
+  .notifications-container {
+    top: 1rem;
+    left: 1rem;
+    right: 1rem;
+    width: auto; /* Let left/right margins define width */
+    max-width: none; /* Remove max-width limit on mobile */
+  }
+
+  .notification {
+    border-radius: 0.375rem; /* Slightly smaller radius */
+  }
+
+  .notification-content {
+    padding: 0.5rem 0.75rem; /* Reduced padding */
+  }
+
+  .notification-icon-container {
+    margin-right: 0.375rem; /* Reduced margin */
+  }
+
+  .notification-icon {
+    height: 1.25rem; /* Smaller icon */
+    width: 1.25rem;
+  }
+
+  .notification-message p {
+    font-size: 0.8rem; /* Smaller text */
+  }
+
+  .notification-close {
+    margin-left: 0.5rem; /* Reduced margin */
+    padding: 0.125rem; /* Tighter padding */
+  }
+
+  .notification-close-icon {
+    height: 1rem; /* Smaller close icon */
+    width: 1rem;
+  }
+  /* End Mobile Notification Adjustments */
 }
 
 /* A4 format styles to override mobile styles when exporting to PDF */

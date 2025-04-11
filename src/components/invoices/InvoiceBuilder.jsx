@@ -1186,24 +1186,22 @@ const InvoiceBuilder = () => {
                 <div className="card mb-4">
                   <div className="card-body">
                     <h3 className="card-subtitle">Client Details</h3><br></br>
-                    <div className="form-row client-name-row">
-                      <div className="client-name-field">
-                        <FormField
-                          label="Client Name"
-                          value={invoiceDetails.clientName}
-                          onChange={(e) => setInvoiceDetails({...invoiceDetails, clientName: e.target.value})}
-                          required
-                        />
-                      </div>
-                      <Button 
+                    <div className="mb-3">
+                      <Button
                         variant="primary"
                         type="button"
                         size="sm"
                         onClick={() => setShowContactSelector(true)}
-                        className="select-contact-btn"
+                        className="select-contact-btn mb-2"
                       >
                         Select Contact
                       </Button>
+                      <FormField
+                        label="Client Name"
+                        value={invoiceDetails.clientName}
+                        onChange={(e) => setInvoiceDetails({...invoiceDetails, clientName: e.target.value})}
+                        required
+                      />
                     </div>
                     
                     <div className="form-row">
