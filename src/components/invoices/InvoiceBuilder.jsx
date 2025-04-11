@@ -214,36 +214,45 @@ const InvoiceBuilder = () => {
   // Handle form submission
   const handleSubmit = async (e, dataToSubmit = invoiceDetails) => {
     e.preventDefault();
-    
+    console.log('handleSubmit called. Data to submit:', dataToSubmit);
+
     // Validate using dataToSubmit
     if (!dataToSubmit.clientName) {
       addNotification('Client name is required', 'error');
+      console.log('handleSubmit validation failed: Missing clientName');
       return;
     }
-    
+
     if (!dataToSubmit.amount || dataToSubmit.amount <= 0) {
       addNotification('Amount must be greater than zero', 'error');
+      console.log('handleSubmit validation failed: Invalid amount');
       return;
     }
     
+    // Add more validation if needed...
+
     try {
+      console.log('handleSubmit validation passed. Preparing data...');
       const invoiceData = {
         ...dataToSubmit, // Use the data passed in or current state
         id: id || Date.now().toString(),
         updatedAt: new Date().toISOString()
       };
-      
+
       if (!id && !dataToSubmit.createdAt) { // Check if createdAt exists in dataToSubmit
         invoiceData.createdAt = new Date().toISOString();
       }
-      
+
+      console.log('handleSubmit attempting to save data:', invoiceData);
       await api.invoices.save(invoiceData);
+      console.log('handleSubmit save successful.');
       // Avoid navigation on auto-save
       // Only show success if not called from auto-save context (how to detect?)
       // Maybe add a flag or check caller? For now, always show.
-      addNotification('Invoice saved successfully', 'success'); 
+      addNotification('Invoice saved successfully', 'success');
       // navigate('/invoices'); // Remove navigation for auto-save
     } catch (error) {
+      console.error('handleSubmit error during save:', error);
       addNotification(`Error saving invoice: ${error.message}`, 'error');
     }
   };
@@ -346,13 +355,14 @@ const InvoiceBuilder = () => {
 
   // Handle save invoice
   const handleSaveInvoice = async (invoiceDataToSave = invoiceDetails) => {
+    console.log('handleSaveInvoice called. Data received:', invoiceDataToSave);
     // Use invoiceDataToSave instead of relying solely on invoiceDetails state
     try {
       // We need to manually trigger the form submission logic
       // but use the provided data or current state
       const eventStub = { preventDefault: () => {} };
       // Log the data being saved
-      console.log("Saving invoice data:", invoiceDataToSave);
+      console.log("handleSaveInvoice passing data to handleSubmit:", invoiceDataToSave);
       await handleSubmit(eventStub, invoiceDataToSave); // Pass data to handleSubmit
     } catch (error) {
       console.error('Error in handleSaveInvoice:', error);
@@ -1060,7 +1070,7 @@ const InvoiceBuilder = () => {
           
           <Button
             variant="primary"
-            onClick={handleSaveInvoice}
+            onClick={() => handleSaveInvoice()}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
           >
             <span className="btn-icon">💾</span>

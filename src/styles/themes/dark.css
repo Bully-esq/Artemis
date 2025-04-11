@@ -24,6 +24,12 @@
 
   /* Button colors are intentionally NOT overridden here */
 
+  /* Fix for content-area in dark mode */
+  .content-area {
+    background-color: #1a1a1a !important;
+    border: none !important;
+  }
+
   /* Preview Styles (Invoices & Quotes) */
   .invoice-preview,
   .quote-preview {
