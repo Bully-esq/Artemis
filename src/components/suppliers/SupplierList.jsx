@@ -32,6 +32,7 @@ const SupplierList = () => {
   const [showCatalogItemDialog, setShowCatalogItemDialog] = useState(false);
   const [showPriceUpdateDialog, setShowPriceUpdateDialog] = useState(false);
   const [priceUpdatePercentage, setPriceUpdatePercentage] = useState('');
+  const [showSupplierDetailsDialog, setShowSupplierDetailsDialog] = useState(false);
   const [catalogItemForm, setCatalogItemForm] = useState({
     id: '',
     name: '',
@@ -421,6 +422,12 @@ const SupplierList = () => {
     }
   };
 
+  // Add a function to handle supplier item click
+  const handleSupplierClick = (supplier) => {
+    setCurrentSupplier(supplier);
+    setShowSupplierDetailsDialog(true);
+  };
+
   if (isLoading) {
     return (
       <PageLayout title="Suppliers & Catalog">
@@ -539,57 +546,59 @@ const SupplierList = () => {
             ) : (
               <div className="recent-items">
                 {filteredSuppliers.map((supplier) => (
-                  <div key={supplier.id} className="recent-item">
+                  <div key={supplier.id} className="recent-item supplier-list-item" onClick={() => handleSupplierClick(supplier)}>
                     <div className="item-content">
-                      <div>
+                      <div className="supplier-main-info">
                         <p className="item-title">{supplier.name}</p>
-                        <p className="item-subtitle">
+                        <p className="item-subtitle mobile-hidden">
                           {supplier.contact && `${supplier.contact}`}
                           {supplier.contact && supplier.email && ' • '}
                           {supplier.email}
                         </p>
                       </div>
                       <div className="item-actions">
-                        <p className="item-detail">{supplier.phone || ''}</p>
+                        <p className="item-detail mobile-hidden">{supplier.phone || ''}</p>
                         <div className="status-button-container">
-                          <Button
-                            className="btn-list-item btn-list-item--update"
-                            style={{ backgroundColor: '#28a745', color: 'white', marginRight: '8px' }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUpdatePrices(supplier);
-                            }}
-                          >
-                            Update Prices
-                          </Button>
-                          <Button
-                            className="btn-list-item btn-list-item--primary"
-                            style={{ backgroundColor: '#0073cf', color: 'white' }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditSupplier(supplier);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            className="btn-list-item btn-list-item--danger"
-                            style={{ backgroundColor: '#dc3545', color: 'white', marginLeft: '8px' }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClick(supplier);
-                            }}
-                          >
-                            Delete
-                          </Button>
+                          <div className="button-row">
+                            <Button
+                              className="btn-list-item btn-list-item--primary"
+                              style={{ backgroundColor: '#0073cf', color: 'white' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditSupplier(supplier);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              className="btn-list-item btn-list-item--danger"
+                              style={{ backgroundColor: '#dc3545', color: 'white' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(supplier);
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                          <div className="button-row">
+                            <Button
+                              className="btn-list-item btn-list-item--update"
+                              style={{ backgroundColor: '#28a745', color: 'white' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUpdatePrices(supplier);
+                              }}
+                            >
+                              Update Prices
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                    {supplier.notes && (
-                      <div className="item-notes">
-                        <p>{supplier.notes}</p>
-                      </div>
-                    )}
+                    <div className="item-notes mobile-hidden">
+                      {supplier.notes && <p>{supplier.notes}</p>}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -804,6 +813,7 @@ const SupplierList = () => {
               <Button 
                 variant="secondary" 
                 onClick={() => setShowPriceUpdateDialog(false)}
+                className="dialog-btn"
               >
                 Cancel
               </Button>
@@ -811,8 +821,9 @@ const SupplierList = () => {
                 variant="primary" 
                 onClick={handleApplyPriceUpdate}
                 isLoading={updateCatalogItemsMutation.isLoading}
+                className="dialog-btn"
               >
-                Apply Price Update
+                Apply Update
               </Button>
             </div>
           }
@@ -974,6 +985,87 @@ const SupplierList = () => {
                 Hide this item from lists and quotes
               </label>
             </div>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Add Supplier Details Dialog */}
+      {showSupplierDetailsDialog && (
+        <Dialog
+          title="Supplier Details"
+          onClose={() => setShowSupplierDetailsDialog(false)}
+          footer={
+            <div className="dialog-footer">
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setShowSupplierDetailsDialog(false);
+                  handleDeleteClick(currentSupplier);
+                }}
+                className="dialog-btn"
+              >
+                Delete
+              </Button>
+              <Button
+                variant="success"
+                onClick={() => {
+                  setShowSupplierDetailsDialog(false);
+                  handleUpdatePrices(currentSupplier);
+                }}
+                className="dialog-btn"
+              >
+                Update Prices
+              </Button>
+              <Button 
+                variant="secondary" 
+                onClick={() => setShowSupplierDetailsDialog(false)}
+                className="dialog-btn"
+              >
+                Close
+              </Button>
+              <Button 
+                variant="primary" 
+                onClick={() => {
+                  setShowSupplierDetailsDialog(false);
+                  handleEditSupplier(currentSupplier);
+                }}
+                className="dialog-btn"
+              >
+                Edit Supplier
+              </Button>
+            </div>
+          }
+        >
+          <div className="supplier-details">
+            <h2 className="supplier-detail-name">{currentSupplier.name}</h2>
+            
+            {currentSupplier.contact && (
+              <div className="detail-row">
+                <span className="detail-label">Contact:</span>
+                <span className="detail-value">{currentSupplier.contact}</span>
+              </div>
+            )}
+            
+            {currentSupplier.email && (
+              <div className="detail-row">
+                <span className="detail-label">Email:</span>
+                <span className="detail-value">{currentSupplier.email}</span>
+              </div>
+            )}
+            
+            {currentSupplier.phone && (
+              <div className="detail-row">
+                <span className="detail-label">Phone:</span>
+                <span className="detail-value">{currentSupplier.phone}</span>
+              </div>
+            )}
+            
+            {currentSupplier.notes && (
+              <div className="detail-notes">
+                <span className="detail-label">Notes:</span>
+                <p className="detail-value notes">{currentSupplier.notes}</p>
+              </div>
+            )}
           </div>
         </Dialog>
       )}

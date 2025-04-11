@@ -1,5 +1,182 @@
 /* Mobile styles - for screens smaller than 768px */
 @media screen and (max-width: 768px) {
+  /* Add additional padding to the top of cards and form fields */
+  .card .form-field:first-child,
+  .card-body .form-field:first-child,
+  .card > div > .form-field:first-child,
+  .card > form > .form-field:first-child,
+  .card form > .form-field:first-child {
+    padding-top: 8px !important;
+    margin-top: 8px !important;
+  }
+  
+  /* Fix labels that appear at the top of cards */
+  .card label:first-child,
+  .card-body label:first-child,
+  .card-content label:first-child,
+  .card > div > label:first-child,
+  .card > form > label:first-child,
+  .card form > label:first-child {
+    padding-top: 8px !important;
+    margin-top: 8px !important;
+    display: block !important;
+  }
+  
+  /* Fix for top padding in all cards to prevent cutoff */
+  .card-body, 
+  .card-content,
+  .card > div,
+  .card > form {
+    padding-top: 8px !important;
+  }
+  
+  /* Critical fix for Create Quote page cards - targeting specific inline styles */
+  /* This is a high-specificity fix for cards that don't respond to other styling */
+  div[style*="grid-template-columns"],
+  div[style*="display: grid"],
+  .form-row[style*="display: grid"],
+  div[style*="minmax"],
+  .card[style*="width"],
+  .card[style*="max-width"] {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    grid-template-columns: 1fr !important;
+    min-width: auto !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Super aggressive fix for all cards in the Create Quote page */
+  .card, 
+  div[class*="card"], 
+  div[class*="Card"],
+  div[class*="-card"],
+  div[class*="box"],
+  div[class*="Box"],
+  div[class*="container"],
+  div[class*="Container"],
+  div[class*="section"],
+  div[class*="Section"] {
+    width: 100% !important;
+    max-width: 100vw !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+    border-radius: 8px !important;
+    /* Add proper padding to cards to ensure content doesn't get cut off */
+    padding: 12px !important;
+  }
+  
+  /* Fix for card contents being cut off */
+  .card-body, 
+  .card-content,
+  .card > div,
+  div[class*="card"] > div,
+  div[class*="Card"] > div,
+  div[class*="-card"] > div,
+  div[class*="box"] > div,
+  div[class*="Box"] > div {
+    padding: 4px !important;
+    margin: 0 !important;
+    overflow: visible !important; /* Ensure content isn't cut off by overflow */
+  }
+  
+  /* Fix form fields inside cards to prevent cutoff */
+  .card input, 
+  .card select, 
+  .card textarea,
+  .card label,
+  .card .form-field,
+  div[class*="card"] input,
+  div[class*="card"] select,
+  div[class*="card"] textarea,
+  div[class*="card"] label,
+  div[class*="card"] .form-field {
+    margin-top: 4px !important;
+    margin-bottom: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Force any nested grid elements to be single-column regardless of inline styles */
+  body .form-row[style*="display: grid"] *,
+  body div[style*="display: grid"] *,
+  body div[style*="grid-template-columns"] * {
+    width: 100% !important;
+    max-width: 100% !important;
+    grid-column: 1 / -1 !important;
+  }
+  
+  /* Force body and html to not have horizontal overflow */
+  html, body {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Add this strong catch-all CSS at the beginning of the media query */
+  /* Force all cards in the quote builder to be properly sized regardless of their specific classes */
+  .quote-builder .card,
+  .quote-details-tab .card,
+  .details-tab .card,
+  div[data-tab="details"] .card,
+  [id*="quote-builder"] .card,
+  [id*="quotebuilder"] .card,
+  [class*="quote-builder"] .card,
+  [class*="quotebuilder"] .card {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    /* Fix any fixed width elements */
+    min-width: 0 !important;
+    /* Ensure padding is reasonable */
+    padding: 0.75rem !important;
+  }
+  
+  /* Force all card bodies to have proper padding */
+  .quote-builder .card .card-body,
+  .quote-details-tab .card .card-body,
+  .details-tab .card .card-body,
+  div[data-tab="details"] .card .card-body,
+  [id*="quote-builder"] .card .card-body,
+  [id*="quotebuilder"] .card .card-body,
+  [class*="quote-builder"] .card .card-body,
+  [class*="quotebuilder"] .card .card-body {
+    padding: 0 !important;
+    width: 100% !important;
+  }
+  
+  /* Fix any grid or flexbox layouts that might be causing overflow */
+  .quote-builder [style*="display: grid"],
+  .quote-builder [style*="display: flex"],
+  .quote-details-tab [style*="display: grid"],
+  .quote-details-tab [style*="display: flex"],
+  .details-tab [style*="display: grid"],
+  .details-tab [style*="display: flex"],
+  div[data-tab="details"] [style*="display: grid"],
+  div[data-tab="details"] [style*="display: flex"],
+  [id*="quote-builder"] [style*="display: grid"],
+  [id*="quote-builder"] [style*="display: flex"],
+  [id*="quotebuilder"] [style*="display: grid"],
+  [id*="quotebuilder"] [style*="display: flex"],
+  [class*="quote-builder"] [style*="display: grid"],
+  [class*="quote-builder"] [style*="display: flex"],
+  [class*="quotebuilder"] [style*="display: grid"],
+  [class*="quotebuilder"] [style*="display: flex"] {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    gap: 0.75rem !important;
+    overflow-x: hidden !important;
+  }
+  
+  /* End of catch-all CSS */
+
   /* General layout adjustments */
   .container, .page-container {
     padding: 10px;
@@ -26,6 +203,9 @@
     margin-bottom: 10px;
     font-size: 16px; /* Prevents iOS zoom on focus */
     padding: 8px;
+    /* Fix for mobile touch events */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
   }
   
   .form-row {
@@ -49,6 +229,115 @@
     width: 100%;
   }
   
+  /* Create Quote Page Specific Optimizations - Fix for the 3 main boxes */
+  /* These styles target the 3 main boxes on the Create Quote page to ensure they scale properly on mobile */
+  .quote-details-tab .card,
+  .details-tab .card,
+  div[data-tab="details"] .card,
+  .client-info-section .card,
+  .quote-settings-section .card,
+  .additional-details-section .card {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 0 1rem 0 !important;
+    box-sizing: border-box !important;
+    overflow: visible !important; /* Changed from hidden to visible to prevent content cutoff */
+    padding: 14px !important; /* Increased padding to ensure content isn't cut off */
+  }
+  
+  /* Client Information Box */
+  .client-info-card,
+  .client-information-card,
+  .card[data-section="client-info"],
+  .card h2[id*="client"],
+  .card .card-title[id*="client"] {
+    width: 100% !important;
+    padding: 14px !important; /* Increased from 0.75rem */
+  }
+  
+  .client-info-card .card-body,
+  .client-information-card .card-body,
+  .card[data-section="client-info"] .card-body {
+    padding: 5px !important; /* Changed from 0 to 5px to prevent content cutoff */
+    overflow: visible !important;
+  }
+  
+  /* Make client info form elements stack properly */
+  .client-info-form,
+  .client-information-form,
+  .client-info-card form,
+  .client-information-card form,
+  .card[data-section="client-info"] form {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important; /* Increased from 0.5rem */
+    padding-top: 5px !important; /* Added padding at the top */
+  }
+  
+  /* Quote Settings Box */
+  .quote-settings-card,
+  .settings-card,
+  .card[data-section="quote-settings"],
+  .card h2[id*="settings"],
+  .card .card-title[id*="settings"] {
+    width: 100% !important;
+    padding: 14px !important; /* Increased from 0.75rem */
+  }
+  
+  .quote-settings-card .card-body,
+  .settings-card .card-body,
+  .card[data-section="quote-settings"] .card-body {
+    padding: 5px !important; /* Changed from 0 to 5px to prevent content cutoff */
+    overflow: visible !important;
+  }
+  
+  /* Additional Settings Box */
+  .additional-details-card,
+  .additional-settings-card,
+  .card[data-section="additional-details"],
+  .card h2[id*="additional"],
+  .card .card-title[id*="additional"] {
+    width: 100% !important;
+    padding: 14px !important; /* Increased from 0.75rem */
+  }
+  
+  .additional-details-card .card-body,
+  .additional-settings-card .card-body,
+  .card[data-section="additional-details"] .card-body {
+    padding: 5px !important; /* Changed from 0 to 5px to prevent content cutoff */
+    overflow: visible !important;
+  }
+  
+  /* Universal targeting for all cards in the quote details tab */
+  .quote-details-tab .card .card-body,
+  .details-tab .card .card-body,
+  div[data-tab="details"] .card .card-body {
+    padding: 5px !important; /* Changed from 0 to 5px to prevent content cutoff */
+    width: 100% !important;
+    overflow: visible !important;
+  }
+  
+  /* Fix the titles and form fields in cards to prevent cutoff */
+  .card-title, 
+  .card h2,
+  .card h3 {
+    margin-top: 5px !important;
+    margin-bottom: 14px !important;
+    padding-top: 0 !important;
+    overflow: visible !important;
+  }
+  
+  .form-label, 
+  .form-field label,
+  label.checkbox-label {
+    margin-top: 5px !important;
+    margin-bottom: 3px !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+  
+  /* End of Create Quote page specific optimizations */
+
   /* Dialog adjustments */
   .dialog-content {
     width: 95%;
@@ -68,6 +357,19 @@
   
   .button-container .btn {
     margin: 5px 0;
+    /* Fix for mobile button press events */
+    touch-action: manipulation;
+    pointer-events: auto;
+  }
+
+  /* Ensure all buttons have proper touch behavior */
+  button, 
+  .btn,
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+    cursor: pointer;
+    pointer-events: auto;
   }
 
   /* Sidebar adjustments */
@@ -149,6 +451,9 @@
     font-size: 1.05rem; /* Increased from 0.9rem */
     padding: 0.5rem 0.75rem;
     white-space: nowrap;
+    /* Fix for mobile tab buttons */
+    touch-action: manipulation;
+    pointer-events: auto;
   }
   
   /* Ensure the tabs container itself is flexible */
@@ -645,6 +950,332 @@
   .invoice-builder-actions a.btn .btn-icon {
     vertical-align: middle;
   }
+
+  /* QuoteBuilder mobile optimizations */
+  /* Fix grid layouts to be single column on mobile */
+  .quote-items-grid {
+    display: grid;
+    grid-template-columns: 1fr !important; /* Force single column */
+    gap: 1rem;
+    width: 100%;
+  }
+
+  /* Make action buttons in builder header stack better */
+  .card-header-flex {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  .card-header-flex .card-title {
+    margin-bottom: 0.5rem;
+    width: 100%;
+  }
+
+  .card-header-flex button {
+    width: 100%;
+  }
+
+  /* Fix grid of form inputs to be responsive */
+  .form-row,
+  div[style*="display: grid"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+  }
+
+  /* Make item cards more compact */
+  .item-card {
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+    border-radius: 8px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  .item-card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.5rem !important;
+  }
+
+  .item-card-header h3 {
+    margin-top: 0 !important;
+    margin-bottom: 0.25rem !important;
+    font-size: 1.1rem !important;
+  }
+
+  .item-actions {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    margin-top: 0.5rem !important;
+  }
+
+  /* Make item editing fields stack in a single column */
+  .item-fields-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important; /* Single column on mobile */
+    gap: 0.5rem !important;
+    margin-top: 0.5rem !important;
+  }
+
+  /* Make the form fields inside item cards more compact */
+  .item-fields-grid .form-field {
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Adjust the button container at bottom of item cards */
+  .item-card .form-field:last-child {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .item-card .form-field:last-child > div {
+    display: flex !important;
+    width: 100% !important;
+    gap: 0.5rem !important;
+    margin-top: 0.5rem !important;
+  }
+
+  .item-card .form-field:last-child button {
+    flex: 1 !important;
+    margin: 0 !important;
+  }
+
+  /* Make the custom item form more mobile-friendly */
+  .custom-item-form .form-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Make hidden costs area more compact */
+  .quote-sidebar {
+    width: 100% !important;
+  }
+
+  .hidden-cost-item {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0.5rem !important;
+    border-bottom: 1px solid var(--border-color, #eee) !important;
+  }
+
+  .hidden-cost-item .cost-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Make exclusions section more compact */
+  .exclusions-list {
+    margin-bottom: 1rem !important;
+  }
+
+  .exclusions-list .form-field {
+    margin-bottom: 0.5rem !important;
+  }
+
+  .custom-exclusion {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .custom-exclusion .form-field {
+    flex: 1 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .custom-exclusion button {
+    flex-shrink: 0 !important;
+  }
+
+  /* End of QuoteBuilder mobile optimizations */
+
+  /* Custom Item Form Optimizations */
+  .custom-item-form {
+    margin-bottom: 1rem !important;
+  }
+
+  .custom-item-form .card {
+    padding: 10px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .custom-item-form .form-grid {
+    display: flex !important;
+    flex-direction: column !important; 
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .custom-item-form .form-field {
+    margin-bottom: 8px !important;
+  }
+
+  .custom-item-form .form-label {
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    margin-bottom: 4px !important;
+  }
+
+  .custom-item-form .form-input,
+  .custom-item-form .form-select {
+    width: 100% !important;
+    padding: 8px !important;
+    font-size: 16px !important; /* Prevent iOS zoom */
+    height: auto !important;
+  }
+
+  .custom-item-form .btn {
+    width: 100% !important;
+    padding: 10px !important;
+    margin-top: 5px !important;
+    font-size: 1rem !important;
+  }
+
+  /* Fix for the Edit/Remove buttons in Item Cards */
+  .item-actions button {
+    margin: 0 !important;
+    padding: 6px !important;
+  }
+
+  .delete-button,
+  .delete-button-small {
+    width: auto !important;
+    padding: 5px !important;
+  }
+
+  /* Fix for Add Cost dialog */
+  .cost-dialog-content {
+    width: 95% !important;
+    max-width: 95% !important;
+    padding: 15px !important;
+  }
+
+  .cost-dialog-content .form-field {
+    margin-bottom: 10px !important;
+  }
+
+  .cost-dialog-content .dialog-actions {
+    margin-top: 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .cost-dialog-content .dialog-actions button {
+    width: 100% !important;
+  }
+
+  /* End of QuoteBuilder mobile optimizations */
+
+  /* Aggressive fix for the specific grid containing the three main boxes */
+  .quote-details-grid,
+  .details-content-grid,
+  div[class*="details-grid"],
+  div[class*="details-container"],
+  div[class*="details-content"],
+  div[class*="quote-grid"],
+  .quote-builder > div > div[style*="display: grid"],
+  .quote-builder > div[style*="display: grid"],
+  div[data-tab="details"] > div[style*="display: grid"],
+  div[data-tab="details"] > div > div[style*="display: grid"] {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    grid-template-columns: 1fr !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Target each of the three cards */
+  .quote-details-grid > div,
+  .details-content-grid > div,
+  div[class*="details-grid"] > div,
+  div[class*="details-container"] > div,
+  div[class*="details-content"] > div,
+  div[class*="quote-grid"] > div,
+  .quote-builder > div > div[style*="display: grid"] > div,
+  .quote-builder > div[style*="display: grid"] > div,
+  div[data-tab="details"] > div[style*="display: grid"] > div,
+  div[data-tab="details"] > div > div[style*="display: grid"] > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* Direct targeting of the inline style that's likely causing the issue */
+  .quote-details-tab [style*="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr))"],
+  .details-tab [style*="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr))"],
+  [data-tab="details"] [style*="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr))"],
+  .quote-builder [style*="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr))"],
+  [style*="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr))"] {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  /* Target the likely grid style that's being used */
+  [style*="display: grid"],
+  [style*="grid-template-columns"],
+  div[style*="display: grid; grid-template-columns"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* Override any inline width styles directly applied to cards */
+  .card[style*="width"],
+  .card[style*="max-width"],
+  .card[style*="min-width"],
+  div[class*="card"][style*="width"],
+  div[class*="card"][style*="max-width"],
+  div[class*="card"][style*="min-width"],
+  div[style*="width"][class*="card"],
+  div[style*="max-width"][class*="card"],
+  div[style*="min-width"][class*="card"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Apply to children of cards that have inline styles */
+  .card[style] > div[style],
+  .card > div[style*="width"],
+  .card > div[style*="max-width"],
+  div[class*="card"] > div[style],
+  div[class*="card"] > div[style*="width"],
+  div[class*="card"] > div[style*="max-width"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Force scale for all inputs and selects */
+  input, select, textarea, 
+  input[style], select[style], textarea[style] {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
 }
 
 /* A4 format styles to override mobile styles when exporting to PDF */
@@ -697,6 +1328,93 @@
     padding: 5px;
   }
   
+  /* Create Quote Page Boxes - Extra Small Screen Optimizations */
+  /* Make the three main boxes on the Create Quote page even more compact for tiny screens */
+  .quote-details-tab .card {
+    padding: 0.5rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  /* Client Information Box */
+  .client-info-card .card-title {
+    font-size: 1.2rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .client-info-card input,
+  .client-info-card textarea {
+    padding: 6px !important;
+    font-size: 15px !important; /* Still large enough to prevent iOS zoom */
+    margin-bottom: 6px !important;
+  }
+  
+  /* Quote Settings Box */
+  .quote-settings-card .card-title {
+    font-size: 1.2rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .quote-settings-card input,
+  .quote-settings-card select {
+    padding: 6px !important;
+    font-size: 15px !important;
+    height: auto !important;
+    margin-bottom: 6px !important;
+  }
+  
+  /* Additional Settings Box */
+  .additional-details-card .card-title {
+    font-size: 1.2rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .additional-details-card .section-title {
+    font-size: 1rem !important;
+    margin-top: 0.75rem !important;
+    margin-bottom: 0.4rem !important;
+  }
+  
+  /* Make exclusions more compact */
+  .exclusions-list {
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .exclusions-list .form-field {
+    margin-bottom: 0.25rem !important;
+  }
+  
+  .exclusions-list .checkbox-label {
+    min-height: 20px !important;
+  }
+  
+  .exclusions-list .checkbox-text {
+    font-size: 0.85rem !important; /* Smaller text but still readable */
+    line-height: 1.2 !important;
+  }
+  
+  /* Custom exclusion fields */
+  .custom-exclusion {
+    margin-bottom: 0.25rem !important;
+  }
+  
+  .custom-exclusion .form-field {
+    margin-bottom: 0 !important;
+  }
+  
+  .custom-exclusion .form-input {
+    padding: 5px !important;
+    font-size: 15px !important;
+    height: auto !important;
+  }
+  
+  /* Better spacing for "Add Custom Exclusion" button */
+  .additional-details-card .btn {
+    padding: 8px !important;
+    margin-top: 0.5rem !important;
+    font-size: 0.9rem !important;
+  }
+  /* End Create Quote Page Small Screen Optimizations */
+
   /* Even smaller tabs for very small screens but still readable */
   .tabs button, 
   .tabs-container button, 
@@ -777,6 +1495,89 @@
   .invoice-builder-actions a.btn .btn-icon {
     vertical-align: middle;
   }
+
+  /* QuoteBuilder extra small screen optimizations */
+  /* Make cards even more compact */
+  .card {
+    padding: 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .card-body {
+    padding: 0 !important;
+  }
+  
+  /* Make form labels more compact */
+  .form-label, .field-label {
+    font-size: 0.9rem !important;
+    margin-bottom: 3px !important;
+  }
+  
+  /* Reduce size of form inputs */
+  .form-input, .form-select, .form-textarea {
+    padding: 6px !important;
+    font-size: 0.95rem !important;
+    height: auto !important;
+  }
+  
+  /* Make item cards more compact */
+  .item-card {
+    padding: 0.75rem !important;
+  }
+  
+  .item-card-header h3 {
+    font-size: 1rem !important;
+  }
+  
+  /* Make item editing buttons on a single row */
+  .item-card .form-field:last-child > div {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+  }
+  
+  .item-card .form-field:last-child button {
+    padding: 6px 8px !important;
+    font-size: 0.85rem !important;
+  }
+  
+  /* Improve hidden cost display */
+  .hidden-cost-item {
+    padding: 6px !important;
+  }
+  
+  .cost-name {
+    font-size: 0.9rem !important;
+  }
+  
+  .cost-amount {
+    font-size: 0.9rem !important;
+  }
+  
+  /* Improve reorder buttons placement */
+  .reorder-buttons {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 5px !important;
+  }
+  
+  /* Make checkboxes more tappable */
+  .checkbox-label {
+    display: flex !important;
+    align-items: center !important;
+    min-height: 24px !important;
+  }
+  
+  .checkbox-text {
+    font-size: 0.9rem !important;
+    line-height: 1.3 !important;
+  }
+  
+  /* Improve range inputs on mobile */
+  input[type="range"] {
+    height: 30px !important;
+    -webkit-appearance: none !important;
+    width: 100% !important;
+  }
 }
 
 /* Extra small mobile devices */
@@ -824,4 +1625,59 @@
     text-align: center;
     vertical-align: initial; 
   }
+}
+
+/* Fix for any grid layout in the boxes that might be causing overflow */
+.quote-details-tab .form-row[style*="display: grid"],
+.quote-details-tab .form-grid,
+.quote-details-tab div[style*="display: grid"],
+.details-tab .form-row[style*="display: grid"],
+.details-tab .form-grid,
+.details-tab div[style*="display: grid"],
+div[data-tab="details"] .form-row[style*="display: grid"],
+div[data-tab="details"] .form-grid,
+div[data-tab="details"] div[style*="display: grid"] {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  gap: 0.75rem !important;
+  overflow: visible !important; /* Added to prevent content cutoff */
+}
+
+/* Ensure all inputs and selects in these boxes are properly sized */
+.quote-details-tab input,
+.quote-details-tab select,
+.quote-details-tab textarea {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin-top: 3px !important; /* Added to prevent content cutoff */
+}
+
+/* Ensure date inputs don't overflow */
+.quote-details-tab input[type="date"] {
+  min-height: 38px !important;
+  padding: 0 8px !important;
+}
+
+/* Make the term selects more mobile-friendly */
+.quote-details-tab select {
+  padding-right: 25px !important;
+  background-position: right 8px center !important;
+}
+
+/* Ensure proper spacing for card titles */
+.quote-details-tab .card-title {
+  margin-top: 5px !important; /* Changed from 0 to 5px to prevent cutoff */
+  margin-bottom: 14px !important; /* Increased from 0.75rem to 14px */
+  font-size: 1.3rem !important;
+  overflow: visible !important; /* Added to prevent content cutoff */
+}
+
+/* Fix section titles inside cards */
+.quote-details-tab .section-title {
+  margin-top: 1rem !important;
+  margin-bottom: 0.5rem !important;
+  font-size: 1.1rem !important;
+  overflow: visible !important; /* Added to prevent content cutoff */
 }

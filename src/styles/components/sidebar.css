@@ -114,32 +114,33 @@
   margin-top: auto;
 }
 
-/* Mobile sidebar */
+/* Mobile sidebar overlay - fixed version */
 .mobile-sidebar-overlay {
-  display: none;
+  display: none; /* Hidden by default */
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 40;
+  width: 100%;
+  height: 100%;
+  z-index: 1000; /* High z-index to be above all content */
+  pointer-events: auto; /* Enable clicking/tapping */
+  touch-action: manipulation; /* Improve mobile touch behavior */
 }
 
 .mobile-sidebar {
   position: fixed;
   top: 0;
-  bottom: 0;
-  left: 0;
-  width: 270px;
-  max-width: 80vw;
-  height: 100vh;
-  background-color: var(--background-secondary);
-  z-index: 41;
-  overflow-y: auto;
+  left: 0; 
+  height: 100%;
+  width: 280px;
+  background-color: var(--background-primary);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  z-index: 1001; /* Above the overlay */
   display: flex;
   flex-direction: column;
-  transform: translateX(-100%);
-  transition: transform 0.3s ease-in-out;
+  transition: transform 0.3s ease;
+  pointer-events: auto; /* Ensure interactions work */
+  touch-action: manipulation; /* Better mobile touch handling */
 }
 
 .close-button {
@@ -194,14 +195,17 @@
   top: -2px; /* Adjust this value to move the small button up as needed */
 }
 
-/* Add Media Queries to control sidebar visibility */
+/* Mobile media query */
+@media (max-width: 767px) {
+  /* Show mobile sidebar overlay when it exists in the DOM */
+  .mobile-sidebar-overlay {
+    display: block;
+  }
+}
 
-/* On Mobile (<= 767px): Show mobile overlay, hide desktop sidebar */
+/* Desktop sidebar hidden on mobile */
 @media (max-width: 767px) {
   .desktop-sidebar {
     display: none;
-  }
-  .mobile-sidebar-overlay {
-    display: block; /* Show the container on mobile */
   }
 }

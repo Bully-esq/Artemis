@@ -46,3 +46,26 @@ body {
 a {
   color: var(--link-color);
 }
+
+/* Global mobile touch handling improvements */
+@media (max-width: 768px) {
+  /* Ensure all interactive elements work properly on touch devices */
+  button, 
+  a, 
+  [role="button"], 
+  input[type="button"], 
+  input[type="submit"], 
+  input[type="reset"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    cursor: pointer;
+  }
+
+  /* Remove potential overlays that could block interaction */
+  .layout-container, 
+  .content-area,
+  .main-content {
+    position: relative;
+    z-index: 1;
+  }
+}
