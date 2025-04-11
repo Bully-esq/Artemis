@@ -179,7 +179,7 @@
 
   /* General layout adjustments */
   .container, .page-container {
-    padding: 10px;
+    padding: 0;
     width: 100%;
     max-width: 100%;
   }
@@ -1325,7 +1325,7 @@
   
   /* Tighten up padding for very small screens */
   .container, .page-container {
-    padding: 5px;
+    padding: 0;
   }
   
   /* Create Quote Page Boxes - Extra Small Screen Optimizations */
