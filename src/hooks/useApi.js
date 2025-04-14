@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import * as storageService from '../services/storageService';
 
 // Shared utilities for hooks
 
@@ -13,15 +13,7 @@ const createErrorHandler = (addNotification, logout) => {
     const { silent = false, showNotification = true } = options;
     
     if (!silent) {
-      console.error('API Error:', error);
-    }
-    
-    // Check if the error is due to unauthorized access (401)
-    if (error.response && error.response.status === 401) {
-      // Log the user out if their token is invalid/expired
-      logout();
-      addNotification('Your session has expired. Please log in again.', 'error');
-      return;
+      console.error('Storage/Hook Error:', error);
     }
     
     // Check if the error is a network error
@@ -30,14 +22,14 @@ const createErrorHandler = (addNotification, logout) => {
       window.dispatchEvent(new CustomEvent('network-disconnected'));
       
       if (showNotification) {
-        addNotification('Network connection lost. Changes will not be saved.', 'error', 0);
+        addNotification('Network connection issue detected.', 'warning', 0);
       }
       return;
     }
     
     // Show generic error notification for other errors
     if (showNotification) {
-      const errorMessage = error.response?.data?.message || error.message || 'Something went wrong';
+      const errorMessage = error.message || 'An unexpected error occurred';
       addNotification(`Error: ${errorMessage}`, 'error');
     }
   };
@@ -54,17 +46,33 @@ export function useErrorHandler() {
 }
 
 /**
- * Hook for making GET requests
+ * Hook for making GET requests (Read from IndexedDB)
+ * Adapts based on the query key: 
+ * - key = ['storeName'] fetches all items.
+ * - key = ['storeName', itemId] fetches a single item.
  */
-export function useApiGet(key, endpoint, options = {}) {
+export function useApiGet(key, _endpoint_ignored = null, options = {}) {
   const handleError = useErrorHandler();
   
+  if (!Array.isArray(key) || key.length === 0) {
+    throw new Error('useApiGet requires a query key array, e.g., ["storeName"] or ["storeName", itemId]');
+  }
+
+  const storeName = key[0];
+  const itemId = key.length > 1 ? key[1] : undefined;
+
   return useQuery(
     key,
     async () => {
       try {
-        const response = await api.get(endpoint);
-        return response.data;
+        if (itemId !== undefined) {
+          console.log(`[useApiGet] Fetching item: ${storeName}/${itemId}`);
+          const item = await storageService.getItem(storeName, itemId);
+          return item === null ? undefined : item; 
+        } else {
+          console.log(`[useApiGet] Fetching all items: ${storeName}`);
+          return await storageService.getAllItems(storeName);
+        }
       } catch (error) {
         handleError(error, { showNotification: options.showErrorNotification !== false });
         throw error;
@@ -75,7 +83,8 @@ export function useApiGet(key, endpoint, options = {}) {
 }
 
 /**
- * Hook for making custom queries
+ * Hook for making custom queries (using storageService)
+ * The provided queryFn should now use storageService methods.
  */
 export function useApiCustomQuery(key, queryFn, options = {}) {
   const handleError = useErrorHandler();
@@ -84,7 +93,7 @@ export function useApiCustomQuery(key, queryFn, options = {}) {
     key,
     async () => {
       try {
-        return await queryFn();
+        return await queryFn(); 
       } catch (error) {
         handleError(error, { showNotification: options.showErrorNotification !== false });
         throw error;
@@ -95,7 +104,8 @@ export function useApiCustomQuery(key, queryFn, options = {}) {
 }
 
 /**
- * Hook for making mutations (POST, PUT, DELETE, etc.)
+ * Hook for making mutations (Write to IndexedDB: POST, PUT, DELETE)
+ * The mutationFn should now use storageService methods.
  */
 export function useApiMutation(mutationFn, options = {}) {
   const queryClient = useQueryClient();
@@ -106,7 +116,7 @@ export function useApiMutation(mutationFn, options = {}) {
     async (variables) => {
       try {
         const result = await mutationFn(variables);
-        return result;
+        return result; 
       } catch (error) {
         handleError(error, { showNotification: options.showErrorNotification !== false });
         throw error;
@@ -115,22 +125,20 @@ export function useApiMutation(mutationFn, options = {}) {
     {
       ...options,
       onSuccess: (data, variables, context) => {
-        // Show success notification if requested
         if (options.showSuccessNotification) {
           addNotification(
-            options.successMessage || 'Operation completed successfully',
+            options.successMessage || 'Data saved successfully',
             'success'
           );
         }
         
-        // Invalidate queries to refetch data
         if (options.invalidateQueries && options.invalidateQueries.length > 0) {
+          console.log('[useApiMutation] Invalidating queries:', options.invalidateQueries);
           options.invalidateQueries.forEach(query => {
             queryClient.invalidateQueries(query);
           });
         }
         
-        // Call original onSuccess if provided
         if (options.onSuccess) {
           options.onSuccess(data, variables, context);
         }
@@ -140,35 +148,45 @@ export function useApiMutation(mutationFn, options = {}) {
 }
 
 /**
- * Hook for making POST requests
+ * Hook for adding/updating data (POST/PUT -> IndexedDB putItem)
+ * Requires storeName instead of endpoint.
  */
-export function useApiPost(endpoint, options = {}) {
+export function useApiSave(storeName, options = {}) {
+  if (!storeName) {
+    throw new Error('useApiSave requires a storeName.');
+  }
   return useApiMutation(
-    (data) => api.post(endpoint, data),
-    options
+    (data) => {
+      console.log(`[useApiSave] Saving to store: ${storeName}`, data);
+      if (!data || typeof data.id === 'undefined') {
+         console.warn(`[useApiSave] Data being saved to ${storeName} is missing an 'id'. IndexedDB requires a key path.`, data);
+      }
+      return storageService.putItem(storeName, data);
+    },
+    {
+      invalidateQueries: [[storeName]], 
+      ...options,
+    }
   );
 }
 
 /**
- * Hook for making PUT requests
+ * Hook for making DELETE requests (IndexedDB deleteItem)
+ * Requires storeName instead of endpoint.
  */
-export function useApiPut(endpoint, options = {}) {
-  return useApiMutation(
-    (data) => api.put(endpoint, data),
-    options
-  );
-}
-
-/**
- * Hook for making DELETE requests
- */
-export function useApiDelete(endpoint, options = {}) {
+export function useApiDelete(storeName, options = {}) {
+  if (!storeName) {
+    throw new Error('useApiDelete requires a storeName.');
+  }
   return useApiMutation(
     (id) => {
-      const url = typeof endpoint === 'function' ? endpoint(id) : `${endpoint}/${id}`;
-      return api.delete(url);
+      console.log(`[useApiDelete] Deleting from store: ${storeName}, ID: ${id}`);
+      return storageService.deleteItem(storeName, id);
     },
-    options
+    {
+      invalidateQueries: [[storeName]], 
+      ...options,
+    }
   );
 }
 
@@ -184,72 +202,3 @@ export function useQueryUtils() {
     setQueryData: (queryKey, data) => queryClient.setQueryData(queryKey, data)
   };
 }
-
-// Legacy API compatibility layer
-export function useApi() {
-  console.warn(
-    'useApi() is deprecated. Please use the individual hooks directly: ' +
-    'useApiGet, useApiPost, useApiPut, useApiDelete, etc.'
-  );
-  
-  // Access to query client utilities
-  const utils = useQueryUtils();
-  
-  // For backwards compatibility, we create references to the hook results
-  // but don't call hooks inside functions as that violates React hooks rules
-  
-  return {
-    get: (key, endpoint, options) => {
-      console.warn('api.get() is deprecated. Use useApiGet() directly in your component instead.');
-      // Return an object that mimics the useApiGet interface instead of calling it
-      return {
-        refetch: () => console.warn('Cannot refetch from this context. Use useApiGet() directly in your component.'),
-        data: null,
-        isLoading: false,
-        error: new Error('This method is deprecated. Use useApiGet() directly in your component.'),
-      };
-    },
-    query: (key, queryFn, options) => {
-      console.warn('api.query() is deprecated. Use useApiCustomQuery() directly in your component instead.');
-      // Return an object that mimics the useApiCustomQuery interface
-      return {
-        refetch: () => console.warn('Cannot refetch from this context. Use useApiCustomQuery() directly in your component.'),
-        data: null,
-        isLoading: false,
-        error: new Error('This method is deprecated. Use useApiCustomQuery() directly in your component.'),
-      };
-    },
-    post: (endpoint, options) => {
-      console.warn('api.post() is deprecated. Use useApiPost() directly in your component instead.');
-      // Return an object that mimics the useMutation interface
-      return {
-        mutate: () => console.warn('Cannot mutate from this context. Use useApiPost() directly in your component.'),
-        isLoading: false,
-        error: new Error('This method is deprecated. Use useApiPost() directly in your component.'),
-      };
-    },
-    put: (endpoint, options) => {
-      console.warn('api.put() is deprecated. Use useApiPut() directly in your component instead.');
-      // Return an object that mimics the useMutation interface
-      return {
-        mutate: () => console.warn('Cannot mutate from this context. Use useApiPut() directly in your component.'),
-        isLoading: false,
-        error: new Error('This method is deprecated. Use useApiPut() directly in your component.'),
-      };
-    },
-    remove: (endpoint, options) => {
-      console.warn('api.remove() is deprecated. Use useApiDelete() directly in your component instead.');
-      // Return an object that mimics the useMutation interface
-      return {
-        mutate: () => console.warn('Cannot mutate from this context. Use useApiDelete() directly in your component.'),
-        isLoading: false,
-        error: new Error('This method is deprecated. Use useApiDelete() directly in your component.'),
-      };
-    },
-    
-    // Query client utilities
-    ...utils
-  };
-}
-
-export default useApi;

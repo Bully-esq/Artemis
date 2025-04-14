@@ -1,8 +1,8 @@
-import api from './api';
+import * as storageService from './storageService'; // Import the new storage service
 
 /**
- * SyncService - Handles data synchronization between local storage and server
- * with offline support.
+ * SyncService - Handles data synchronization using local IndexedDB and Google Drive.
+ * (Formerly synced with a backend server)
  */
 
 // Constants
@@ -14,9 +14,7 @@ const SYNC_NETWORK_DISCONNECTED = `${SYNC_EVENT_PREFIX}network-disconnected`;
 
 // Store sync metadata
 let syncInProgress = false;
-let lastSyncTime = localStorage.getItem('axtonLastSyncTime') 
-  ? parseInt(localStorage.getItem('axtonLastSyncTime')) 
-  : Date.now();
+let lastSyncTime = null; // Will be loaded from storage or Drive later
 let retryCount = 0;
 const maxRetries = 5;
 let networkStatus = navigator.onLine;
@@ -45,7 +43,8 @@ function handleNetworkChange() {
     retryCount = 0;
     // Try to sync immediately when connection is restored
     if (!syncInProgress) {
-      syncAll().catch(err => console.error('Sync error after network restore:', err));
+      // syncAll().catch(err => console.error('Sync error after network restore:', err)); // TODO: Re-enable with Drive Sync
+      console.log('[Sync] TODO: Trigger Drive sync after network restore.');
     }
   } else if (!networkStatus && previousStatus) {
     console.log('Network connection lost, sync paused');
@@ -67,6 +66,12 @@ function triggerSyncEvent(eventName, detail = {}) {
 export function startAutoSync(intervalMs = 60000) {
   let syncInterval = null;
   
+  // Initialize lastSyncTime from storage (example)
+  // storageService.getItem('settings', 'lastSyncTime').then(time => {
+  //   if (time) lastSyncTime = time;
+  //   console.log('Initialized lastSyncTime:', lastSyncTime);
+  // });
+
   if (syncInterval) {
     clearInterval(syncInterval);
     console.log('Cleared previous sync interval');
@@ -74,8 +79,8 @@ export function startAutoSync(intervalMs = 60000) {
   
   // First sync immediately
   if (networkStatus && !syncInProgress) {
-    console.log('Starting immediate initial sync');
-    syncAll().catch(err => console.error('Initial auto-sync error:', err));
+    console.log('Starting immediate initial sync (placeholder)');
+    // syncAll().catch(err => console.error('Initial auto-sync error:', err)); // TODO: Re-enable with Drive Sync
   } else {
     console.log(`Skipping initial sync: networkStatus=${networkStatus}, syncInProgress=${syncInProgress}`);
   }
@@ -83,20 +88,20 @@ export function startAutoSync(intervalMs = 60000) {
   // Then set up recurring sync
   syncInterval = setInterval(() => {
     if (networkStatus && !syncInProgress) {
-      console.log('Running scheduled auto-sync');
-      syncAll().catch(err => {
-        console.error('Auto-sync error:', err);
-        // Increment retry count
-        retryCount++;
-        
-        if (retryCount > maxRetries) {
-          console.warn(`Sync failed ${retryCount} times, pausing auto-sync`);
-          triggerSyncEvent(SYNC_ERROR, { 
-            error: 'Maximum retry attempts reached',
-            retries: retryCount
-          });
-        }
-      });
+      console.log('Running scheduled auto-sync (placeholder)');
+      // syncAll().catch(err => { // TODO: Re-enable with Drive Sync
+      //   console.error('Auto-sync error:', err);
+      //   // Increment retry count
+      //   retryCount++;
+      //   
+      //   if (retryCount > maxRetries) {
+      //     console.warn(`Sync failed ${retryCount} times, pausing auto-sync`);
+      //     triggerSyncEvent(SYNC_ERROR, { 
+      //       error: 'Maximum retry attempts reached',
+      //       retries: retryCount
+      //     });
+      //   }
+      // });
     } else {
       console.log(`Skipping scheduled sync: networkStatus=${networkStatus}, syncInProgress=${syncInProgress}`);
     }
@@ -187,299 +192,54 @@ function processDeleted(localArray, serverArray) {
 }
 
 /**
- * Sync all data between local storage and server
+ * Placeholder for Sync All data with Google Drive.
+ * This function needs to be implemented with Google Drive API logic.
  */
 export async function syncAll() {
   if (syncInProgress || !networkStatus) {
-    console.log('Sync all not possible:', 
+    console.log('[Sync] Sync all not possible:', 
                syncInProgress ? 'Sync already in progress' : 'No network');
     return null;
   }
   
   syncInProgress = true;
   triggerSyncEvent(SYNC_STARTED);
-  console.log('Starting complete data synchronization');
-  
+  console.log('[Sync] Starting Google Drive synchronization (Placeholder)');
+
   try {
-    // Get local data
-    const localSuppliers = JSON.parse(localStorage.getItem('axtonSuppliers') || '[]');
-    const localItems = JSON.parse(localStorage.getItem('axtonItems') || '[]');
-    const localQuotes = JSON.parse(localStorage.getItem('axtonSavedQuotes') || '[]');
+    // TODO: Implement Google Drive Sync Logic
+    // 1. Authenticate/Get Token
+    // 2. Check Drive for app data file
+    // 3. Download Drive file content
+    // 4. Get local data from storageService (IndexedDB)
+    // 5. Compare local and Drive data (e.g., using timestamps or version numbers)
+    // 6. If Drive is newer: Update IndexedDB from Drive data
+    // 7. If Local is newer: Upload IndexedDB data to Drive file
+    // 8. Handle conflicts (e.g., last write wins, merge logic)
+    // 9. Update local data in IndexedDB if needed (e.g., after conflict resolution)
+
+    console.log('[Sync] Placeholder: Simulating sync process...');
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate async work
     
-    console.log(`Local data: ${localSuppliers.length} suppliers, ${localItems.length} items, ${localQuotes.length} quotes`);
-    
-    // Get server data
-    const serverSuppliers = await api.suppliers.getAll();
-    const serverItems = await api.catalog.getAll();
-    const serverQuotes = await api.quotes.getAll();
-    
-    console.log(`Server data: ${serverSuppliers.length} suppliers, ${serverItems.length} items, ${serverQuotes.length} quotes`);
-    
-    // Process and merge data
-    const processedSuppliers = processDeleted(localSuppliers, serverSuppliers);
-    const processedItems = processDeleted(localItems, serverItems);
-    
-    console.log(`Processed data: ${processedSuppliers.length} suppliers, ${processedItems.length} items`);
-    
-    // Save processed data back to server
-    await api.suppliers.update(processedSuppliers);
-    await api.catalog.update(processedItems);
-    
-    // Process quotes (handled differently as they have nested structures)
-    await syncQuotes(localQuotes, serverQuotes);
-    
-    // Sync invoices as well
-    await syncInvoices();
-    
-    // Always update both memory and localStorage with non-deleted items only for consistency
-    const finalSuppliers = processedSuppliers.filter(s => !s.deleted);
-    const finalItems = processedItems.filter(i => !i.deleted);
-    
-    localStorage.setItem('axtonSuppliers', JSON.stringify(finalSuppliers));
-    localStorage.setItem('axtonItems', JSON.stringify(finalItems));
-    
-    // Reset retry count on successful sync
-    retryCount = 0;
-    
-    // Update last sync time
+    // On successful sync:
     lastSyncTime = Date.now();
-    localStorage.setItem('axtonLastSyncTime', lastSyncTime);
-    
-    // Sync settings
-    const settings = await api.settings.get();
-    if (Object.keys(settings).length > 0) {
-      localStorage.setItem('axtonSettings', JSON.stringify(settings));
-      console.log('Settings synchronized from server');
-    }
-    
-    // Trigger sync completed event
-    triggerSyncEvent(SYNC_COMPLETED, { 
-      success: true,
-      suppliers: finalSuppliers,
-      items: finalItems,
-      timestamp: lastSyncTime
-    });
-    
-    console.log('Complete synchronization finished successfully');
-    
+    retryCount = 0;
+    // Persist lastSyncTime (e.g., in IndexedDB settings)
+    // await storageService.putItem('settings', { id: 'lastSyncTime', value: lastSyncTime });
+    console.log(`[Sync] Placeholder: Sync completed successfully. Last sync time: ${new Date(lastSyncTime).toISOString()}`);
+    triggerSyncEvent(SYNC_COMPLETED, { lastSyncTime });
     syncInProgress = false;
-    return {
-      suppliers: finalSuppliers,
-      items: finalItems
-    };
-  } catch (error) {
-    console.error('Sync error:', error);
-    
-    // Trigger sync error event
-    triggerSyncEvent(SYNC_ERROR, { 
-      error: error.message 
-    });
-    
-    syncInProgress = false;
-    return null;
-  }
-}
+    return { success: true, lastSyncTime };
 
-/**
- * Sync quotes between local storage and server
- */
-async function syncQuotes(localQuotes, serverQuotes) {
-  try {
-    console.log('Starting quote synchronization');
-    
-    // Create maps for faster lookup
-    const serverQuoteMap = new Map();
-    serverQuotes.forEach(quote => serverQuoteMap.set(quote.id, quote));
-    
-    const localQuoteMap = new Map();
-    localQuotes.forEach(quote => localQuoteMap.set(quote.id, quote));
-    
-    // Process local quotes to send to server if needed
-    const updatedQuotes = [];
-    for (const localQuote of localQuotes) {
-      const serverQuote = serverQuoteMap.get(localQuote.id);
-      
-      // If quote doesn't exist on server or local version is newer
-      if (!serverQuote || 
-          (localQuote.data?.savedAt && (!serverQuote.savedAt || new Date(localQuote.data.savedAt) > new Date(serverQuote.savedAt)))) {
-        console.log(`Uploading quote ${localQuote.id} to server`);
-        try {
-          await api.quotes.save(localQuote.data);
-          updatedQuotes.push(localQuote.id);
-        } catch (err) {
-          console.error(`Failed to upload quote ${localQuote.id}:`, err);
-        }
-      }
-    }
-    
-    if (updatedQuotes.length > 0) {
-      console.log(`Updated ${updatedQuotes.length} quotes on server`);
-    }
-    
-    // Process server quotes to save locally if needed
-    const newQuotes = [];
-    const updatedLocalQuotes = [...localQuotes];
-    
-    for (const serverQuote of serverQuotes) {
-      const localQuote = localQuoteMap.get(serverQuote.id);
-      
-      // If quote doesn't exist locally or server version is newer
-      if (!localQuote || 
-          (serverQuote.savedAt && (!localQuote.data?.savedAt || new Date(serverQuote.savedAt) > new Date(localQuote.data.savedAt)))) {
-        console.log(`Downloading quote ${serverQuote.id} from server`);
-        
-        // Format server quote to match local structure
-        const formattedQuote = {
-          id: serverQuote.id,
-          name: serverQuote.name || `Quote ${serverQuote.id}`,
-          data: {
-            id: serverQuote.id,
-            name: serverQuote.name,
-            client: {
-              name: serverQuote.clientName || '',
-              company: serverQuote.clientCompany || '',
-              email: serverQuote.clientEmail || '',
-              phone: serverQuote.clientPhone || '',
-              address: serverQuote.clientAddress || ''
-            },
-            date: serverQuote.date || new Date().toISOString().split('T')[0],
-            validUntil: serverQuote.validUntil || '',
-            paymentTerms: serverQuote.paymentTerms || '1',
-            customTerms: serverQuote.customTerms || '',
-            notes: serverQuote.notes || '',
-            includeDrawingOption: Boolean(serverQuote.includeDrawingOption),
-            exclusions: serverQuote.exclusions || [],
-            selectedItems: serverQuote.selectedItems || [],
-            hiddenCosts: serverQuote.hiddenCosts || [],
-            globalMarkup: serverQuote.globalMarkup || 20,
-            distributionMethod: serverQuote.distributionMethod || 'even',
-            savedAt: serverQuote.savedAt || new Date().toISOString()
-          },
-          serverUpdatedAt: serverQuote.savedAt || new Date().toISOString()
-        };
-        
-        // Update local quote list
-        const existingIndex = updatedLocalQuotes.findIndex(q => q.id === serverQuote.id);
-        if (existingIndex >= 0) {
-          updatedLocalQuotes[existingIndex] = formattedQuote;
-        } else {
-          updatedLocalQuotes.push(formattedQuote);
-          newQuotes.push(serverQuote.id);
-        }
-      }
-    }
-    
-    if (newQuotes.length > 0) {
-      console.log(`Downloaded ${newQuotes.length} quotes from server`);
-    }
-    
-    // Filter out deleted quotes from the local storage
-    const finalLocalQuotes = updatedLocalQuotes.filter(quote => {
-      const serverQuote = serverQuoteMap.get(quote.id);
-      return !serverQuote || !serverQuote.deleted;
-    });
-    
-    // Save back to local storage
-    localStorage.setItem('axtonSavedQuotes', JSON.stringify(finalLocalQuotes));
-    console.log(`Saved ${finalLocalQuotes.length} quotes to localStorage`);
-    
-    return finalLocalQuotes;
   } catch (error) {
-    console.error('Error syncing quotes:', error);
-    throw error;
-  }
-}
-
-/**
- * Sync invoices between local storage and server
- */
-async function syncInvoices() {
-  if (syncInProgress || !networkStatus) {
-    console.log('Sync not possible:', 
-                syncInProgress ? 'Sync already in progress' : 'No network');
-    return false;
-  }
-  
-  syncInProgress = true;
-  console.log('Starting invoice synchronization...');
-  
-  try {
-    // Load invoices from localStorage
-    const localInvoices = JSON.parse(localStorage.getItem('axtonInvoices') || '[]');
-    console.log(`Found ${localInvoices.length} local invoices`);
-    
-    // Get server invoices
-    const serverInvoices = await api.invoices.getAll();
-    console.log(`Found ${serverInvoices.length} server invoices`);
-    
-    // Create maps for faster lookup
-    const serverInvoiceMap = new Map();
-    serverInvoices.forEach(invoice => serverInvoiceMap.set(invoice.id, invoice));
-    
-    const localInvoiceMap = new Map();
-    localInvoices.forEach(invoice => localInvoiceMap.set(invoice.id, invoice));
-    
-    // Process local invoices to send to server if needed
-    const updatedInvoices = [];
-    
-    for (const localInvoice of localInvoices) {
-      const serverInvoice = serverInvoiceMap.get(localInvoice.id);
-      
-      // If invoice doesn't exist on server or local version is newer
-      if (!serverInvoice || 
-          (localInvoice.updatedAt && serverInvoice.updatedAt && 
-            new Date(localInvoice.updatedAt) > new Date(serverInvoice.updatedAt))) {
-        console.log(`Uploading invoice ${localInvoice.id} to server`);
-        try {
-          await api.invoices.save(localInvoice);
-          updatedInvoices.push(localInvoice.id);
-        } catch (err) {
-          console.error(`Failed to upload invoice ${localInvoice.id}:`, err);
-        }
-      }
-    }
-    
-    if (updatedInvoices.length > 0) {
-      console.log(`Updated ${updatedInvoices.length} invoices on server`);
-    }
-    
-    // Process server invoices to save locally if needed
-    const newInvoices = [];
-    const mergedInvoices = [...localInvoices];
-    const localIds = new Set(localInvoices.map(inv => inv.id));
-    
-    for (const serverInvoice of serverInvoices) {
-      const localInvoice = localInvoiceMap.get(serverInvoice.id);
-      
-      if (!localInvoice) {
-        // Server invoice doesn't exist locally, add it
-        mergedInvoices.push(serverInvoice);
-        newInvoices.push(serverInvoice.id);
-      } else if (serverInvoice.updatedAt && localInvoice.updatedAt && 
-                 new Date(serverInvoice.updatedAt) > new Date(localInvoice.updatedAt)) {
-        // Server invoice is newer, update local
-        const index = mergedInvoices.findIndex(inv => inv.id === serverInvoice.id);
-        if (index !== -1) {
-          mergedInvoices[index] = serverInvoice;
-          newInvoices.push(serverInvoice.id);
-        }
-      }
-    }
-    
-    if (newInvoices.length > 0) {
-      console.log(`Downloaded ${newInvoices.length} invoices from server`);
-    }
-    
-    // Save merged invoices back to localStorage
-    localStorage.setItem('axtonInvoices', JSON.stringify(mergedInvoices));
-    console.log(`Saved ${mergedInvoices.length} invoices to localStorage`);
-    
+    console.error('[Sync] Google Drive sync failed (Placeholder): ', error);
+    retryCount++;
+    triggerSyncEvent(SYNC_ERROR, { error: error.message || 'Unknown sync error', retries: retryCount });
     syncInProgress = false;
-    return mergedInvoices;
-  } catch (error) {
-    syncInProgress = false;
-    console.error('Error syncing invoices:', error);
-    throw error;
+    // Consider specific error handling, e.g., re-authentication for 401 errors
+    throw error; // Re-throw the error to be handled by the caller if necessary
+  } finally {
+    syncInProgress = false; // Ensure syncInProgress is always reset
   }
 }
 
@@ -501,6 +261,7 @@ export function isSyncing() {
  * Get last sync time
  */
 export function getLastSyncTime() {
+  // Return the in-memory value. Needs to be loaded initially.
   return lastSyncTime;
 }
 
@@ -508,19 +269,24 @@ export function getLastSyncTime() {
  * Create a custom Hook to handle synchronization in React components
  */
 export function useSyncStatus() {
-  return {
-    isOnline: networkStatus,
-    isSyncing: syncInProgress,
-    lastSyncTime,
-    syncAll,
-    startAutoSync,
-    stopAutoSync
-  };
+  const [isSyncing, setIsSyncing] = useState(syncInProgress);
+  const [lastSyncTimestamp, setLastSyncTimestamp] = useState(lastSyncTime);
+
+  useEffect(() => {
+    // ... existing code ...
+
+    return () => {
+      window.removeEventListener(SYNC_STARTED, handleSyncStart);
+      window.removeEventListener(SYNC_COMPLETED, handleSyncEnd);
+      window.removeEventListener(SYNC_ERROR, handleSyncEnd); // Also stop on error
+    };
+  }, []);
+
+  return { isSyncing, lastSyncTime: lastSyncTimestamp, isOnline: networkStatus };
 }
 
 export default {
   syncAll,
-  syncInvoices,
   startAutoSync,
   stopAutoSync,
   isOnline,

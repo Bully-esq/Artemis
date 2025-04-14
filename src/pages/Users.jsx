@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { useQueryClient } from 'react-query';
 import PageLayout from '../components/common/PageLayout';
 import Button from '../components/common/Button';
-import { useApiCustomQuery } from '../hooks/useApi';
+import { useApiGet, useApiDelete } from '../hooks/useApi';
 import { useAuth } from '../context/AuthContext';
-import api, { apiClient } from '../services/api';
 import ActionButtonContainer from '../components/common/ActionButtonContainer';
 import { useNotification } from '../hooks/useNotification';
 
@@ -18,29 +17,27 @@ const Users = () => {
   const { showNotification } = useNotification();
   const queryClient = useQueryClient();
   
-  // Fetch users data using the direct hook
-  const { data: users, isLoading, error } = useApiCustomQuery(
-    ['users'], 
-    () => {
-      return apiClient.get('/users').then(response => response.data);
-    },
+  // Fetch users data using the direct hook for IndexedDB
+  const { data: users, isLoading, error } = useApiGet(
+    ['users'], // Key indicating the 'users' object store
+    // No API endpoint needed
     {
-      enabled: currentUser?.role === 'admin',
-      refetchOnWindowFocus: true
+      enabled: currentUser?.role === 'admin', // Keep enabling logic
+      refetchOnWindowFocus: false // Less relevant for local DB, can disable
     }
   );
 
-  // Delete user mutation
-  const deleteUserMutation = useMutation(
-    (userId) => apiClient.delete(`/users/${userId}`),
+  // Delete user mutation using the dedicated hook
+  const { mutateAsync: deleteUserMutate, isLoading: isDeleting } = useApiDelete(
+    'users', // Specify the store name
     {
       onSuccess: () => {
-        // Invalidate and refetch users query
-        queryClient.invalidateQueries('users');
+        // Query invalidation is handled by default in useApiDelete
+        // queryClient.invalidateQueries('users'); // Keep if custom logic needed, else remove
         showNotification({
           type: 'success',
           title: 'Success',
-          message: 'User has been successfully deleted'
+          message: 'User data removed successfully' // Updated message
         });
       },
       onError: (error) => {
@@ -48,7 +45,8 @@ const Users = () => {
         showNotification({
           type: 'error',
           title: 'Error',
-          message: error?.response?.data?.message || 'Failed to delete user. Please try again.'
+          // Update error message for local context
+          message: error?.message || 'Failed to remove user data. Please try again.'
         });
       }
     }
@@ -69,9 +67,9 @@ const Users = () => {
     }
 
     try {
-      await deleteUserMutation.mutateAsync(user.id);
+      await deleteUserMutate(user.id); // Call mutate with the user ID
     } catch (error) {
-      // Error is handled in the mutation's onError
+      // Error is handled in the mutation's onError callback
     }
   };
   
@@ -212,7 +210,7 @@ const Users = () => {
                               </button>
                               <button
                                 className="btn btn-list-item btn-list-item--danger"
-                                disabled={deleteUserMutation.isLoading || user.id === currentUser.id}
+                                disabled={isDeleting || user.id === currentUser.id}
                                 onClick={() => {
                                   if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
                                     handleDeleteUser(user);
@@ -220,7 +218,7 @@ const Users = () => {
                                 }}
                               >
                                 <span className="button-content">
-                                  {deleteUserMutation.isLoading && deleteUserMutation.variables === user.id ? (
+                                  {isDeleting && deleteUserMutate.variables === user.id ? (
                                     <svg className="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
