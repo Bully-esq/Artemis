@@ -1,6 +1,6 @@
 // App.js - With modular CSS import and circuit breaker support
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import './styles/index.css';  // Updated to use our modular CSS structure
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
@@ -29,6 +29,10 @@ import Users from './pages/Users';
 // Components
 import { Notifications } from './components/common/Notification';
 import NetworkStatus from './components/common/NetworkStatus';
+
+// Sync Service
+// import syncService from './services/syncService'; // Import the default export
+import { syncAll, startAutoSync, stopAutoSync } from './services/syncService'; // Use named imports
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -77,19 +81,14 @@ function FaviconUpdater() {
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading, circuitBroken } = useAuth();
+  const { isAuthenticated, loading, isAuthReady } = useAuth();
   const location = useLocation();
 
-  // If authentication is still loading, show a spinner
-  if (loading) {
+  // If authentication status is not yet determined, show a spinner
+  if (!isAuthReady) {
     return <div className="flex items-center justify-center h-screen">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
     </div>;
-  }
-
-  // If circuit breaker is active, redirect to login with a warning
-  if (circuitBroken) {
-    return <Navigate to="/login" state={{ from: location, circuitBroken: true }} replace />;
   }
 
   // If not authenticated, redirect to login with return path
@@ -100,6 +99,54 @@ const ProtectedRoute = ({ children }) => {
   // If authenticated, render the protected component
   return children;
 };
+
+// Component to handle initialization of sync after auth + gapi is ready
+function SyncInitializer() {
+  const { isAuthenticated, isGapiReady } = useAuth();
+  const syncStarted = useRef(false);
+  const autoSyncInterval = useRef(null);
+
+  useEffect(() => {
+    if (isAuthenticated && isGapiReady && !syncStarted.current) {
+      console.log("[App/SyncInitializer] User authenticated and GAPI ready. Triggering initial sync and starting auto-sync.");
+      syncStarted.current = true;
+      
+      // Perform initial sync
+      // syncService.syncAll().catch(error => {
+      syncAll().catch(error => { // Call directly
+        console.error("[App/SyncInitializer] Initial sync failed:", error);
+        // Optionally notify the user about the initial sync failure
+      });
+
+      // Start auto-sync (e.g., every 5 minutes)
+      const intervalMs = 5 * 60 * 1000; 
+      // autoSyncInterval.current = syncService.startAutoSync(intervalMs);
+      autoSyncInterval.current = startAutoSync(intervalMs); // Call directly
+      
+    } else if (!isAuthenticated && syncStarted.current) {
+      // User logged out, stop auto-sync if it was running
+      console.log("[App/SyncInitializer] User logged out. Stopping auto-sync.");
+      if (autoSyncInterval.current) {
+        // syncService.stopAutoSync(autoSyncInterval.current);
+        stopAutoSync(autoSyncInterval.current); // Call directly
+        autoSyncInterval.current = null;
+      }
+      syncStarted.current = false; // Reset flag for next login
+    }
+
+    // Cleanup function to stop auto-sync when component unmounts (e.g., app closes)
+    return () => {
+      if (autoSyncInterval.current) {
+        console.log("[App/SyncInitializer] Component unmounting. Stopping auto-sync.");
+        // syncService.stopAutoSync(autoSyncInterval.current);
+        stopAutoSync(autoSyncInterval.current); // Call directly
+      }
+    };
+
+  }, [isAuthenticated, isGapiReady]); // Rerun when auth or gapi status changes
+
+  return null; // This component doesn't render anything
+}
 
 function App() {
   return (
@@ -112,6 +159,7 @@ function App() {
                 <FaviconUpdater /> {/* Add the FaviconUpdater component */}
                 <Notifications />
                 <NetworkStatus />
+                <SyncInitializer /> {/* Add the Sync Initializer */}
                 
                 <Routes>
                   {/* Public Routes */}

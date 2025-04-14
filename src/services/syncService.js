@@ -1,4 +1,5 @@
 import * as storageService from './storageService'; // Import the new storage service
+import { useAuth } from '../context/AuthContext'; // Need context potentially for GAPI status?
 
 /**
  * SyncService - Handles data synchronization using local IndexedDB and Google Drive.
@@ -12,12 +13,31 @@ const SYNC_COMPLETED = `${SYNC_EVENT_PREFIX}completed`;
 const SYNC_ERROR = `${SYNC_EVENT_PREFIX}error`;
 const SYNC_NETWORK_DISCONNECTED = `${SYNC_EVENT_PREFIX}network-disconnected`;
 
+// --- Google Drive Configuration ---
+const DRIVE_FILE_NAME = 'artemis_data.json';
+const APP_DATA_STORES = ['quotes', 'items', 'suppliers', 'settings', 'invoices', 'contacts'];
+
 // Store sync metadata
 let syncInProgress = false;
 let lastSyncTime = null; // Will be loaded from storage or Drive later
 let retryCount = 0;
 const maxRetries = 5;
 let networkStatus = navigator.onLine;
+
+// Attempt to load lastSyncTime from storage on module load
+(async () => {
+  try {
+    const storedSetting = await storageService.getItem('settings', 'lastSyncTime');
+    if (storedSetting && typeof storedSetting.value === 'number') {
+      lastSyncTime = storedSetting.value;
+      console.log(`[Sync] Initialized lastSyncTime from settings: ${new Date(lastSyncTime).toISOString()}`);
+    } else {
+        console.log('[Sync] No valid lastSyncTime found in settings.');
+    }
+  } catch (error) {
+    console.error('[Sync] Error loading initial lastSyncTime from settings:', error);
+  }
+})();
 
 // Set up network status listeners
 window.addEventListener('online', handleNetworkChange);
@@ -44,7 +64,8 @@ function handleNetworkChange() {
     // Try to sync immediately when connection is restored
     if (!syncInProgress) {
       // syncAll().catch(err => console.error('Sync error after network restore:', err)); // TODO: Re-enable with Drive Sync
-      console.log('[Sync] TODO: Trigger Drive sync after network restore.');
+      console.log('[Sync] Network restored. Triggering syncAll.');
+      syncAll().catch(err => console.error('Sync error after network restore:', err));
     }
   } else if (!networkStatus && previousStatus) {
     console.log('Network connection lost, sync paused');
@@ -81,8 +102,9 @@ export function startAutoSync(intervalMs = 60000) {
   if (networkStatus && !syncInProgress) {
     console.log('Starting immediate initial sync (placeholder)');
     // syncAll().catch(err => console.error('Initial auto-sync error:', err)); // TODO: Re-enable with Drive Sync
+    // Note: Initial sync is now triggered from App component after GAPI is ready.
   } else {
-    console.log(`Skipping initial sync: networkStatus=${networkStatus}, syncInProgress=${syncInProgress}`);
+    console.log(`Skipping immediate sync in startAutoSync: networkStatus=${networkStatus}, syncInProgress=${syncInProgress}`);
   }
   
   // Then set up recurring sync
@@ -102,6 +124,20 @@ export function startAutoSync(intervalMs = 60000) {
       //     });
       //   }
       // });
+      console.log('[Sync] Running scheduled auto-sync.');
+      syncAll().catch(err => {
+        console.error('[Sync] Auto-sync error:', err);
+        retryCount++;
+        if (retryCount > maxRetries) {
+          console.warn(`[Sync] Auto-sync failed ${retryCount} times, pausing auto-sync for this session.`);
+          // Consider stopping the interval completely or just logging
+          triggerSyncEvent(SYNC_ERROR, {
+            error: 'Maximum retry attempts reached',
+            retries: retryCount
+          });
+          // Optionally stop the interval: clearInterval(syncInterval); syncInterval = null;
+        } 
+      });
     } else {
       console.log(`Skipping scheduled sync: networkStatus=${networkStatus}, syncInProgress=${syncInProgress}`);
     }
@@ -191,11 +227,189 @@ function processDeleted(localArray, serverArray) {
   return result;
 }
 
+// --- Google Drive Helper Functions ---
+
 /**
- * Placeholder for Sync All data with Google Drive.
- * This function needs to be implemented with Google Drive API logic.
+ * Finds the application's data file in Google Drive or creates it if not found.
+ * Returns the file ID.
+ * @returns {Promise<string | null>} The file ID or null if an error occurs.
+ */
+async function findOrCreateDriveFile() {
+  if (!window.gapi?.client?.drive) {
+    console.error('[Sync] GAPI Drive client not loaded.');
+    throw new Error('Google Drive API not ready.');
+  }
+
+  console.log(`[Sync] Searching for Drive file: ${DRIVE_FILE_NAME}`);
+  try {
+    // Search for the file by name in the user's root folder
+    const response = await window.gapi.client.drive.files.list({
+      q: `name='${DRIVE_FILE_NAME}' and trashed=false`,
+      // Use 'root' or specify another parent folder ID if needed
+      // Use 'appDataFolder' space if using drive.appdata scope
+      spaces: 'drive', 
+      fields: 'files(id, name, modifiedTime)',
+    });
+
+    if (response.result.files && response.result.files.length > 0) {
+      const file = response.result.files[0];
+      console.log(`[Sync] Found Drive file ID: ${file.id}, Modified: ${file.modifiedTime}`);
+      return file.id;
+    } else {
+      console.log(`[Sync] Drive file not found. Creating new file: ${DRIVE_FILE_NAME}`);
+      // Create the file if it doesn't exist
+      const createResponse = await window.gapi.client.drive.files.create({
+        resource: {
+          name: DRIVE_FILE_NAME,
+          // Add mimeType if needed, defaults likely okay for JSON
+          // mimeType: 'application/json',
+          // parents: ['root'] // Specify parent folder if not root
+        },
+        fields: 'id',
+      });
+      console.log(`[Sync] Created new Drive file ID: ${createResponse.result.id}`);
+      return createResponse.result.id;
+    }
+  } catch (error) {
+    console.error('[Sync] Error finding or creating Drive file:', error);
+    throw new Error(`Failed to access Google Drive file: ${error.result?.error?.message || error.message}`);
+  }
+}
+
+/**
+ * Downloads and parses the JSON content of the Drive file.
+ * @param {string} fileId The ID of the file in Google Drive.
+ * @returns {Promise<object | null>} Parsed JSON data or null if file is empty/invalid.
+ */
+async function downloadDriveFileContent(fileId) {
+  if (!fileId) return null;
+  console.log(`[Sync] Downloading content for Drive file ID: ${fileId}`);
+  try {
+    const response = await window.gapi.client.drive.files.get({
+      fileId: fileId,
+      alt: 'media',
+    });
+    // If the file is empty or content is not JSON, response.body might be empty string or invalid
+    if (response.body && response.body.length > 0) {
+        try {
+            const jsonData = JSON.parse(response.body);
+            console.log('[Sync] Successfully downloaded and parsed Drive file content.', jsonData);
+            return jsonData;
+        } catch (parseError) {
+            console.error('[Sync] Error parsing JSON from Drive file:', parseError, 'Content:', response.body);
+            throw new Error('Drive file contains invalid JSON data.');
+        }
+    } else {
+        console.log('[Sync] Drive file is empty or content is missing.');
+        return null; // Return null for empty files
+    }
+  } catch (error) {
+    // Handle 404 Not Found specifically - might mean the file was deleted externally
+    if (error.status === 404) {
+        console.warn(`[Sync] Drive file ID ${fileId} not found (404). Maybe deleted externally?`);
+        return null; // Treat as empty/non-existent
+    }
+    console.error('[Sync] Error downloading Drive file content:', error);
+    throw new Error(`Failed to download Google Drive file content: ${error.result?.error?.message || error.message}`);
+  }
+}
+
+/**
+ * Bundles local IndexedDB data into a JSON object.
+ * @returns {Promise<object>}
+ */
+async function bundleLocalData() {
+  console.log('[Sync] Bundling local data from IndexedDB.');
+  const localDataBundle = {
+    lastUpdated: new Date().toISOString(), // Timestamp for comparison
+    data: {}
+  };
+  try {
+    for (const storeName of APP_DATA_STORES) {
+      localDataBundle.data[storeName] = await storageService.getAllItems(storeName);
+    }
+    console.log('[Sync] Local data bundled successfully.');
+    return localDataBundle;
+  } catch (error) {
+    console.error('[Sync] Error bundling local data:', error);
+    throw new Error('Failed to read local application data.');
+  }
+}
+
+/**
+ * Uploads the bundled JSON data to the specified Drive file.
+ * @param {string} fileId The ID of the file in Google Drive.
+ * @param {object} dataBundle The bundled data object to upload.
+ * @returns {Promise<void>}
+ */
+async function uploadToDrive(fileId, dataBundle) {
+  if (!fileId || !dataBundle) return;
+  console.log(`[Sync] Uploading data to Drive file ID: ${fileId}`);
+  try {
+    const jsonData = JSON.stringify(dataBundle);
+    await window.gapi.client.request({
+        path: `/upload/drive/v3/files/${fileId}`,
+        method: 'PATCH', // Use PATCH to update content
+        params: { uploadType: 'media' },
+        body: jsonData,
+    });
+    console.log('[Sync] Successfully uploaded data to Drive.');
+  } catch (error) {
+    console.error('[Sync] Error uploading data to Drive:', error);
+    throw new Error(`Failed to upload data to Google Drive: ${error.result?.error?.message || error.message}`);
+  }
+}
+
+/**
+ * Replaces local IndexedDB data with data from the Drive bundle.
+ * @param {object} driveDataBundle The data bundle downloaded from Drive.
+ * @returns {Promise<void>}
+ */
+async function applyDriveDataLocally(driveDataBundle) {
+  if (!driveDataBundle || !driveDataBundle.data) {
+      console.warn('[Sync] No valid data received from Drive to apply locally.');
+      return;
+  }
+  console.log('[Sync] Applying Drive data to local IndexedDB.');
+  try {
+    // Clear existing local data and replace with Drive data
+    for (const storeName of APP_DATA_STORES) {
+      console.log(`[Sync] Clearing store: ${storeName}`);
+      await storageService.clearStore(storeName);
+      const storeData = driveDataBundle.data[storeName];
+      if (storeData && Array.isArray(storeData)) {
+        console.log(`[Sync] Adding ${storeData.length} items to store: ${storeName}`);
+        // Add items one by one or potentially use addBulk if storageService supports it
+        for (const item of storeData) {
+          // Ensure item has an ID if required by store keyPath
+          if (typeof item.id === 'undefined') {
+             console.warn(`[Sync] Item in store ${storeName} from Drive is missing ID:`, item);
+             // Skip or assign ID depending on app logic
+             continue; 
+          }
+          await storageService.putItem(storeName, item);
+        }
+      }
+    }
+    console.log('[Sync] Finished applying Drive data locally.');
+  } catch (error) {
+    console.error('[Sync] Error applying Drive data locally:', error);
+    throw new Error('Failed to update local data from Google Drive.');
+  }
+}
+
+/**
+ * Sync All data with Google Drive.
+ * Assumes gapi client is loaded and user is authenticated.
  */
 export async function syncAll() {
+  // Check if GAPI is ready (this check might be better placed *before* calling syncAll)
+  if (!window.gapi?.client?.drive) {
+    console.warn('[Sync] Attempted syncAll, but GAPI Drive client is not ready.');
+    triggerSyncEvent(SYNC_ERROR, { error: 'Google Drive API not ready.' });
+    return null;
+  }
+
   if (syncInProgress || !networkStatus) {
     console.log('[Sync] Sync all not possible:', 
                syncInProgress ? 'Sync already in progress' : 'No network');
@@ -204,35 +418,59 @@ export async function syncAll() {
   
   syncInProgress = true;
   triggerSyncEvent(SYNC_STARTED);
-  console.log('[Sync] Starting Google Drive synchronization (Placeholder)');
+  console.log('[Sync] Starting Google Drive synchronization');
 
   try {
-    // TODO: Implement Google Drive Sync Logic
-    // 1. Authenticate/Get Token
-    // 2. Check Drive for app data file
-    // 3. Download Drive file content
-    // 4. Get local data from storageService (IndexedDB)
-    // 5. Compare local and Drive data (e.g., using timestamps or version numbers)
-    // 6. If Drive is newer: Update IndexedDB from Drive data
-    // 7. If Local is newer: Upload IndexedDB data to Drive file
-    // 8. Handle conflicts (e.g., last write wins, merge logic)
-    // 9. Update local data in IndexedDB if needed (e.g., after conflict resolution)
+    // 1. Find or Create the Drive file
+    const fileId = await findOrCreateDriveFile();
+    if (!fileId) throw new Error('Could not get Drive file ID.');
 
-    console.log('[Sync] Placeholder: Simulating sync process...');
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate async work
-    
-    // On successful sync:
-    lastSyncTime = Date.now();
+    // 2. Download Drive file content
+    const driveDataBundle = await downloadDriveFileContent(fileId);
+    const driveTimestamp = driveDataBundle ? new Date(driveDataBundle.lastUpdated || 0) : new Date(0);
+    console.log(`[Sync] Drive data timestamp: ${driveTimestamp.toISOString()}`);
+
+    // 3. Get Local Data Bundle (including its timestamp)
+    const localDataBundle = await bundleLocalData();
+    const localTimestamp = new Date(localDataBundle.lastUpdated);
+    console.log(`[Sync] Local data timestamp: ${localTimestamp.toISOString()}`);
+
+    // 4. Compare Timestamps & Decide Action (Last Write Wins)
+    if (!driveDataBundle || localTimestamp > driveTimestamp) {
+      // Local is newer (or Drive file is new/empty), Upload local to Drive
+      console.log('[Sync] Local data is newer or Drive file empty. Uploading to Drive.');
+      await uploadToDrive(fileId, localDataBundle);
+      lastSyncTime = new Date(localDataBundle.lastUpdated).getTime(); // Use timestamp from uploaded bundle
+
+    } else if (driveTimestamp > localTimestamp) {
+      // Drive is newer, Apply Drive data locally
+      console.log('[Sync] Drive data is newer. Applying locally.');
+      await applyDriveDataLocally(driveDataBundle);
+      lastSyncTime = driveTimestamp.getTime(); // Use timestamp from downloaded bundle
+
+    } else {
+      // Timestamps are the same (or both invalid/zero), data is considered in sync
+      console.log('[Sync] Local and Drive data timestamps match. No sync action needed.');
+      lastSyncTime = localTimestamp.getTime(); // Use local timestamp
+    }
+
+    // 5. Finalize Sync
     retryCount = 0;
     // Persist lastSyncTime (e.g., in IndexedDB settings)
-    // await storageService.putItem('settings', { id: 'lastSyncTime', value: lastSyncTime });
-    console.log(`[Sync] Placeholder: Sync completed successfully. Last sync time: ${new Date(lastSyncTime).toISOString()}`);
+    try {
+      await storageService.putItem('settings', { id: 'lastSyncTime', value: lastSyncTime });
+      console.log(`[Sync] Persisted lastSyncTime (${lastSyncTime}) to settings.`);
+    } catch(settingsError) {
+       console.warn('[Sync] Could not persist lastSyncTime to settings:', settingsError);
+    }
+    
+    console.log(`[Sync] Google Drive sync completed successfully. Last sync time: ${new Date(lastSyncTime).toISOString()}`);
     triggerSyncEvent(SYNC_COMPLETED, { lastSyncTime });
     syncInProgress = false;
     return { success: true, lastSyncTime };
 
   } catch (error) {
-    console.error('[Sync] Google Drive sync failed (Placeholder): ', error);
+    console.error('[Sync] Google Drive sync failed: ', error);
     retryCount++;
     triggerSyncEvent(SYNC_ERROR, { error: error.message || 'Unknown sync error', retries: retryCount });
     syncInProgress = false;
@@ -261,36 +499,27 @@ export function isSyncing() {
  * Get last sync time
  */
 export function getLastSyncTime() {
-  // Return the in-memory value. Needs to be loaded initially.
+  // TODO: Load initial lastSyncTime from storageService async when service loads?
+  // For now, it returns the in-memory value, which is null until first sync.
+  // Removed TODO as initial load is now attempted above.
   return lastSyncTime;
 }
 
 /**
- * Create a custom Hook to handle synchronization in React components
+ * React hook to get the current sync status and last sync time.
+ * This hook should be defined in its own file (e.g., src/hooks/useSyncStatus.js)
+ * as service files cannot contain React hooks.
  */
-export function useSyncStatus() {
-  const [isSyncing, setIsSyncing] = useState(syncInProgress);
-  const [lastSyncTimestamp, setLastSyncTimestamp] = useState(lastSyncTime);
+// export function useSyncStatus() { ... remove the implementation ... }
 
-  useEffect(() => {
-    // ... existing code ...
-
-    return () => {
-      window.removeEventListener(SYNC_STARTED, handleSyncStart);
-      window.removeEventListener(SYNC_COMPLETED, handleSyncEnd);
-      window.removeEventListener(SYNC_ERROR, handleSyncEnd); // Also stop on error
-    };
-  }, []);
-
-  return { isSyncing, lastSyncTime: lastSyncTimestamp, isOnline: networkStatus };
-}
-
-export default {
-  syncAll,
-  startAutoSync,
-  stopAutoSync,
-  isOnline,
-  isSyncing,
-  getLastSyncTime,
-  useSyncStatus
-};
+// Remove default export if not needed or update it
+// Leaving it commented out as the service now exports named functions.
+// export default { 
+//   syncAll,
+//   startAutoSync,
+//   stopAutoSync,
+//   isOnline,
+//   isSyncing,
+//   getLastSyncTime
+//   // useSyncStatus removed
+// };

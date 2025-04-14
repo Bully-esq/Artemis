@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from 'react-query';
+import { useQueryClient } from 'react-query';
 
 // Components
 import PageLayout from '../components/common/PageLayout';
@@ -11,86 +11,45 @@ import ActionButtonContainer from '../components/common/ActionButtonContainer';
 // Contexts and Hooks
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
+import { useApiGet } from '../hooks/useApi';
 
 // Services
-import api, { apiClient } from '../services/api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { addNotification } = useAppContext();
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, isAuthReady } = useAuth();
   const [period, setPeriod] = useState('month'); // 'week', 'month', 'year'
-  const [retryCount, setRetryCount] = useState(0);
   const queryClient = useQueryClient();
 
-  // Effect to reapply token to API requests if needed
-  useEffect(() => {
-    if (token) {
-      // Ensure token is applied to all subsequent requests
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      console.log("Dashboard: Reapplied auth token to API client");
-    }
-  }, [token]);
-
-  // Retry logic for API requests
-  useEffect(() => {
-    if (retryCount > 0 && isAuthenticated && token) {
-      // Force a refetch of data
-      setTimeout(() => {
-        console.log("Retrying API requests after applying token...");
-        // Invalidate queries to trigger refetch
-        queryClient.invalidateQueries('quotes');
-        queryClient.invalidateQueries('invoices');
-      }, 500);
-    }
-  }, [retryCount, isAuthenticated, token, queryClient]);
-
-  // Fetch data with React Query
-  const { data: quotes, isLoading: quotesLoading, error: quotesError } = useQuery(
-    'quotes', 
-    api.quotes.getAll, 
-    {
+  // Fetch data using the refactored useApiGet hook
+  const { data: quotes, isLoading: quotesLoading, error: quotesError } = useApiGet(
+    ['quotes'], // Use store name as query key
+    { // Options for useQuery via useApiGet
       onError: (error) => {
-        console.error("Error fetching quotes:", error);
-        if (error.response?.status === 401 && retryCount < 2) {
-          console.log("Authentication error fetching quotes, retrying...");
-          setRetryCount(prev => prev + 1);
-        } else {
-          addNotification(`Error fetching quotes: ${error.message}`, 'error');
-        }
+        console.error("Error fetching quotes from storage:", error);
+        addNotification(`Error loading quotes: ${error.message}`, 'error');
+        // Remove retry logic based on 401
       },
-      retry: 2,
-      retryDelay: 1000,
-      enabled: isAuthenticated
+      // retry: 2, // useApiGet might have default retry, or configure globally
+      // retryDelay: 1000,
+      enabled: isAuthReady && isAuthenticated // Enable only when auth is fully ready
     }
   );
 
-  const { data: invoices, isLoading: invoicesLoading, error: invoicesError } = useQuery(
-    'invoices', 
-    api.invoices.getAll, 
-    {
+  const { data: invoices, isLoading: invoicesLoading, error: invoicesError } = useApiGet(
+    ['invoices'], // Use store name as query key
+    { // Options for useQuery via useApiGet
       onError: (error) => {
-        console.error("Error fetching invoices:", error);
-        if (error.response?.status === 401 && retryCount < 2) {
-          console.log("Authentication error fetching invoices, retrying...");
-          setRetryCount(prev => prev + 1);
-        } else {
-          addNotification(`Error fetching invoices: ${error.message}`, 'error');
-        }
+        console.error("Error fetching invoices from storage:", error);
+        addNotification(`Error loading invoices: ${error.message}`, 'error');
+        // Remove retry logic based on 401
       },
-      retry: 2,
-      retryDelay: 1000,
-      enabled: isAuthenticated
+      // retry: 2,
+      // retryDelay: 1000,
+      enabled: isAuthReady && isAuthenticated // Enable only when auth is fully ready
     }
   );
-
-  // If not authenticated, redirect to login
-  useEffect(() => {
-    if (!isAuthenticated) {
-      console.log("Dashboard: Not authenticated, redirecting to login");
-      navigate('/login');
-    }
-  }, [isAuthenticated, navigate]);
 
   // Calculate dashboard metrics
   const calculateMetrics = () => {

@@ -1,0 +1,161 @@
+/* src/styles/pages/login.css */
+
+.login-page-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  /* Use theme variables for background */
+  background: var(--gradient-primary-to-secondary, linear-gradient(to bottom right, var(--color-primary-light, #e0f2fe), var(--color-secondary-light, #ede9fe))); 
+}
+
+.login-card {
+  background-color: var(--color-base-bg);
+  padding: 2rem; /* Adjust padding as needed */
+  border-radius: var(--border-radius-lg, 0.75rem);
+  box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04));
+  width: 100%;
+  max-width: 450px; /* Adjust max width as needed */
+  text-align: center;
+  border: 1px solid var(--color-border);
+}
+
+.login-logo-container {
+  margin-bottom: 1.5rem;
+  height: 56px; /* Fixed height for logo container */
+  display: flex; /* Use flexbox for centering */
+  align-items: center;
+  justify-content: center;
+}
+
+.login-logo {
+  max-height: 100%; /* Ensure logo fits within the container height */
+  width: auto;
+  display: block;
+}
+
+/* Dark mode logo handling - uses theme variables */
+.logo-light {
+  display: var(--logo-light-display, block);
+}
+
+.logo-dark {
+  display: var(--logo-dark-display, none);
+}
+
+/* You likely have theme variables in themes/dark.css or similar that set these:
+body.dark {
+  --logo-light-display: none;
+  --logo-dark-display: block;
+}
+*/
+
+.login-title {
+  font-size: var(--font-size-2xl, 1.875rem);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  /* color: var(--color-text-primary); */
+  color: #000000; /* Force black color for light mode */
+}
+
+.login-subtitle {
+  font-size: var(--font-size-sm, 0.875rem);
+  /* color: var(--color-text-secondary); */
+  color: #333333; /* Use a dark gray for subtitle for slight contrast */
+  margin-bottom: 2rem;
+}
+
+.login-loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1.5rem 0;
+  /* color: var(--color-text-secondary); */
+  color: #333333; /* Dark gray for loading text */
+}
+
+.login-loading-text {
+    margin-left: 0.5rem;
+    font-size: var(--font-size-sm);
+}
+
+/* Define .spinner styles if you don't have a global one */
+.spinner {
+  border: 2px solid var(--color-primary-light, rgba(0, 0, 0, 0.1));
+  border-left-color: var(--color-primary);
+  border-radius: 50%;
+  width: 1.5rem; /* 24px */
+  height: 1.5rem; /* 24px */
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.login-error-container {
+  background-color: var(--color-danger-light-transparent, rgba(239, 68, 68, 0.1));
+  border: 1px solid var(--color-danger);
+  /* color: var(--color-danger-text); */
+  color: #b91c1c; /* Use a specific error color for better visibility */
+  padding: 0.75rem; /* 12px */
+  border-radius: var(--border-radius-md, 0.5rem);
+  margin-bottom: 1.5rem;
+  font-size: var(--font-size-sm);
+  text-align: left;
+}
+
+.login-google-button-container {
+  display: flex; 
+  justify-content: center;
+  align-items: center;
+  margin: 2rem 0;
+  min-height: 48px; /* Ensure space for the button */
+}
+
+.login-google-loading-text {
+  font-size: var(--font-size-sm);
+  /* color: var(--color-text-secondary); */
+  color: #333333; /* Dark gray for loading text */
+}
+
+.login-footer-text {
+  margin-top: 2.5rem; /* Increased margin */
+  font-size: var(--font-size-xs, 0.75rem);
+  /* color: var(--color-text-secondary); */
+  color: #555555; /* Slightly lighter gray for footer */
+}
+
+/* Dark mode overrides */
+body.dark .login-page-container {
+    background: var(--gradient-primary-to-secondary-dark, linear-gradient(to bottom right, var(--color-primary-dark, #1e3a8a), var(--color-secondary-dark, #3730a3)));
+}
+
+body.dark .login-card {
+  background-color: var(--color-base-bg-dark);
+  border-color: var(--color-border-dark);
+}
+
+body.dark .login-title {
+  color: var(--color-text-primary-dark); /* Keep using dark mode variables */
+}
+
+body.dark .login-subtitle,
+body.dark .login-loading-text,
+body.dark .login-google-loading-text,
+body.dark .login-footer-text {
+  color: var(--color-text-secondary-dark); /* Keep using dark mode variables */
+}
+
+body.dark .login-error-container {
+  background-color: var(--color-danger-dark-transparent, rgba(239, 68, 68, 0.1));
+  border-color: var(--color-danger-dark);
+  color: var(--color-danger-text-dark); /* Keep using dark mode variables */
+}
+
+body.dark .spinner {
+  border-color: var(--color-primary-dark-transparent, rgba(255, 255, 255, 0.1));
+  border-left-color: var(--color-primary-dark);
+} 
