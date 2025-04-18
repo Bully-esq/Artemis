@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useAppContext } from '../context/AppContext';
 
@@ -18,10 +18,17 @@ import { formatDate } from '../utils/formatters';
 const Invoices = () => {
   const navigate = useNavigate();
   const { addNotification } = useAppContext();
+  const [searchParams] = useSearchParams();
   
   // Local state
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(() => {
+    const initialStatus = searchParams.get('status');
+    if (initialStatus && ['all', 'paid', 'pending', 'overdue'].includes(initialStatus)) {
+      return initialStatus;
+    }
+    return 'all';
+  });
   const [showQuoteSelector, setShowQuoteSelector] = useState(false);
   const [selectedQuoteId, setSelectedQuoteId] = useState(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -71,6 +78,8 @@ const Invoices = () => {
           statusMatch = invoice.status === 'pending' && new Date(invoice.dueDate) >= new Date();
         } else if (statusFilter === 'overdue') {
           statusMatch = invoice.status === 'pending' && new Date(invoice.dueDate) < new Date();
+        } else if (statusFilter === 'outstanding') {
+          statusMatch = invoice.status === 'pending';
         }
       }
       

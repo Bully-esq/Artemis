@@ -243,7 +243,13 @@ const Dashboard = () => {
           <p className="text-sm text-text-secondary mt-4">{metrics.invoiceCount} invoices this {period}</p>
         </div>
 
-        <div className="bg-card-background rounded-lg p-6 shadow-md transition-colors duration-300 ease-linear">
+        <div 
+          className="bg-card-background rounded-lg p-6 shadow-md transition-all duration-200 ease-linear cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
+          onClick={() => navigate('/invoices?status=overdue')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/invoices?status=overdue'); }}
+        >
           <div className="flex items-center">
             <div className="p-3 rounded-full mr-4 flex items-center justify-center bg-blue-500/20 text-info">
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -381,6 +381,8 @@ const InvoiceBuilder = () => {
       await api.invoices.save(updatedInvoice);
       addNotification('Invoice marked as paid', 'success');
       setInvoiceDetails(updatedInvoice);
+      // Invalidate the main invoices list query so the dashboard updates
+      queryClient.invalidateQueries('invoices');
     } catch (error) {
       addNotification(`Error updating invoice: ${error.message}`, 'error');
     }
