@@ -278,7 +278,7 @@ const QuoteBuilder = () => {
     }
     
     // Close dialog if open
-    setShowItemDialog(false);
+    // setShowItemDialog(false); // <-- Moved this logic
   };
   
   // Handle removing an item from the quote
@@ -985,6 +985,7 @@ const QuoteBuilder = () => {
                     size="sm"
                     onClick={() => setShowContactSelector(true)}
                     icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
+                    className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
                   >
                     Load Contact
                   </Button>
@@ -1090,13 +1091,13 @@ const QuoteBuilder = () => {
 
               {/* Selected Items Card */}
               <div className="bg-card-background shadow-sm sm:rounded-lg border border-card-border transition-colors duration-300 ease-linear">
-                <div className="px-6 py-4 border-b border-card-border flex justify-between items-center">
+                <div className="px-6 py-4 border-b border-card-border flex justify-between items-center dark:border-gray-700">
                   <h3 className="text-lg font-medium leading-6 text-text-primary">Selected Items</h3>
                   <div className="space-x-2">
-                     <Button variant="outline" size="sm" onClick={handleOpenItemDialog}>
+                     <Button variant="outline" size="sm" onClick={handleOpenItemDialog} className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
                        Add Catalog Item
                      </Button>
-                     <Button variant="outline" size="sm" onClick={() => setShowCustomItemForm(true)}>
+                     <Button variant="outline" size="sm" onClick={() => setShowCustomItemForm(true)} className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
                       Add Custom Item
                      </Button>
                    </div>
@@ -1112,9 +1113,9 @@ const QuoteBuilder = () => {
                           <div className="flex flex-col md:flex-row md:items-start md:justify-between space-y-3 md:space-y-0 md:space-x-4">
                             <div className="flex-grow min-w-0">
                               <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-base font-semibold text-gray-800 truncate mr-2">
+                                <h4 className="text-base font-semibold text-gray-800 dark:text-white truncate mr-2">
                                   {item.name || 'Unnamed Item'}
-                                  {item.category && <span className="ml-2 text-xs font-medium text-gray-500">({item.category})</span>}
+                                  {item.category && <span className="ml-2 text-xs font-medium text-gray-500 dark:text-gray-400">({item.category})</span>}
                                 </h4>
                                  {/* Item Actions (Move, Delete) */}
                                 <div className="flex items-center space-x-1 flex-shrink-0">
@@ -1123,7 +1124,7 @@ const QuoteBuilder = () => {
                                     <button
                                       onClick={() => handleMoveItemUp(index)}
                                       disabled={index === 0}
-                                      className="p-0.5 rounded text-gray-400 hover:text-indigo-600 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                                      className="p-0.5 rounded text-gray-400 hover:text-indigo-600 dark:text-gray-500 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-400"
                                       aria-label="Move item up"
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
@@ -1131,7 +1132,7 @@ const QuoteBuilder = () => {
                                     <button
                                       onClick={() => handleMoveItemDown(index)}
                                       disabled={index === selectedItems.length - 1}
-                                      className="p-0.5 rounded text-gray-400 hover:text-indigo-600 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                                      className="p-0.5 rounded text-gray-400 hover:text-indigo-600 dark:text-gray-500 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-400"
                                       aria-label="Move item down"
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -1141,7 +1142,7 @@ const QuoteBuilder = () => {
                                     variant="ghost"
                                     size="icon-sm"
                                     onClick={() => handleRemoveItem(index)}
-                                    className="text-red-500 hover:bg-red-100"
+                                    className="text-red-500 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30"
                                     aria-label="Remove item"
                                   >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -1149,10 +1150,10 @@ const QuoteBuilder = () => {
                                 </div>
                               </div>
                               {item.description && (
-                                <p className="text-sm text-gray-600 mb-2 line-clamp-2">{item.description}</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{item.description}</p>
                               )}
                                {item.supplier && (
-                                  <p className="text-xs text-gray-500 mb-3">Supplier: {item.supplier || 'N/A'}</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Supplier: {item.supplier || 'N/A'}</p>
                                )}
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 <FormField
@@ -1201,7 +1202,7 @@ const QuoteBuilder = () => {
                                   labelSrOnly
                                   labelText="Hide"
                                   className="flex items-center justify-end pt-1"
-                                  labelClassName="text-sm ml-2"
+                                  labelClassName="text-sm ml-2 dark:text-gray-300"
                                 />
                               </div>
                             </div>
@@ -1215,9 +1216,9 @@ const QuoteBuilder = () => {
 
               {/* Hidden Costs Card */}
               <div className="bg-card-background shadow-sm sm:rounded-lg border border-card-border transition-colors duration-300 ease-linear">
-                 <div className="px-6 py-4 border-b border-card-border flex justify-between items-center">
+                 <div className="px-6 py-4 border-b border-card-border flex justify-between items-center dark:border-gray-700">
                    <h3 className="text-lg font-medium leading-6 text-text-primary">Additional Costs (Hidden)</h3>
-                   <Button variant="outline" size="sm" onClick={handleAddHiddenCost}>
+                   <Button variant="outline" size="sm" onClick={() => setShowHiddenCostDialog(true)} className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
                      Add Hidden Cost
                    </Button>
                  </div>
@@ -1264,7 +1265,7 @@ const QuoteBuilder = () => {
                              variant="ghost"
                              size="icon-sm"
                              onClick={() => handleRemoveHiddenCost(index)}
-                             className="text-red-500 hover:bg-red-100 flex-shrink-0"
+                             className="text-red-500 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30 flex-shrink-0"
                              aria-label="Remove hidden cost"
                            >
                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -1330,7 +1331,7 @@ const QuoteBuilder = () => {
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => handleRemoveExclusion(index)}
-                        className="text-red-500 hover:bg-red-100 mt-1"
+                        className="text-red-500 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30 mt-1"
                         aria-label="Remove exclusion"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -1342,7 +1343,7 @@ const QuoteBuilder = () => {
                   variant="link"
                   size="sm"
                   onClick={handleAddExclusion}
-                  className="mt-3"
+                  className="mt-3 text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
                 >
                   + Add Exclusion
                 </Button>
@@ -1386,6 +1387,7 @@ const QuoteBuilder = () => {
               <Button
                   variant="secondary"
                   onClick={() => navigate('/quotes')}
+                  className="dark:bg-gray-600 dark:hover:bg-gray-500 dark:border-gray-600 dark:text-gray-100"
               >
                   Cancel
               </Button>
@@ -1394,6 +1396,7 @@ const QuoteBuilder = () => {
                   onClick={handleSaveQuote}
                   isLoading={isSaving}
                   disabled={isSaving}
+                  className="dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:text-white"
               >
                   {id ? 'Update Quote' : 'Save Quote'}
               </Button>
@@ -1405,22 +1408,24 @@ const QuoteBuilder = () => {
                     isLoading={isGeneratingPdf}
                     disabled={isGeneratingPdf || isSaving}
                     icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>}
+                    className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
                   >
                     Export PDF
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={handleExportAndOpenEmail}
+                    onClick={handleEmailQuote}
                     isLoading={isGeneratingPdf} // Assuming export happens first
                     disabled={isGeneratingPdf || isSaving}
                     icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
+                    className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
                    >
                      Email Quote
                    </Button>
                    <Button
                       variant="outline"
                       onClick={handleGenerateInvoice}
-                      // Add loading/disabled states if needed
+                      className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
                    >
                       Generate Invoice
                    </Button>
@@ -1452,19 +1457,69 @@ const QuoteBuilder = () => {
           </Dialog>
 
            {/* Catalog Item Selector Dialog */}
-           <Dialog isOpen={showItemDialog} onClose={() => setShowItemDialog(false)} title="Add Item from Catalog" size="3xl"> 
+           <Dialog isOpen={showItemDialog} onClose={() => setShowItemDialog(false)} title="Add Item from Catalog" size="3xl">
               <p className="text-sm text-gray-600 mb-4">Select items from your catalog to add to the quote.</p>
               {/* Needs CatalogItemSelector component refactored or implemented with Tailwind */}
-              {/* <CatalogItemSelector 
-                onItemSelected={(item) => {
-                  handleAddItem({ ...item, quantity: 1, markup: 0 }); // Add default quantity/markup
+              {/* Use the correct ItemSelector component */}
+              <ItemSelector
+                onSelectItem={(selectedItemsFromDialog) => {
+                  if (Array.isArray(selectedItemsFromDialog)) {
+                    // Use functional update to correctly handle multiple additions
+                    setSelectedItems(currentSelectedItems => {
+                      let updatedItems = [...currentSelectedItems];
+                      
+                      selectedItemsFromDialog.forEach(itemToAdd => {
+                        const existingItemIndex = updatedItems.findIndex(i => i.id === itemToAdd.id);
+                        
+                        if (existingItemIndex > -1) {
+                          // Item exists, update quantity
+                          const newItems = [...updatedItems]; // Create a new array copy
+                          newItems[existingItemIndex] = {
+                            ...newItems[existingItemIndex],
+                            quantity: newItems[existingItemIndex].quantity + 1
+                          };
+                          updatedItems = newItems; // Update the working copy
+                        } else {
+                          // Item doesn't exist, add it with defaults
+                          updatedItems.push({
+                            ...itemToAdd,
+                            quantity: 1, // Set default quantity
+                            markup: globalMarkup, // Use global markup by default
+                            hideInQuote: false
+                          });
+                        }
+                      });
+                      
+                      return updatedItems; // Return the final list for this state update
+                    });
+
+                    addNotification(`Added ${selectedItemsFromDialog.length} items`, 'success');
+                    
+                  } else if (selectedItemsFromDialog && typeof selectedItemsFromDialog === 'object' && selectedItemsFromDialog.isAddNew) {
+                    // Handle 'Add New Item' case (if implemented to open another dialog)
+                    console.log('Add New Item clicked in selector'); 
+                    // Potentially open the custom item form here
+                    // setShowCustomItemForm(true); // Example
+                    // Don't close the item selector dialog yet if opening another
+                    return; // Early exit, keep dialog open
+                  } else if (selectedItemsFromDialog && typeof selectedItemsFromDialog === 'object') {
+                    // Handle potential single item selection (legacy or specific case)
+                    handleAddItem({
+                      ...selectedItemsFromDialog,
+                      quantity: 1,
+                      markup: globalMarkup,
+                      hideInQuote: false
+                    });
+                  }
+                  // Close the dialog AFTER processing items
                   setShowItemDialog(false);
                 }}
                 currentItems={selectedItems} // Pass current items to potentially disable already added ones
-              /> */}
-              <p className="p-4 text-center text-orange-600 bg-orange-100 border border-orange-200 rounded-md">
-                Catalog Item Selector component needs to be created/refactored with Tailwind.
-              </p>
+                // Pass the actual catalog items and suppliers data
+                items={catalogItems} 
+                suppliers={suppliers}
+                // Example: itemsToDisplay={filteredCatalogItems}
+              />
            </Dialog>
 
            {/* Custom Item Form Dialog */}
@@ -1525,11 +1580,11 @@ const QuoteBuilder = () => {
                    helpText="Leave at 0 to use global markup."
                  />
 
-                 <div className="flex justify-end space-x-3 pt-4">
-                   <Button variant="secondary" onClick={() => setShowCustomItemForm(false)} type="button">
+                 <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                   <Button variant="secondary" onClick={() => setShowCustomItemForm(false)} type="button" className="dark:bg-gray-600 dark:hover:bg-gray-500 dark:border-gray-600 dark:text-gray-100">
                      Cancel
                    </Button>
-                   <Button variant="primary" type="submit">
+                   <Button variant="primary" type="submit" className="dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:text-white">
                      Add Item
                    </Button>
                  </div>
@@ -1542,35 +1597,38 @@ const QuoteBuilder = () => {
             {/* Email Dialog (If needed) */}
             <Dialog isOpen={showEmailDialog} onClose={() => setShowEmailDialog(false)} title="Email Quote">
               {/* Content for emailing - potentially preview, recipients, message */}
-              <p className="mb-4">Configure email options here (Not fully implemented).</p>
-               <div className="flex justify-end space-x-3">
-                   <Button variant="secondary" onClick={() => setShowEmailDialog(false)}>
-                     Cancel
+              <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">How would you like to proceed?</p>
+               <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                   <Button variant="secondary" onClick={() => setShowEmailDialog(false)} className="dark:bg-gray-600 dark:hover:bg-gray-500 dark:border-gray-600 dark:text-gray-100">
+                      Cancel
                    </Button>
-                   <Button variant="primary" onClick={handleOpenEmailClient} >
-                     Open Email Client
+                   <Button variant="outline" onClick={handleExportAndOpenEmail} className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
+                     Export PDF & Email
+                   </Button>
+                   <Button variant="primary" onClick={handleOpenEmailClient} className="dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:text-white">
+                      Open Email Client
                    </Button>
                  </div>
             </Dialog>
 
            {/* Missing Company Info Dialog */}
             <Dialog isOpen={showMissingCompanyInfoDialog} onClose={() => setShowMissingCompanyInfoDialog(false)} title="Missing Company Information">
-              <p className="mb-4 text-sm text-gray-700">
+              <p className="mb-4 text-sm text-gray-700 dark:text-gray-300">
                 Your company details (name, address, etc.) are needed for the PDF header.
                 Please update them in <Link to="/settings/company" className="text-indigo-600 hover:underline font-medium">Company Settings</Link>.
               </p>
-              <p className="mb-6 text-sm text-gray-600">
+              <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
                 Alternatively, you can export the PDF without the company header information for now.
               </p>
-               <div className="flex justify-end space-x-3">
-                   <Button variant="secondary" onClick={() => setShowMissingCompanyInfoDialog(false)}>
-                     Cancel Export
+               <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                   <Button variant="secondary" onClick={() => setShowMissingCompanyInfoDialog(false)} className="dark:bg-gray-600 dark:hover:bg-gray-500 dark:border-gray-600 dark:text-gray-100">
+                      Cancel Export
                    </Button>
-                   <Button variant="outline" onClick={exportPDFWithoutCompanyCheck} >
-                     Export Anyway
+                   <Button variant="outline" onClick={exportPDFWithoutCompanyCheck} className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
+                      Export Anyway
                    </Button>
-                   <Button variant="primary" onClick={() => { setShowMissingCompanyInfoDialog(false); navigate('/settings/company'); }}>
-                     Go to Settings
+                   <Button variant="primary" onClick={() => { setShowMissingCompanyInfoDialog(false); navigate('/settings/company'); }} className="dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:text-white">
+                      Go to Settings
                    </Button>
                  </div>
             </Dialog>
