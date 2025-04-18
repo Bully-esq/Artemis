@@ -66,7 +66,7 @@ const generateCsvContent = (records, taxYear) => {
   const csv = [
     headers.join(','),
     ...rows.map(row => row.join(','))
-  ].join('\\n');
+  ].join('\r\n'); // Use Windows-style line endings
 
   return csv;
 };
@@ -204,16 +204,23 @@ const CisDownloader = ({ className = '', mode = 'dashboard' }) => {
 
   // --- Render based on mode ---
   if (mode === 'dashboard') {
-    // Dashboard mode: Show only stats
+    // Dashboard mode: Show stats with icon, mimicking other cards
     return (
-      <div className={className}>
-        {/* Mimic stat-card structure */}
-        <p className="stat-label mb-2">CIS Records</p>
-        <p className="stat-number">
-           £{totalCis.toFixed(2)}
-        </p>
-        <p className="stat-detail">
-           This tax year
+      <div className={className}> { /* Main container - already styled by Dashboard.jsx */ }
+        <div className="flex items-center"> { /* Flex container for icon + text */ }
+          <div className="p-3 rounded-full mr-4 flex items-center justify-center bg-yellow-500/20 text-warning"> { /* Icon container */ }
+            {/* Building icon (Heroicons) */}
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M8.25 21h7.5M12 3v18M12 21h-1.5m1.5 0h1.5M4.5 12h15m-15 0a4.5 4.5 0 119 0m-9 0a4.5 4.5 0 109 0" />
+            </svg>
+          </div>
+          <div> { /* Text container */ }
+            <p className="text-sm font-medium text-text-secondary">CIS Deductions</p>
+            <p className="text-2xl font-bold text-text-primary my-2">£{totalCis.toFixed(2)}</p>
+          </div>
+        </div>
+        <p className="text-sm text-text-secondary mt-4">
+          {recordCount} record{recordCount !== 1 ? 's' : ''} this tax year ({selectedTaxYear})
         </p>
       </div>
     );

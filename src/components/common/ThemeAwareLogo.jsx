@@ -25,7 +25,7 @@ const ThemeAwareLogo = ({ className, alt, width, height, isTransparent = false, 
   return (
     <img 
       src={logoSrc} 
-      className={`theme-aware-logo ${className || ''}`}
+      className={`${className || ''}`}
       alt={alt || 'Logo'} 
       width={width}
       height={height}

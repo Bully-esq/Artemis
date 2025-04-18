@@ -176,6 +176,7 @@
 /* Add these PDF-specific styles */
 .pdf-export-mode {
   font-size: 80%; /* Base font size reduction */
+  /* Add !important cautiously if needed to override Tailwind base styles in PDF context */
 }
 
 .pdf-export-mode .quote-title {
@@ -187,7 +188,8 @@
 }
 
 .pdf-export-mode .company-name {
-  font-size: 14px !important;
+  font-size: 14px !important; /* May need !important */
+  font-weight: bold;
 }
 
 .pdf-export-mode .company-address,
@@ -201,27 +203,53 @@
   margin: 4px 0;
 }
 
+.pdf-export-mode .quote-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
 .pdf-export-mode .quote-table th,
 .pdf-export-mode .quote-table td {
   font-size: 11px;
   padding: 6px 8px;
+  border: 1px solid #dee2e6; /* Add simple borders */
+  text-align: left;
+}
+
+.pdf-export-mode .quote-table th {
+  background-color: #f8f9fa; /* Light background for header */
+  font-weight: bold;
+}
+
+.pdf-export-mode .quote-table td.text-right {
+  text-align: right;
 }
 
 .pdf-export-mode .quote-table-total td {
   font-size: 12px;
   font-weight: bold;
+  border-top: 2px solid #adb5bd; /* Thicker top border for total */
 }
 
 .pdf-export-mode .terms-heading {
   font-size: 14px;
   margin-top: 16px;
   margin-bottom: 8px;
+  font-weight: bold;
 }
 
 .pdf-export-mode .terms-subheading {
   font-size: 12px;
   margin-top: 12px;
   margin-bottom: 6px;
+  font-weight: bold;
+}
+
+.pdf-export-mode .terms-list {
+  padding-left: 20px;
+  margin-top: 4px;
+  margin-bottom: 12px;
 }
 
 .pdf-export-mode .terms-list li,
@@ -231,55 +259,103 @@
   margin: 4px 0;
 }
 
+.pdf-export-mode .quote-footer {
+   margin-top: 24px;
+   padding-top: 12px;
+   border-top: 1px solid #dee2e6;
+   text-align: center;
+}
+
 .pdf-export-mode .quote-footer p {
   font-size: 10px;
   margin: 2px 0;
+  color: #6c757d;
 }
 
-/* Special class for A4 PDF export - overrides mobile styling */
+/* Special class for A4 PDF export - overrides potential Tailwind styles */
 .pdf-a4-format {
-  /* Reset any mobile-specific styles */
-  max-width: 210mm !important; /* A4 width */
-  min-height: 297mm !important; /* A4 height */
+  /* Reset any potential Tailwind base styles that interfere */
+  max-width: 210mm !important;
+  min-height: 297mm !important; /* Approximate A4 height */
   margin: 0 auto !important;
-  font-size: 100% !important; /* Reset font size */
-  transform: none !important; /* Remove any transforms */
-  width: 100% !important;
+  padding: 15mm !important; /* Add padding for margins */
+  font-size: 10pt !important; /* Set base font size for PDF */
+  line-height: 1.4 !important;
+  box-sizing: border-box !important;
+  background-color: #ffffff !important; /* Ensure white background */
+  color: #212529 !important; /* Default text color */
+  -webkit-print-color-adjust: exact !important; /* Ensure colors print */
+  print-color-adjust: exact !important;
+}
+
+/* Ensure nested elements within pdf-a4-format inherit base styles or have specific overrides */
+.pdf-a4-format * {
+  box-sizing: border-box !important;
 }
 
 .pdf-a4-format .quote-title {
-  font-size: 24px !important;
+  font-size: 22pt !important;
+  margin-bottom: 5pt !important;
+}
+
+.pdf-a4-format .quote-reference {
+  font-size: 11pt !important;
+  color: #495057 !important;
 }
 
 .pdf-a4-format .quote-table {
-  font-size: 12px !important;
   width: 100% !important;
-  table-layout: fixed !important;
+  margin-top: 15pt !important;
+  margin-bottom: 15pt !important;
+  border-collapse: collapse !important;
 }
 
 .pdf-a4-format .quote-table th,
 .pdf-a4-format .quote-table td {
-  padding: 8px !important;
-  font-size: 12px !important;
+  border: 1px solid #ced4da !important;
+  padding: 5pt 7pt !important;
+  font-size: 9pt !important;
+  vertical-align: top !important; /* Align text to top */
 }
 
-/* Ensure mobile-specific scaling is disabled for PDF export */
-.pdf-a4-format .quote-preview-header {
-  flex-direction: row !important;
-}
-
-.pdf-a4-format .quote-branding,
-.pdf-a4-format .company-details {
-  width: auto !important;
+.pdf-a4-format .quote-table th {
+  background-color: #e9ecef !important;
+  font-weight: 600 !important;
   text-align: left !important;
 }
 
-.pdf-a4-format .company-details {
+.pdf-a4-format .quote-table td.text-right {
   text-align: right !important;
 }
 
-.pdf-a4-format .logo-container,
-.pdf-a4-format .logo-placeholder {
-  margin: 0 0 1rem !important;
-  max-width: 200px !important;
+
+.pdf-a4-format .quote-preview-header {
+   display: flex !important; /* Use flex for layout */
+   justify-content: space-between !important;
+   align-items: flex-start !important;
+   margin-bottom: 20pt !important;
+}
+
+.pdf-a4-format .quote-branding {
+   /* Adjust width as needed */
+   flex-basis: 50% !important;
+}
+
+.pdf-a4-format .company-details {
+   text-align: right !important;
+   font-size: 9pt !important;
+   flex-basis: 50% !important;
+   padding-left: 15pt !important;
+}
+
+.pdf-a4-format .logo-container {
+    margin-bottom: 10pt !important;
+    max-width: 180px !important; /* Adjust as needed */
+    max-height: 70px !important;
+}
+
+.pdf-a4-format .company-logo {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
 }

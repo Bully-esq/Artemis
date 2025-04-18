@@ -288,55 +288,58 @@ const Login = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    // Use theme background
+    <div className="min-h-screen flex items-center justify-center bg-background-primary py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 
-            className="mt-6 text-center text-3xl font-extrabold text-gray-900" 
-            onClick={handleTitleClick}
+            // Use theme text color
+            className="mt-6 text-center text-3xl font-extrabold text-text-primary"
+            onClick={handleTitleClick} // Keep debug tap handler
           >
             Welcome to Axton's Staircases
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-text-secondary">
             Log in to your account to continue
           </p>
         </div>
         
-        {/* Card container */}
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          {/* Show auth error if any */}
+        {/* Card container - Use standard theme card styling */}
+        <div className="bg-card-background border border-card-border rounded-lg shadow-sm py-8 px-4 sm:px-10">
+          {/* Show auth error if any - Use theme danger colors */}
           {error && (
-            <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
+            <div className="mb-4 bg-danger-bg-light border-l-4 border-danger-border p-4 rounded-md">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="h-5 w-5 text-danger-icon" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-red-700">{error}</p>
+                  <p className="text-sm text-danger-text">{error}</p>
                 </div>
               </div>
             </div>
           )}
           
-          {/* Circuit breaker warning */}
+          {/* Circuit breaker warning - Use theme warning colors */}
           {circuitBroken && (
-            <div className="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <div className="mb-4 bg-warning-bg-light border-l-4 border-warning-border p-4 rounded-md">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="h-5 w-5 text-warning-icon" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
+                  <p className="text-sm text-warning-text">
                     Authentication temporarily disabled due to too many failed attempts. 
                     Please try again later.
                     {showDebugInfo && (
                       <button 
                         onClick={handleResetCircuitBreaker}
-                        className="ml-2 text-xs underline text-yellow-800 hover:text-yellow-900"
+                        // Use theme link styling for the reset button
+                        className="ml-2 text-xs underline text-link hover:text-link-hover font-medium"
                       >
                         Reset Circuit Breaker
                       </button>
@@ -358,6 +361,7 @@ const Login = () => {
               error={formErrors.email}
               required
               autoComplete="email"
+              // Ensure FormField uses theme styles internally
             />
             
             <FormField
@@ -369,6 +373,7 @@ const Login = () => {
               error={formErrors.password}
               required
               autoComplete="current-password"
+               // Ensure FormField uses theme styles internally
             />
             
             <div className="flex items-center justify-between">
@@ -377,17 +382,20 @@ const Login = () => {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  // Use consistent themed checkbox style
+                  className="h-4 w-4 rounded border-input-border text-primary bg-input-background focus:ring-primary focus:ring-offset-0 focus:ring-2 transition duration-150 ease-in-out shadow-sm"
                   checked={rememberMe}
                   onChange={() => setRememberMe(!rememberMe)}
                 />
-                <label htmlFor="remember-me" className="ml-4 block text-sm text-gray-900" style={{ marginLeft: '10px' }}>
+                {/* Use theme text color and Tailwind margin */}
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-text-secondary">
                   Remember me
                 </label>
               </div>
               
               <div className="text-sm">
-                <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                 {/* Use theme link styles */}
+                <a href="#" className="font-medium text-link hover:text-link-hover">
                   Forgot your password?
                 </a>
               </div>
@@ -406,32 +414,32 @@ const Login = () => {
             </div>
           </form>
 
-          {/* Registration link */}
+          {/* Registration link - Use theme text/link colors */}
           <div className="mt-6 text-center text-sm">
-            <p className="text-gray-600">
-              Don't have an account? <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">Register now</Link>
+            <p className="text-text-secondary">
+              Don't have an account? <Link to="/register" className="font-medium text-link hover:text-link-hover">Register now</Link>
             </p>
           </div>
 
-          {/* Debug Information - hidden by default, shown after 5 rapid taps on title */}
+          {/* Debug Information - Apply theme styles */}
           {showDebugInfo && (
-            <div className="mt-4 pt-4 border-t border-gray-200 text-xs">
-              <h3 className="font-medium text-gray-700">Debug Information</h3>
-              <div className="mt-2 bg-gray-50 p-2 rounded overflow-auto max-h-40">
-                <p>API URL: {selectedApiEndpoint}</p>
-                <p>API Status: {apiStatus || 'unknown'}</p>
-                <p>Circuit Breaker: {circuitBroken ? 'ACTIVE' : 'inactive'}</p>
-                <p>Authentication Status:</p>
-                <ul className="ml-4 list-disc">
-                  <li>isAuthenticated: <span className={isAuthenticated ? "text-green-600 font-bold" : "text-red-600"}>{isAuthenticated ? "TRUE" : "false"}</span></li>
-                  <li>Token exists: <span className={localStorage.getItem('token') ? "text-green-600 font-bold" : "text-red-600"}>{localStorage.getItem('token') ? "TRUE" : "false"}</span></li>
-                  <li>Last login attempt: {authDebugInfo.lastLoginAttempt || 'none'}</li>
-                  <li>Login successful: <span className={authDebugInfo.loginSuccessful ? "text-green-600 font-bold" : "text-red-600"}>{authDebugInfo.loginSuccessful ? "TRUE" : "false"}</span></li>
-                  <li>Redirect triggered: <span className={authDebugInfo.redirectTriggered ? "text-green-600 font-bold" : "text-red-600"}>{authDebugInfo.redirectTriggered ? "TRUE" : "false"}</span></li>
-                  <li>Last check: {authDebugInfo.lastCheck || 'none'}</li>
+            <div className="mt-4 pt-4 border-t border-border-color text-xs">
+              <h3 className="font-medium text-text-primary">Debug Information</h3>
+              <div className="mt-2 bg-background-secondary p-2 rounded overflow-auto max-h-60">
+                <p className="text-text-secondary">API URL: <span className="text-text-primary font-mono">{selectedApiEndpoint}</span></p>
+                <p className="text-text-secondary">API Status: <span className="text-text-primary font-semibold">{apiStatus || 'unknown'}</span></p>
+                <p className="text-text-secondary">Circuit Breaker: <span className={`font-semibold ${circuitBroken ? 'text-warning-text' : 'text-success-text'}`}>{circuitBroken ? 'ACTIVE' : 'inactive'}</span></p>
+                <p className="text-text-secondary mt-1">Authentication Status:</p>
+                <ul className="ml-4 list-disc text-text-secondary space-y-1">
+                  <li>isAuthenticated: <span className={`font-bold ${isAuthenticated ? 'text-success-text' : 'text-danger-text'}`}>{isAuthenticated ? "TRUE" : "false"}</span></li>
+                  <li>Token exists: <span className={`font-bold ${localStorage.getItem('token') ? 'text-success-text' : 'text-danger-text'}`}>{localStorage.getItem('token') ? "TRUE" : "false"}</span></li>
+                  <li>Last login attempt: <span className="text-text-primary font-mono">{authDebugInfo.lastLoginAttempt || 'none'}</span></li>
+                  <li>Login successful: <span className={`font-bold ${authDebugInfo.loginSuccessful ? 'text-success-text' : 'text-danger-text'}`}>{authDebugInfo.loginSuccessful ? "TRUE" : "false"}</span></li>
+                  <li>Redirect triggered: <span className={`font-bold ${authDebugInfo.redirectTriggered ? 'text-success-text' : 'text-danger-text'}`}>{authDebugInfo.redirectTriggered ? "TRUE" : "false"}</span></li>
+                  <li>Last check: <span className="text-text-primary font-mono">{authDebugInfo.lastCheck || 'none'}</span></li>
                 </ul>
-                <p>Session Storage:</p>
-                <pre className="text-xs overflow-auto">
+                <p className="text-text-secondary mt-2">Session Storage:</p>
+                <pre className="text-xs overflow-auto bg-code-background p-2 rounded font-mono text-code-text">
                   {JSON.stringify(
                     Object.fromEntries(
                       Object.keys(sessionStorage).map(key => [key, sessionStorage.getItem(key)])
@@ -439,8 +447,8 @@ const Login = () => {
                     null, 2
                   )}
                 </pre>
-                <p>Local Storage:</p>
-                <pre className="text-xs overflow-auto">
+                <p className="text-text-secondary mt-2">Local Storage:</p>
+                <pre className="text-xs overflow-auto bg-code-background p-2 rounded font-mono text-code-text">
                   {JSON.stringify(
                     Object.fromEntries(
                       Object.keys(localStorage).map(key => [key, 
@@ -449,9 +457,11 @@ const Login = () => {
                     null, 2
                   )}
                 </pre>
-                <div className="mt-2">
-                  <button 
-                    className="text-xs bg-gray-200 hover:bg-gray-300 py-1 px-2 rounded"
+                {/* Use Button component for debug actions */}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button 
+                    variant="danger_outline"
+                    size="xs"
                     onClick={() => {
                       localStorage.clear();
                       sessionStorage.clear();
@@ -459,21 +469,23 @@ const Login = () => {
                     }}
                   >
                     Clear Storage & Reload
-                  </button>
-                  <button 
-                    className="ml-2 text-xs bg-gray-200 hover:bg-gray-300 py-1 px-2 rounded"
+                  </Button>
+                  <Button 
+                    variant="secondary"
+                    size="xs"
                     onClick={() => setShowDebugInfo(false)}
                   >
                     Hide Debug Info
-                  </button>
-                  <button 
-                    className="ml-2 text-xs bg-blue-200 hover:bg-blue-300 py-1 px-2 rounded"
+                  </Button>
+                  <Button 
+                    variant="info_outline"
+                    size="xs"
                     onClick={() => {
                       navigate('/dashboard', { replace: true });
                     }}
                   >
                     Force Navigate to Dashboard
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

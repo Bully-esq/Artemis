@@ -1,12 +1,8 @@
 /* src/components/common/ToggleSwitch.css */
 
-.toggle-switch-field {
-  display: flex;
-  flex-direction: column; /* Stack label, switch, and help text vertically */
-  margin-bottom: 1.5rem; /* Increased spacing to match other form fields */
-  align-items: flex-start; /* Align items to the start */
-}
+/* Remove .toggle-switch-field styles */
 
+/* Keep .toggle-switch-label styles (might be used elsewhere, or remove if confirmed unused) */
 .toggle-switch-label {
   display: block; /* Make label take its own line */
   margin-bottom: 0.75rem; /* Space between label and switch */
@@ -14,6 +10,10 @@
   color: var(--text); /* Match app text color */
   font-size: 0.875rem;
 }
+
+/* Remove .toggle-switch-help styles */
+
+/* Keep other styles (.toggle-switch-container, slider, checkbox etc) */
 
 .toggle-switch-container {
   position: relative;
@@ -72,14 +72,8 @@
   box-shadow: 0 0 1px var(--primary);
 }
 
-.toggle-switch-help {
-  margin-top: 0.5rem; /* Space between switch and help text */
-  font-size: 0.875rem;
-  color: var(--text-light); /* Match app text-light color */
+/* Adjust alignment if needed within a form row - REMOVE THIS */
+/* .form-row .toggle-switch-field {
+  margin-bottom: 0; 
 }
-
-/* Adjust alignment if needed within a form row */
-.form-row .toggle-switch-field {
-  margin-bottom: 0; /* Remove bottom margin when in a row */
-  /* Add other alignment styles if necessary */
-}
+*/

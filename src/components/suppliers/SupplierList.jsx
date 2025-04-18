@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useAppContext } from '../../context/AppContext';
-import '../../styles/pages/suppliers.css'; // Import the CSS file
-import '../../styles/components/lists.css'; // Import list styles
-import '../../styles/components/common/buttons.css'; // Import button styles
+// CSS imports removed - styling handled by Tailwind
+// import '../../styles/pages/suppliers.css';
+// import '../../styles/components/lists.css';
+// import '../../styles/components/common/buttons.css';
 
 // Components
 import PageLayout from '../common/PageLayout';
@@ -14,7 +15,7 @@ import Dialog from '../common/Dialog';
 import FormField from '../common/FormField';
 import Loading from '../common/Loading';
 import Tabs from '../common/Tabs';
-import CatalogItemList from './CatalogItemList'; // Import CatalogItemList
+import CatalogItemList from './CatalogItemList';
 import ActionButtonContainer from '../common/ActionButtonContainer';
 
 const SupplierList = () => {
@@ -458,8 +459,12 @@ const SupplierList = () => {
       title="Suppliers & Catalog" 
     >
       <ActionButtonContainer>
-        <Button variant="primary" onClick={handleAddSupplier}>
-          <svg className="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <Button 
+          variant="primary" 
+          onClick={handleAddSupplier} 
+          className="px-4 py-2 text-sm inline-flex items-center"
+        >
+          <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Add Supplier
@@ -475,7 +480,7 @@ const SupplierList = () => {
       {/* Quick Actions - Same styling as Dashboard */}
       <div className="quick-actions-section">
         <h2 className="section-title">Quick Actions</h2>
-        <div className="quick-actions">
+        <div className="quick-actions flex flex-wrap gap-4">
           <div onClick={handleAddSupplier} className="quick-action-btn">
             <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -544,60 +549,60 @@ const SupplierList = () => {
                 )}
               </div>
             ) : (
-              <div className="recent-items">
+              <div className="recent-items grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredSuppliers.map((supplier) => (
-                  <div key={supplier.id} className="recent-item supplier-list-item" onClick={() => handleSupplierClick(supplier)}>
-                    <div className="item-content">
-                      <div className="supplier-main-info">
-                        <p className="item-title">{supplier.name}</p>
-                        <p className="item-subtitle mobile-hidden">
-                          {supplier.contact && `${supplier.contact}`}
-                          {supplier.contact && supplier.email && ' • '}
-                          {supplier.email}
+                  <div 
+                    key={supplier.id} 
+                    className="bg-card-background border border-card-border rounded-lg shadow-sm p-4 flex flex-col justify-between hover:bg-background-tertiary cursor-pointer transition-shadow duration-200 ease-in-out"
+                    onClick={() => handleSupplierClick(supplier)}
+                  >
+                    <div className="mb-3">
+                      <p className="font-medium text-text-primary truncate">
+                        {supplier.name}
+                      </p>
+                      <p className="text-sm text-text-secondary mt-1 truncate">
+                        {supplier.contact && `${supplier.contact}`}
+                        {supplier.contact && supplier.email && ' • '}
+                        {supplier.email || 'No contact info'}
+                      </p>
+                      {supplier.notes && (
+                        <p className="text-xs text-text-secondary mt-1 truncate italic">
+                          Notes: {supplier.notes}
                         </p>
-                      </div>
-                      <div className="item-actions">
-                        <p className="item-detail mobile-hidden">{supplier.phone || ''}</p>
-                        <div className="status-button-container">
-                          <div className="button-row">
-                            <Button
-                              className="btn-list-item btn-list-item--primary"
-                              style={{ backgroundColor: '#0073cf', color: 'white' }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditSupplier(supplier);
-                              }}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              className="btn-list-item btn-list-item--danger"
-                              style={{ backgroundColor: '#dc3545', color: 'white' }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClick(supplier);
-                              }}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                          <div className="button-row">
-                            <Button
-                              className="btn-list-item btn-list-item--update"
-                              style={{ backgroundColor: '#28a745', color: 'white' }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleUpdatePrices(supplier);
-                              }}
-                            >
-                              Update Prices
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
+                      )}
                     </div>
-                    <div className="item-notes mobile-hidden">
-                      {supplier.notes && <p>{supplier.notes}</p>}
+
+                    <div className="flex items-center justify-between mt-auto">
+                      <p className="text-sm text-text-secondary">
+                        {supplier.phone || 'No phone'}
+                      </p>
+                      <div 
+                         className="flex items-center space-x-2" 
+                         onClick={(e) => e.stopPropagation()}
+                      >
+                         <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditSupplier(supplier)}
+                         >
+                            Edit
+                         </Button>
+                         <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => handleDeleteClick(supplier)}
+                         >
+                            Delete
+                         </Button>
+                         <Button
+                            size="sm"
+                            variant="outline"
+                            className="whitespace-nowrap"
+                            onClick={() => handleUpdatePrices(supplier)}
+                         >
+                            Update Prices
+                         </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -618,9 +623,11 @@ const SupplierList = () => {
         )}
       </div>
       
-      {/* Add Supplier Dialog */}
-      {showAddSupplierDialog && (
+      {/* Add Supplier Dialog - Pass state to isOpen prop */}
+      {/* {console.log('Rendering Add Supplier Dialog? State:', showAddSupplierDialog) /* Remove log */} 
+      {/* {showAddSupplierDialog && ( */} // Remove conditional rendering here
         <Dialog
+          isOpen={showAddSupplierDialog} // Pass state to isOpen prop
           title="Add Supplier"
           onClose={() => setShowAddSupplierDialog(false)}
           footer={
@@ -659,7 +666,7 @@ const SupplierList = () => {
               placeholder="Enter contact person name"
             />
             
-            <div className="form-row">
+            <div className="form-row flex flex-col sm:flex-row gap-4">
               <FormField
                 label="Email"
                 name="email"
@@ -667,6 +674,7 @@ const SupplierList = () => {
                 value={supplierForm.email}
                 onChange={handleFormChange}
                 placeholder="Enter email address"
+                className="w-full"
               />
               
               <FormField
@@ -675,6 +683,7 @@ const SupplierList = () => {
                 value={supplierForm.phone}
                 onChange={handleFormChange}
                 placeholder="Enter phone number"
+                className="w-full"
               />
             </div>
             
@@ -688,11 +697,12 @@ const SupplierList = () => {
             />
           </div>
         </Dialog>
-      )}
+      {/* )} */} // Remove conditional rendering here
       
-      {/* Edit Supplier Dialog */}
+      {/* Edit Supplier Dialog - Already correctly passing isOpen prop? Let's check. Seems missing! Add it. */}
       {showEditSupplierDialog && (
         <Dialog
+          isOpen={showEditSupplierDialog} // Pass state to isOpen prop - This was missing!
           title="Edit Supplier"
           onClose={() => setShowEditSupplierDialog(false)}
           footer={
@@ -731,7 +741,7 @@ const SupplierList = () => {
               placeholder="Enter contact person name"
             />
             
-            <div className="form-row">
+            <div className="form-row flex flex-col sm:flex-row gap-4">
               <FormField
                 label="Email"
                 name="email"
@@ -739,6 +749,7 @@ const SupplierList = () => {
                 value={supplierForm.email}
                 onChange={handleFormChange}
                 placeholder="Enter email address"
+                className="w-full"
               />
               
               <FormField
@@ -747,6 +758,7 @@ const SupplierList = () => {
                 value={supplierForm.phone}
                 onChange={handleFormChange}
                 placeholder="Enter phone number"
+                className="w-full"
               />
             </div>
             
@@ -762,9 +774,10 @@ const SupplierList = () => {
         </Dialog>
       )}
       
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog - Add isOpen prop */}
       {showDeleteConfirmDialog && (
         <Dialog
+          isOpen={showDeleteConfirmDialog} // Pass state to isOpen prop
           title="Delete Supplier"
           onClose={() => setShowDeleteConfirmDialog(false)}
           footer={
@@ -803,9 +816,10 @@ const SupplierList = () => {
         </Dialog>
       )}
 
-      {/* Add this price update dialog */}
+      {/* Add this price update dialog - Add isOpen prop */}
       {showPriceUpdateDialog && (
         <Dialog
+          isOpen={showPriceUpdateDialog} // Pass state to isOpen prop
           title="Update Prices"
           onClose={() => setShowPriceUpdateDialog(false)}
           footer={
@@ -863,9 +877,11 @@ const SupplierList = () => {
         </Dialog>
       )}
 
-      {/* Add this catalog item dialog */}
-      {showCatalogItemDialog && (
+      {/* Add this catalog item dialog - Pass state to isOpen prop */}
+      {/* {console.log('Rendering Catalog Item Dialog? State:', showCatalogItemDialog) /* Remove log */} 
+      {/* {showCatalogItemDialog && ( */} // Remove conditional rendering here
         <Dialog
+          isOpen={showCatalogItemDialog} // Pass state to isOpen prop
           title={catalogItemForm.id ? "Edit Catalog Item" : "Add Catalog Item"}
           onClose={() => setShowCatalogItemDialog(false)}
           footer={
@@ -905,8 +921,8 @@ const SupplierList = () => {
               placeholder="Enter item description"
             />
             
-            <div className="form-row">
-              <div className="form-column">
+            <div className="form-row flex flex-col sm:flex-row gap-4">
+              <div className="form-column w-full">
                 <label className="form-label">Category</label>
                 <select 
                   name="category"
@@ -923,7 +939,7 @@ const SupplierList = () => {
                 </select>
               </div>
               
-              <div className="form-column">
+              <div className="form-column w-full">
                 <label className="form-label">Supplier</label>
                 <select 
                   name="supplier"
@@ -941,7 +957,7 @@ const SupplierList = () => {
               </div>
             </div>
             
-            <div className="form-row">
+            <div className="form-row flex flex-col sm:flex-row gap-4">
               <FormField
                 label="Cost (£)"
                 name="cost"
@@ -951,6 +967,7 @@ const SupplierList = () => {
                 value={catalogItemForm.cost}
                 onChange={handleCatalogItemFormChange}
                 placeholder="0.00"
+                className="w-full"
               />
               
               <FormField
@@ -961,6 +978,7 @@ const SupplierList = () => {
                 value={catalogItemForm.leadTime}
                 onChange={handleCatalogItemFormChange}
                 placeholder="0"
+                className="w-full"
               />
             </div>
             
@@ -987,15 +1005,16 @@ const SupplierList = () => {
             </div>
           </div>
         </Dialog>
-      )}
+      {/* )} */} // Remove conditional rendering here
 
-      {/* Add Supplier Details Dialog */}
+      {/* Add Supplier Details Dialog - Add isOpen prop */}
       {showSupplierDetailsDialog && (
         <Dialog
+          isOpen={showSupplierDetailsDialog} // Pass state to isOpen prop
           title="Supplier Details"
           onClose={() => setShowSupplierDetailsDialog(false)}
           footer={
-            <div className="dialog-footer">
+            <div className="dialog-footer flex flex-wrap justify-end gap-2">
               <Button
                 variant="danger"
                 onClick={() => {
@@ -1040,30 +1059,30 @@ const SupplierList = () => {
             <h2 className="supplier-detail-name">{currentSupplier.name}</h2>
             
             {currentSupplier.contact && (
-              <div className="detail-row">
-                <span className="detail-label">Contact:</span>
-                <span className="detail-value">{currentSupplier.contact}</span>
+              <div className="detail-row flex flex-col sm:flex-row mb-2">
+                <span className="detail-label w-full sm:w-auto mb-1 sm:mb-0 sm:mr-2 font-semibold">Contact:</span>
+                <span className="detail-value flex-grow">{currentSupplier.contact}</span>
               </div>
             )}
             
             {currentSupplier.email && (
-              <div className="detail-row">
-                <span className="detail-label">Email:</span>
-                <span className="detail-value">{currentSupplier.email}</span>
+              <div className="detail-row flex flex-col sm:flex-row mb-2">
+                <span className="detail-label w-full sm:w-auto mb-1 sm:mb-0 sm:mr-2 font-semibold">Email:</span>
+                <span className="detail-value flex-grow">{currentSupplier.email}</span>
               </div>
             )}
             
             {currentSupplier.phone && (
-              <div className="detail-row">
-                <span className="detail-label">Phone:</span>
-                <span className="detail-value">{currentSupplier.phone}</span>
+              <div className="detail-row flex flex-col sm:flex-row mb-2">
+                <span className="detail-label w-full sm:w-auto mb-1 sm:mb-0 sm:mr-2 font-semibold">Phone:</span>
+                <span className="detail-value flex-grow">{currentSupplier.phone}</span>
               </div>
             )}
             
             {currentSupplier.notes && (
-              <div className="detail-notes">
-                <span className="detail-label">Notes:</span>
-                <p className="detail-value notes">{currentSupplier.notes}</p>
+              <div className="detail-notes mt-3">
+                <span className="detail-label font-semibold block mb-1">Notes:</span>
+                <p className="detail-value notes text-sm text-gray-700">{currentSupplier.notes}</p>
               </div>
             )}
           </div>

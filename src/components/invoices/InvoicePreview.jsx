@@ -12,8 +12,8 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
   if (!invoice) {
     return (
-      <div className="empty-state">
-        <p className="empty-message">No invoice selected</p>
+      <div className="p-6 text-center text-gray-500 bg-gray-50 rounded-md">
+        <p>No invoice data provided for preview.</p>
       </div>
     );
   }
@@ -42,20 +42,23 @@ const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
     ? new Date(invoice.paidAt).toLocaleDateString('en-GB') 
     : null;
 
-  // Determine invoice status for badge
-  const getStatusBadge = () => {
+  // Determine status badge Tailwind classes
+  const getStatusBadgeClasses = () => {
+    const baseClasses = "inline-block px-2 py-1 text-xs font-semibold rounded-full";
     if (invoice.status === 'paid') {
-      return <div className="status-badge status-badge-success">Paid</div>;
+      // Add dark mode variants for paid badge
+      return `${baseClasses} bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300`;
     }
-    
     const today = new Date();
+    today.setHours(0,0,0,0); // Normalize today's date
     const invoiceDueDate = new Date(invoice.dueDate);
-    
-    if (today > invoiceDueDate) {
-      return <div className="status-badge status-badge-danger">Overdue</div>;
+     invoiceDueDate.setHours(0,0,0,0); // Normalize due date
+    if (invoiceDueDate < today) { // Corrected overdue check
+      // Add dark mode variants for overdue badge
+      return `${baseClasses} bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300`;
     }
-    
-    return <div className="status-badge status-badge-info">Pending</div>;
+    // Add dark mode variants for pending badge
+    return `${baseClasses} bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300`; // Pending
   };
 
   // Check if the invoice has line items
@@ -65,378 +68,285 @@ const InvoicePreview = ({ invoice, settings = {}, printMode = false }) => {
   const hasCisDeduction = invoice.cisApplied || 
     (hasLineItems && invoice.lineItems.some(item => item.type === 'cis'));
 
-  // If we have line items, we'll calculate the subtotal before VAT
-  const subtotal = hasLineItems 
-    ? invoice.lineItems
-        .filter(item => item.type !== 'cis')
-        .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
-    : (invoice.amount || 0);
-  
-  // Only calculate new VAT if VAT is enabled in settings and not already included in the total
-  const shouldCalculateNewVat = vatSettings.enabled && !hasCisDeduction && !vatInfo.includedInTotal;
-  
-  // Determine the VAT rate - use the one from the invoice if available, otherwise from settings
-  const vatRate = vatInfo.rate || vatSettings.rate || 20;
-  
-  // For the display, if VAT is included in the total, use the provided amount,
-  // otherwise calculate it as a percentage of the subtotal
-  const vatAmount = vatInfo.includedInTotal && vatInfo.enabled
-    ? vatInfo.amount 
-    : (shouldCalculateNewVat ? (subtotal * vatRate / 100) : 0);
-  
-  // The total with VAT - if already included in total, use the subtotal as is
-  const totalWithVat = vatInfo.includedInTotal && vatInfo.enabled
-    ? subtotal 
-    : (shouldCalculateNewVat ? (subtotal + vatAmount) : subtotal);
+  // --- Recalculate Totals for Preview --- 
+  // Use the calculateTotals logic similar to InvoiceBuilder for consistency
+  const calculatePreviewTotals = (invDetails, vatSettings) => {
+    const items = invDetails.lineItems || [];
+    const isCisApplied = invDetails.cisApplied || false;
+    const originalGross = invDetails.originalGrossAmount || 0;
+    const currentAmount = invDetails.amount || 0;
+    const cisDeductionAmount = invDetails.cisDeduction || 0;
+    const vatInfo = invDetails.vatInfo || {};
+    const settingsVatEnabled = vatSettings?.enabled || false;
+    const settingsVatRate = vatSettings?.rate || 20;
 
-  // This determines whether to show the VAT line item in the display
-  const shouldDisplayVat = (vatSettings.enabled && !hasCisDeduction) || (vatInfo.enabled && vatInfo.includedInTotal);
-  
-  // Use original invoice amount if VAT is not applied
-  const finalAmount = shouldDisplayVat ? totalWithVat : (invoice.amount || 0);
+    // Calculate subtotal based on items *before* CIS/VAT adjustments
+    let subtotalPreAdjustments = items
+        .filter(item => item.type !== 'cis') // Exclude CIS deduction line itself
+        .reduce((sum, item) => sum + (parseFloat(item.amount) || 0) * (parseFloat(item.quantity) || 1), 0);
+
+    let displaySubtotal = subtotalPreAdjustments;
+    let calculatedVatAmount = 0;
+    let grandTotal = currentAmount; // Default to current amount (might be net of CIS)
+    let baseForVat = subtotalPreAdjustments;
+    let isVatEnabled = vatInfo.enabled ?? settingsVatEnabled;
+    let vatRate = vatInfo.rate ?? settingsVatRate;
+
+    if (isCisApplied) {
+        // If CIS is applied, the subtotal shown should be the original gross
+        displaySubtotal = originalGross;
+        baseForVat = originalGross; // VAT is calculated on the original gross amount
+        grandTotal = originalGross - cisDeductionAmount; // Start grand total calculation from gross minus CIS
+    } else {
+        // If no CIS, subtotal is sum of items, base for VAT is that sum
+        displaySubtotal = subtotalPreAdjustments;
+        baseForVat = subtotalPreAdjustments;
+        grandTotal = subtotalPreAdjustments; // Start grand total from subtotal
+    }
+
+    if (isVatEnabled) {
+        const vatRateDecimal = (vatRate || 0) / 100;
+        calculatedVatAmount = baseForVat * vatRateDecimal;
+        // Add VAT to the grand total (which already accounts for CIS if applied)
+        grandTotal += calculatedVatAmount;
+    } else {
+         calculatedVatAmount = 0; // Ensure VAT is zero if not enabled
+    }
+
+    return {
+      subtotal: displaySubtotal || 0,
+      vatAmount: calculatedVatAmount || 0,
+      grandTotal: grandTotal || 0,
+      cisDeduction: cisDeductionAmount || 0, // Pass through CIS deduction
+      isVatEnabled: isVatEnabled,
+      vatRate: vatRate
+    };
+  };
+
+  const totals = calculatePreviewTotals(invoice, vatSettings);
 
   // Wrapper classes for print mode
-  const containerClass = printMode ? "invoice-preview print-mode" : "invoice-preview";
+  // Added bg-white, p-8 for screen view. pdf-a4-format is handled by invoice-builder.css
+  // Added dark mode border color to the container
+  const containerClass = printMode ? "invoice-preview pdf-export-mode pdf-a4-format" : "invoice-preview bg-white shadow-md rounded-lg p-8 border border-gray-200 dark:border-gray-600";
 
   return (
-    <div className={containerClass} id="invoice-preview">
-      {/* Header */}
-      <div className="invoice-header">
-        <div className="invoice-branding">
-          {/* Logo */}
-          {companySettings.logo && (
-            <div className="logo-container">
+    // Use the id="invoice-preview" for PDF generation target if needed elsewhere
+    // Added base dark mode text color to the root div
+    <div className={`${containerClass} max-w-4xl mx-auto font-sans text-sm text-gray-700 dark:text-gray-300`} id="invoice-preview">
+      {/* Header: Logo/Title/Status on Left, Company Details on Right */}
+      <div className="flex justify-between items-start mb-8 pb-4 border-b border-gray-200 dark:border-gray-600">
+        {/* Left Side: Branding */} 
+        <div className="flex flex-col items-start">
+          {/* Logo */} 
+          {companySettings.logo ? (
+            <div className="mb-4 max-w-[150px] h-auto"> {/* Constrain logo size */}
               <img 
                 src={companySettings.logo} 
                 alt={`${companySettings.name || 'Company'} Logo`}
-                className="company-logo"
+                className="block object-contain"
               />
             </div>
+          ) : (
+             <div className="mb-4 p-4 bg-gray-100 rounded text-gray-400 text-xs italic min-h-[50px] flex items-center justify-center dark:bg-gray-700 dark:text-gray-500"> 
+               {companySettings.name || 'Company Logo'}
+             </div>
           )}
           
-          {/* Document title */}
-          <h1 className="invoice-title">INVOICE</h1>
-          <p className="invoice-reference">
-            Reference: {invoice.invoiceNumber || `INV-${invoice.id?.substring(0, 6)}`}
+          {/* Document title */} 
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 uppercase mb-1">Invoice</h1>
+          {/* Reference */} 
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+            Ref: {invoice.invoiceNumber || `INV-${invoice.id?.substring(0, 6)}`}
           </p>
-          <div className="status-container">
-            {getStatusBadge()}
+          {/* Status Badge */} 
+          <div>
+            <span className={getStatusBadgeClasses()}>
+               {invoice.status === 'paid' ? 'Paid' : (new Date(invoice.dueDate) < new Date() ? 'Overdue' : 'Pending')}
+            </span>
           </div>
         </div>
         
-        {/* Company details */}
-        <div className="company-details">
-          <h3 className="company-name">{companySettings.name || 'Your Company'}</h3>
-          <div className="company-address">
-            {companySettings.address || 'Company Address'}
-          </div>
-          <div className="company-contact">
+        {/* Right Side: Company details */} 
+        <div className="text-right text-xs">
+          <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-1">{companySettings.name || 'Your Company Name'}</h3>
+          {companySettings.address && (
+             <div className="text-gray-600 dark:text-gray-400 mb-1 whitespace-pre-line">
+                {companySettings.address}
+             </div>
+          )}
+          <div className="text-gray-600 dark:text-gray-400">
             {companySettings.email && <p>{companySettings.email}</p>}
             {companySettings.phone && <p>{companySettings.phone}</p>}
-            {companySettings.website && <p>{companySettings.website}</p>}
-            {vatSettings.enabled && vatSettings.number && <p>VAT Registration: {vatSettings.number}</p>}
+            {companySettings.website && <p><a href={companySettings.website} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline dark:text-indigo-400">{companySettings.website}</a></p>}
+             {vatSettings.enabled && vatSettings.number && <p className="mt-1 font-medium text-gray-700 dark:text-gray-300">VAT Reg: {vatSettings.number}</p>}
           </div>
         </div>
       </div>
       
-      <div className="invoice-info-grid">
-        {/* Client information */}
-        <div className="client-info" style={{ textAlign: 'left !important', width: '100%' }}>
-          <h3 className="section-header" style={{ textAlign: 'left !important' }}>Bill To:</h3>
-          <div className="client-details" style={{ textAlign: 'left !important', display: 'block', width: '100%' }}>
-            <p className="client-name" style={{ textAlign: 'left !important' }}>
+      {/* Info Grid: Client Details (Left), Invoice Details (Right) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        {/* Client information */} 
+        <div className="text-left">
+          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Bill To:</h3>
+          <div className="text-gray-800 dark:text-gray-100">
+            <p className="font-semibold text-base mb-1">
               {invoice.clientName || '[Client Name]'}
             </p>
-            
             {invoice.clientCompany && (
-              <p className="client-company" style={{ textAlign: 'left !important' }}>
+              <p className="text-gray-600 dark:text-gray-400 mb-1">
                 {invoice.clientCompany}
               </p>
             )}
-            
             {invoice.clientAddress && (
-              <div 
-                className="client-address" 
-                style={{
-                  textAlign: 'left !important',
-                  marginBottom: '8px',
-                  lineHeight: '1.2',
-                  display: 'block',
-                  width: '100%',
-                  float: 'left'
-                }}
-              >
-                {invoice.clientAddress.split('\n').map((line, i) => (
-                  <span 
-                    key={i} 
-                    style={{
-                      display: 'block',
-                      marginBottom: '2px',
-                      padding: 0,
-                      textAlign: 'left !important',
-                      width: '100%'
-                    }}
-                  >
-                    {line}
-                  </span>
-                ))}
+              <div className="text-gray-600 dark:text-gray-400 mb-2 whitespace-pre-line leading-snug">
+                {invoice.clientAddress}
               </div>
             )}
-            
-            <div className="client-contact-info" style={{ textAlign: 'left !important' }}>
+            <div className="text-gray-600 dark:text-gray-400">
               {invoice.clientEmail && (
-                <p className="client-email" style={{ textAlign: 'left !important' }}>
-                  Email: {invoice.clientEmail}
-                </p>
+                <p>Email: {invoice.clientEmail}</p>
               )}
               {invoice.clientPhone && (
-                <p className="client-phone" style={{ textAlign: 'left !important' }}>
-                  Phone: {invoice.clientPhone}
-                </p>
+                <p>Phone: {invoice.clientPhone}</p>
               )}
             </div>
           </div>
         </div>
         
-        {/* Invoice details */}
-        <div className="invoice-details">
-          <div className="details-grid">
-            <p className="detail-label">Invoice Date:</p>
-            <p className="detail-value">{invoiceDate}</p>
-            
-            <p className="detail-label">Due Date:</p>
-            <p className="detail-value">{dueDate}</p>
-            
-            {paidDate && (
-              <>
-                <p className="detail-label">Paid Date:</p>
-                <p className="detail-value">{paidDate}</p>
-              </>
-            )}
-          </div>
+        {/* Invoice details */} 
+        <div className="text-left md:text-right">
+           {/* Using simple divs for alignment, could use grid */} 
+           <div className="space-y-1 text-sm">
+             <div className="flex md:justify-end">
+               <span className="font-semibold text-gray-500 dark:text-gray-400 w-24">Invoice Date:</span>
+               <span className="text-gray-800 dark:text-gray-100">{invoiceDate}</span>
+             </div>
+             <div className="flex md:justify-end">
+               <span className="font-semibold text-gray-500 dark:text-gray-400 w-24">Due Date:</span>
+               <span className="text-gray-800 dark:text-gray-100">{dueDate}</span>
+             </div>
+             {paidDate && (
+               <div className="flex md:justify-end">
+                 <span className="font-semibold text-gray-500 dark:text-gray-400 w-24">Paid Date:</span>
+                 <span className="text-gray-800 dark:text-gray-100">{paidDate}</span>
+               </div>
+             )}
+           </div>
         </div>
       </div>
       
-      {/* Invoice items */}
-      <div className="invoice-items">
-        <table className="table">
-          <thead>
+      {/* Invoice items table */} 
+      <div className="mb-8 overflow-x-auto"> {/* Added overflow-x-auto for smaller screens */} 
+        <table className="min-w-full w-full border-collapse text-sm">
+          <thead className="border-b border-gray-300 dark:border-gray-600">
             <tr>
-              <th className="description-column">Description</th>
-              <th className="quantity-column">Qty</th>
-              <th className="amount-column">Amount</th>
+              <th className="p-2 text-left font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-1/2">Description</th>
+              <th className="p-2 text-center font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-1/6">Qty</th>
+              <th className="p-2 text-right font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-1/6">Unit Price</th>
+              <th className="p-2 text-right font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-1/6">Total</th>
             </tr>
           </thead>
           <tbody>
-            {/* If there are itemized invoice items */}
             {hasLineItems ? (
-              <>
-                {/* Display all non-CIS items first */}
-                {invoice.lineItems
-                  .filter(item => item.type !== 'cis')
-                  .map((item, index) => {
-                    const amount = parseFloat(item.amount) || 0;
-                    const quantity = parseFloat(item.quantity) || 1;
-                    
-                    // More thorough check for labor items
-                    const isLabourItem = item.isLabour || 
-                      item.category === 'labour' ||
-                      (item.description && (
-                        item.description.toLowerCase().includes('labour') || 
-                        item.description.toLowerCase().includes('labor')
-                      ));
-                    
-                    return (
-                      <tr 
-                        key={item.id || `item-${index}`}
-                        className={isLabourItem ? 'labour-row' : ''}
-                      >
-                        <td className="description-cell">
-                          {item.description || 'Item'}
-                          {isLabourItem && invoice.cisApplied && ' (CIS Applicable)'}
-                        </td>
-                        <td className="quantity-cell text-center">
-                          {quantity}
-                        </td>
-                        <td className="amount-cell text-right">
-                          £{Math.abs(amount).toFixed(2)}
-                        </td>
-                      </tr>
-                    );
-                  })
+              invoice.lineItems.map((item, index) => {
+                const amount = parseFloat(item.amount) || 0;
+                const quantity = parseFloat(item.quantity) || 1;
+                const itemTotal = amount * quantity;
+                
+                // Determine row classes based on item type
+                let rowClasses = "border-b border-gray-200 dark:border-gray-700";
+                let textClasses = "text-gray-800 dark:text-gray-100";
+                let priceTextClasses = "text-gray-700 dark:text-gray-300";
+                let descriptionSuffix = ""; // Suffix for description like (Labour)
+
+                if (item.isLabour) {
+                  rowClasses += " bg-blue-50 dark:bg-blue-900/20";
+                  descriptionSuffix = '<span class="text-xs text-blue-600 dark:text-blue-400 ml-1">(Labour)</span>';
+                } else if (item.type === 'cis') {
+                  rowClasses += " bg-red-50 dark:bg-red-900/20 italic";
+                  textClasses = "text-red-700 dark:text-red-300";
+                  priceTextClasses = "text-red-700 dark:text-red-300";
+                  descriptionSuffix = '<span class="text-xs ml-1">(CIS Deduction)</span>';
                 }
-                
-                {/* If we have CIS deductions, show a subtotal of all non-CIS items */}
-                {(hasCisDeduction || shouldDisplayVat) && (
-                  <tr className="subtotal-row">
-                    <td className="text-right" colSpan="2">Subtotal</td>
-                    <td className="text-right">
-                      £{subtotal.toFixed(2)}
+
+                return (
+                  <tr key={item.id || index} className={rowClasses}>
+                    <td className={`p-2 align-top ${textClasses}`}> 
+                      {item.description}
+                      {/* Use dangerouslySetInnerHTML for the suffix span */} 
+                      {descriptionSuffix && <span dangerouslySetInnerHTML={{ __html: descriptionSuffix }} />} 
                     </td>
+                    <td className={`p-2 text-center align-top ${priceTextClasses}`}>{quantity}</td>
+                    <td className={`p-2 text-right align-top ${priceTextClasses}`}>{formatCurrency(amount)}</td>
+                    <td className={`p-2 text-right align-top ${priceTextClasses}`}>{formatCurrency(itemTotal)}</td>
                   </tr>
-                )}
-                
-                {/* VAT row - only show when VAT is enabled and CIS is not applied */}
-                {shouldDisplayVat && (
-                  <tr className="vat-row">
-                    <td className="text-right" colSpan="2">VAT ({vatRate}%)</td>
-                    <td className="text-right">
-                      £{vatAmount.toFixed(2)}
-                    </td>
-                  </tr>
-                )}
-                
-                {/* Now add CIS deduction items with clear styling */}
-                {hasCisDeduction && invoice.lineItems
-                  .filter(item => item.type === 'cis')
-                  .map((item, index) => {
-                    const amount = parseFloat(item.amount) || 0;
-                    
-                    return (
-                      <tr 
-                        key={item.id || `cis-${index}`}
-                        className="cis-deduction-row"
-                      >
-                        <td className="description-cell">
-                          {item.description || 'CIS Deduction (20%)'}
-                        </td>
-                        <td className="quantity-cell text-center">1</td>
-                        <td className="amount-cell text-right text-danger">
-                          -£{Math.abs(amount).toFixed(2)}
-                        </td>
-                      </tr>
-                    );
-                  })
-                }
-              </>
+                );
+              })
             ) : (
-              // Simple single line item if no itemized data
               <tr>
-                <td className="description-cell">
-                  {invoice.description || 'Invoice payment'}
-                </td>
-                <td className="quantity-cell text-center">1</td>
-                <td className="amount-cell text-right">
-                  £{subtotal.toFixed(2)}
+                <td colSpan="4" className="p-4 text-center text-gray-500 dark:text-gray-400 italic">
+                  No line items on this invoice.
                 </td>
               </tr>
             )}
-            
-            {/* VAT row for simple invoices - only show when VAT is enabled and CIS is not applied */}
-            {shouldDisplayVat && !hasLineItems && (
-              <>
-                <tr className="subtotal-row">
-                  <td className="text-right" colSpan="2">Subtotal</td>
-                  <td className="text-right">
-                    £{subtotal.toFixed(2)}
-                  </td>
-                </tr>
-                <tr className="vat-row">
-                  <td className="text-right" colSpan="2">VAT ({vatRate}%)</td>
-                  <td className="text-right">
-                    £{vatAmount.toFixed(2)}
-                  </td>
-                </tr>
-              </>
-            )}
-            
-            {/* Total row - show the final total with VAT included if applicable */}
-            <tr className="total-row">
-              <td className="total-label" colSpan="2">Total</td>
-              <td className="total-value">
-                £{finalAmount.toFixed(2)}
-              </td>
-            </tr>
           </tbody>
         </table>
       </div>
-      
-      {/* After the items table and totals, add bank details */}
-      <div className="invoice-bank-details">
-        <h3 className="bank-details-title">Bank Details</h3>
-        <div className="bank-details-grid">
-          {bankSettings.name && (
-            <div className="bank-detail">
-              <span className="label"><b>Bank: </b></span>
-              <span className="value">{bankSettings.name}</span>
+
+      {/* Totals Section */}
+      <div className="flex justify-end mb-8">
+        <div className="w-full max-w-xs space-y-1 text-sm">
+          {/* Subtotal */} 
+          <div className="flex justify-between">
+            <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
+            <span className="font-medium text-gray-800 dark:text-gray-100">{formatCurrency(totals.subtotal)}</span>
+          </div>
+          {/* CIS Deduction */} 
+          {hasCisDeduction && (
+            <div className="flex justify-between text-red-600 dark:text-red-400">
+              <span>CIS Deduction ({((cisSettings?.rate || 0.20) * 100).toFixed(0)}%):</span>
+              <span className="font-medium">- {formatCurrency(totals.cisDeduction)}</span>
             </div>
           )}
-          {bankSettings.accountName && (
-            <div className="bank-detail">
-              <span className="label"><b>Account Name: </b></span>
-              <span className="value">{bankSettings.accountName}</span>
+          {/* VAT */} 
+          {totals.isVatEnabled && (
+            <div className="flex justify-between">
+              <span className="text-gray-600 dark:text-gray-400">VAT ({totals.vatRate}%):</span>
+              <span className="font-medium text-gray-800 dark:text-gray-100">{formatCurrency(totals.vatAmount)}</span>
             </div>
           )}
-          {bankSettings.accountNumber && (
-            <div className="bank-detail">
-              <span className="label"><b>Account Number: </b></span>
-              <span className="value">{bankSettings.accountNumber}</span>
-            </div>
-          )}
-          {bankSettings.sortCode && (
-            <div className="bank-detail">
-              <span className="label"><b>Sort Code: </b></span>
-              <span className="value">{bankSettings.sortCode}</span>
-            </div>
-          )}
-          {bankSettings.iban && (
-            <div className="bank-detail">
-              <span className="label"><b>IBAN: </b></span>
-              <span className="value">{bankSettings.iban}</span>
-            </div>
-          )}
-          {bankSettings.bic && (
-            <div className="bank-detail">
-              <span className="label"><b>BIC/SWIFT: </b></span>
-              <span className="value">{bankSettings.bic}</span>
-            </div>
-          )}
+          {/* Grand Total */} 
+          <div className="flex justify-between pt-2 mt-2 border-t border-gray-300 dark:border-gray-600">
+            <span className="text-base font-bold text-gray-900 dark:text-gray-50">Grand Total:</span>
+            <span className="text-base font-bold text-gray-900 dark:text-gray-50">{formatCurrency(totals.grandTotal)}</span>
+          </div>
         </div>
       </div>
 
-      {/* CIS Information with more detailed explanation */}
-      {invoice.cisApplied && (
-        <div className="cis-information">
-          <h3 className="section-header">Construction Industry Scheme (CIS) Information</h3>
-          <div className="cis-grid">
-            <div className="cis-field">
-              <span className="cis-label">Name:</span>
-              <span className="cis-value">{cisSettings.companyName || 'Not Set'}</span>
-            </div>
-            <div className="cis-field">
-              <span className="cis-label">UTR Number:</span>
-              <span className="cis-value">{cisSettings.utr || 'Not Set'}</span>
-            </div>
-            <div className="cis-field">
-              <span className="cis-label">National Insurance Number:</span>
-              <span className="cis-value">{cisSettings.niNumber || 'Not Set'}</span>
-            </div>
+      {/* Footer: Notes & Bank Details */}
+      <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-400">
+        {/* Notes */} 
+        {invoice.notes && (
+          <div className="mb-4">
+            <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Notes:</h4>
+            <p className="whitespace-pre-line">{invoice.notes}</p>
           </div>
-          <div className="cis-note">
-            <p>
-              As required by the Construction Industry Scheme, a 20% tax deduction of <strong>£{(invoice.cisDeduction || 0).toFixed(2)}</strong> has been applied to labor charges only.
-            </p>
-          </div>
-        </div>
-      )}
-      
-      {/* Additional notes */}
-      {invoice.notes && (
-        <div className="invoice-notes">
-          <h3 className="section-header">Notes:</h3>
-          <div className="notes-content">
-            {invoice.notes}
-          </div>
-        </div>
-      )}
-      
-      {/* Footer */}
-      <div className="invoice-footer">
-        {invoiceSettings.footer && <p>{invoiceSettings.footer}</p>}
+        )}
         
-        {/* VAT Registration Number */}
-        {vatSettings.enabled && vatSettings.number && (
-          <p className="vat-registration">VAT Registration Number: {vatSettings.number}</p>
+        {/* Bank Details */} 
+        {(bankSettings.accountName || bankSettings.sortCode || bankSettings.accountNumber) && (
+          <div>
+            <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Payment Details:</h4>
+            {bankSettings.accountName && <p>Account Name: {bankSettings.accountName}</p>}
+            {bankSettings.sortCode && bankSettings.accountNumber && (
+              <p>Sort Code: {bankSettings.sortCode} &nbsp;&nbsp;&nbsp; Account Number: {bankSettings.accountNumber}</p>
+            )}
+            {bankSettings.iban && <p>IBAN: {bankSettings.iban}</p>}
+            {bankSettings.bic && <p>BIC/Swift: {bankSettings.bic}</p>}
+            {/* Payment Reference */} 
+            <p className="mt-1">Please use invoice number <span className="font-semibold text-gray-700 dark:text-gray-300">{invoice.invoiceNumber || `INV-${invoice.id?.substring(0, 6)}`}</span> as payment reference.</p>
+          </div>
         )}
       </div>
     </div>

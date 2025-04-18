@@ -6,7 +6,7 @@ import api from '../../services/api';
 import pdfGenerator from '../../services/pdfGenerator';
 import { formatDate } from '../../utils/formatters';
 import html2pdf from 'html2pdf.js'; // Add html2pdf import
-import '../../styles/index.css'; // Updated to use modular CSS structure
+/* import '../../styles/index.css'; */ // Removed as Tailwind is used now
 
 // Components
 import Button from '../common/Button';
@@ -201,6 +201,8 @@ const InvoiceBuilder = () => {
   // Generate a unique invoice number if creating a new invoice
   useEffect(() => {
     if (!id && !invoiceDetails.invoiceNumber) {
+      // Directly use fallback generation logic since getNextInvoiceNumber doesn't exist
+      console.log("Generating fallback invoice number for new invoice.");
       const prefix = 'INV-';
       const year = new Date().getFullYear();
       const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
@@ -209,7 +211,7 @@ const InvoiceBuilder = () => {
         invoiceNumber: `${prefix}${year}-${random}`
       }));
     }
-  }, [id, invoiceDetails.invoiceNumber]);
+  }, [id, invoiceDetails.invoiceNumber]); // Keep dependency array
   
   // Helper function to check for line items and confirm before proceeding
   const checkLineItems = () => {
@@ -224,6 +226,59 @@ const InvoiceBuilder = () => {
     return true; // Proceed (items exist)
   };
   
+  // Calculate totals based on line items and VAT info
+  const calculateTotals = (details) => {
+    // Calculate subtotal from line items, ensuring CIS deduction is handled
+    let subtotal = (details.lineItems || []).reduce((sum, item) => {
+        // Add amount * quantity for regular items
+        // For CIS deduction (negative amount), just add the amount
+        const itemTotal = (item.type === 'cis') ? (parseFloat(item.amount) || 0) : (parseFloat(item.amount) || 0) * (parseFloat(item.quantity) || 1);
+        return sum + itemTotal;
+    }, 0);
+    
+    // If CIS was applied, the subtotal should be the net amount after deduction.
+    // If not, the subtotal is simply the sum of line items.
+    // Let's reconcile: If CIS is applied, the 'amount' field on invoiceDetails *should* be the net total.
+    // The sum calculated above should match `details.amount` if CIS is applied.
+    // For clarity, we might recalculate based on original items if CIS is applied.
+
+    let displaySubtotal = details.cisApplied ? details.originalGrossAmount : subtotal;
+    let calculatedVatAmount = 0;
+    let grandTotal = details.amount; // Start with the current invoice amount (net if CIS applied)
+
+    if (details.vatInfo?.enabled) {
+        const vatRateDecimal = (details.vatInfo.rate || 0) / 100;
+        // Calculate VAT based on the amount *before* potential CIS deduction but *after* line item sums
+        const baseForVat = details.cisApplied ? details.originalGrossAmount : subtotal;
+        calculatedVatAmount = baseForVat * vatRateDecimal;
+        // If VAT is included in the total already, don't add it again.
+        // If VAT is NOT included (e.g., added separately), add it to the grand total.
+        // Assuming vatInfo.includedInTotal means the line items *already* contain VAT.
+        // If line items are EXCLUSIVE of VAT, then we add VAT to the subtotal.
+        // For now, let's assume line items DO NOT include VAT and it's added here.
+        // If CIS is applied, VAT is calculated on the original gross amount.
+        grandTotal = baseForVat + calculatedVatAmount - (details.cisApplied ? details.cisDeduction : 0);
+        displaySubtotal = baseForVat; // Show pre-VAT subtotal
+    } else {
+       // If VAT is disabled, the grand total is just the (potentially CIS-adjusted) amount.
+       grandTotal = details.amount;
+       displaySubtotal = details.cisApplied ? details.originalGrossAmount : grandTotal; // Show pre-CIS gross or final amount
+    }
+    
+    // Ensure displayed subtotal reflects the gross amount before CIS if applied
+    if(details.cisApplied) {
+        displaySubtotal = details.originalGrossAmount;
+    }
+
+    return {
+      subtotal: displaySubtotal || 0,
+      vatAmount: calculatedVatAmount || 0,
+      grandTotal: grandTotal || 0,
+      cisDeduction: details.cisDeduction || 0, // Pass through CIS deduction for display
+      isVatEnabled: details.vatInfo?.enabled || false
+    };
+  };
+
   // Handle form submission
   const handleSubmit = async (e, dataToSubmit = invoiceDetails) => {
     e.preventDefault();
@@ -909,10 +964,7 @@ const InvoiceBuilder = () => {
   const handleClientChange = (field, value) => {
     setInvoiceDetails(prev => ({
       ...prev,
-      client: {
-        ...prev.client,
-        [field]: value
-      }
+      [field]: value,
     }));
   };
 
@@ -991,18 +1043,21 @@ const InvoiceBuilder = () => {
   return (
     <PageLayout title={id ? 'Edit Invoice' : 'Create Invoice'}>
       {/* Add ActionButtonContainer below the header */}
-      <div className="action-button-container">
-        <div className="invoice-builder-actions">
-          
+      <div className="action-button-container mb-4"> {/* Added margin-bottom for spacing */}
+        {/* Apply flexbox for horizontal layout with wrapping */}
+        {/* Reverting: Add wrap back, remove overflow */}
+        <div className="invoice-builder-actions flex flex-wrap gap-2">
+          {/* Moved Paid button to the top */}
           <Button
             variant="primary"
-            onClick={() => handleSaveInvoice()}
+            onClick={handleMarkAsPaid}
+            disabled={invoiceDetails.status === 'paid'}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
           >
-            <span className="btn-icon">💾</span>
-            Save Invoice
+            <span className="btn-icon">✓</span>
+            Paid
           </Button>
-          
+
           <Button
             variant="primary"
             onClick={handleExportPDF}
@@ -1022,54 +1077,12 @@ const InvoiceBuilder = () => {
           </Button>
           
           <Button
-            variant="primary"
-            onClick={handleMarkAsPaid}
-            disabled={invoiceDetails.status === 'paid'}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
-          >
-            <span className="btn-icon">✓</span>
-            Paid
-          </Button>
-          
-          {/* Conditional CIS Button */}
-          {invoiceDetails.cisApplied ? (
-            <Button
-              variant="warning" // Use warning color for undo
-              onClick={handleUndoCIS}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
-            >
-              <span className="btn-icon">↩️</span>
-              Undo CIS
-            </Button>
-          ) : (
-            settings?.cis?.enabled && (
-              <Button
-                variant="primary"
-                onClick={handleApplyCIS}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
-              >
-                <span className="btn-icon">🔧</span>
-                Apply CIS
-              </Button>
-            )
-          )}
-          
-          <Button
             variant="danger"
             onClick={handleDeleteInvoice}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
           >
             <span className="btn-icon">🗑</span>
             Delete Invoice
-          </Button>
-          
-          <Button
-            variant="primary"
-            onClick={() => navigate('/settings')}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
-          >
-            <span className="btn-icon">⚙️</span>
-            Settings
           </Button>
         </div>
       </div>
@@ -1129,7 +1142,8 @@ const InvoiceBuilder = () => {
                       />
                     </div>
                     
-                    <div className="form-row">
+                    {/* Company field - Make full width */}
+                    <div className="form-field mb-3"> {/* Use form-field for consistent spacing */} 
                       <FormField
                         label="Company"
                         value={invoiceDetails.clientCompany}
@@ -1137,13 +1151,18 @@ const InvoiceBuilder = () => {
                       />
                     </div>
                     
-                    <div className="form-row">
+                    {/* Email field - Full width on its own line */}
+                    <div className="form-field mb-3"> 
                       <FormField
                         label="Email"
                         type="email"
                         value={invoiceDetails.clientEmail}
                         onChange={(e) => setInvoiceDetails({...invoiceDetails, clientEmail: e.target.value})}
                       />
+                    </div>
+                    
+                    {/* Phone field - Full width on its own line */}
+                    <div className="form-field mb-3"> 
                       <FormField
                         label="Phone"
                         value={invoiceDetails.clientPhone}
@@ -1151,6 +1170,7 @@ const InvoiceBuilder = () => {
                       />
                     </div>
                     
+                    {/* Address field - Remains full width */}
                     <div className="form-field">
                       <FormField
                         label="Address"
@@ -1165,9 +1185,9 @@ const InvoiceBuilder = () => {
                 
                 {/* Invoice Type */}
                 <div className="form-field">
-                  <label className="form-label">Invoice Type</label>
+                  <label className="form-label dark:text-gray-300">Invoice Type</label>
                   <select
-                    className="form-select"
+                    className="form-select dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                     value={invoiceDetails.type || 'Deposit (50%)'}
                     onChange={(e) => setInvoiceDetails({...invoiceDetails, type: e.target.value})}
                   >
@@ -1179,29 +1199,28 @@ const InvoiceBuilder = () => {
                   </select>
                 </div>
                 
-                {/* Invoice/Due Date */}
-                <div className="form-row">
-                  <div className="form-field">
-                    <label className="form-label">Invoice Date</label>
-                    <input
-                      type="date"
-                      className="form-input"
-                      value={invoiceDetails.invoiceDate || ''}
-                      onChange={(e) => setInvoiceDetails({...invoiceDetails, invoiceDate: e.target.value})}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="form-field">
-                    <label className="form-label">Due Date</label>
-                    <input
-                      type="date"
-                      className="form-input"
-                      value={invoiceDetails.dueDate || ''}
-                      onChange={(e) => setInvoiceDetails({...invoiceDetails, dueDate: e.target.value})}
-                      required
-                    />
-                  </div>
+                {/* Invoice Date - Remove form-row, add margin */} 
+                <div className="form-field mb-3"> {/* Changed from form-row */} 
+                  <label className="form-label dark:text-gray-300">Invoice Date</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={invoiceDetails.invoiceDate || ''}
+                    onChange={(e) => setInvoiceDetails({...invoiceDetails, invoiceDate: e.target.value})}
+                    required
+                  />
+                </div>
+                
+                {/* Due Date - Remove form-row, add margin */} 
+                <div className="form-field mb-3">
+                  <label className="form-label dark:text-gray-300">Due Date</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={invoiceDetails.dueDate || ''}
+                    onChange={(e) => setInvoiceDetails({...invoiceDetails, dueDate: e.target.value})}
+                    required
+                  />
                 </div>
                 
                 {/* Additional Notes */}
@@ -1243,103 +1262,251 @@ const InvoiceBuilder = () => {
                 )}
               </form>
               
-              {/* Quick Add Item */}
-              <div className="quick-add-item">
-                <h3 className="quick-add-title">Quick Add Item</h3>
-                <div className="form-field">
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Item Name"
-                    value={newItemName}
-                    onChange={(e) => setNewItemName(e.target.value)}
-                  />
-                </div>
-                <div className="form-row">
-                  <div className="form-field">
-                    <input
-                      type="number"
-                      className="form-input"
-                      placeholder="Amount (£)"
-                      step="0.01"
-                      min="0"
-                      value={newItemAmount}
-                      onChange={(e) => setNewItemAmount(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-field">
-                    <input
-                      type="number"
-                      className="form-input"
-                      placeholder="Quantity"
-                      min="1"
-                      value={newItemQuantity}
-                      onChange={(e) => setNewItemQuantity(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <Button
-                  variant="primary"
-                  onClick={handleAddItem}
-                >
-                  Add Item
-                </Button>
-              </div>
+              {/* Quick Add Item section removed as redundant */}
               
-              {/* Line Items Table */}
-              {invoiceDetails.lineItems && invoiceDetails.lineItems.length > 0 && (
-                <div className="line-items-table-container">
-                  <h3 className="quick-add-title">Invoice Items</h3>
-                  <table className="line-items-table">
-                    <thead>
-                      <tr>
-                        <th>Description</th>
-                        <th>Qty</th>
-                        <th>Amount</th>
-                        <th>Total</th>
-                        <th>Type</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invoiceDetails.lineItems.map((item) => (
-                        <tr 
-                          key={item.id} 
-                          className={item.type === 'cis' ? 'cis-deduction-row' : (item.isLabour || item.isLabor ? 'labour-row' : '')}
+              {/* Line Items Section - Apply card structure */} 
+              <div className="card mb-4">{/* Added card wrapper */}
+                <div className="card-body">{/* Added card-body wrapper */}
+                  {/* Removed explicit styling from inner div */}
+                  <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200 border-b dark:border-gray-600 pb-2">Line Items</h2>
+                  
+                  {/* Line Items List */}
+                  <div className="space-y-3 mb-6">
+                    {/* Header Row (Optional but good for clarity) */}
+                    {invoiceDetails.lineItems && invoiceDetails.lineItems.length > 0 && (
+                      <div className="hidden md:grid md:grid-cols-6 gap-4 text-sm font-medium text-gray-500 dark:text-gray-400 px-3 py-2 border-b dark:border-gray-600">
+                        <div className="md:col-span-3">Description</div>
+                        <div className="text-right">Qty</div>
+                        <div className="text-right">Unit Price</div>
+                        <div className="text-right">Total</div>
+                        {/* Empty div for alignment with remove button column */}
+                        <div></div> 
+                      </div>
+                    )}
+
+                    {/* Items */}
+                    {invoiceDetails.lineItems && invoiceDetails.lineItems.length > 0 ? (
+                      invoiceDetails.lineItems.map((item, index) => {
+                        const itemTotal = (parseFloat(item.amount) || 0) * (parseFloat(item.quantity) || 1);
+                        // Determine background color based on item type
+                        // Add dark variants for backgrounds and text colors
+                        let rowBgClass = 'hover:bg-gray-50 dark:hover:bg-gray-700/50'; // Default hover with dark mode
+                        let textColorClass = 'text-gray-800 dark:text-gray-200';
+                        let detailColorClass = 'text-gray-700 dark:text-gray-300';
+                        let labelSpanClass = ''; // For special item types
+
+                        if (item.isLabour) {
+                          rowBgClass = 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-800/40'; // Light blue for labour
+                          labelSpanClass = '<span class="text-xs font-semibold text-blue-600 dark:text-blue-400 ml-2">(Labour)</span>';
+                          // Keep default text colors for labour rows
+                        } else if (item.type === 'cis') {
+                          rowBgClass = 'bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-800/40 italic'; // Light red for CIS deduction
+                          textColorClass = 'text-red-700 dark:text-red-300'; // Apply red text to main description
+                          detailColorClass = 'text-red-600 dark:text-red-400'; // Slightly different red for details
+                          labelSpanClass = '<span class="text-xs font-semibold ml-2">(CIS Deduction)</span>'; // Default color inherited
+                        } else if (index % 2 !== 0 && !item.isLabour && item.type !== 'cis') {
+                           rowBgClass = 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-700/30 dark:hover:bg-gray-600/40'; // Slightly different bg for odd rows (zebra striping)
+                           // Keep default text colors for odd rows
+                        }
+
+                        return (
+                          <div 
+                            key={item.id || `item-${index}`} // Use index as fallback key if id is missing
+                            className={`grid grid-cols-1 md:grid-cols-6 gap-2 md:gap-4 items-center p-3 rounded ${rowBgClass} border-b border-gray-100 dark:border-gray-700 last:border-b-0`}
+                          >
+                            {/* Description */}
+                            <div className={`md:col-span-3 font-medium ${textColorClass} break-words`}>
+                               <span className="md:hidden font-semibold mr-2">Desc:</span> 
+                               {item.description}
+                               {/* Use dangerouslySetInnerHTML for the label span to handle conditional class injection */} 
+                               {labelSpanClass && <span dangerouslySetInnerHTML={{ __html: labelSpanClass }} />} 
+                            </div>
+                            {/* Quantity */}
+                            <div className={`${detailColorClass} text-right`}>
+                               <span className="md:hidden font-semibold mr-2">Qty:</span> 
+                               {item.quantity}
+                            </div>
+                            {/* Unit Price */}
+                            <div className={`${detailColorClass} text-right`}>
+                               <span className="md:hidden font-semibold mr-2">Unit Price:</span> 
+                               £{(parseFloat(item.amount) || 0).toFixed(2)}
+                             </div>
+                            {/* Total Price */}
+                            <div className={`${detailColorClass} font-medium text-right`}>
+                               <span className="md:hidden font-semibold mr-2">Total:</span> 
+                               £{itemTotal.toFixed(2)}
+                            </div>
+                            {/* Remove Button */}
+                            <div className="text-right md:text-center">
+                               {/* Show remove button only if CIS is NOT applied OR if it's the original view */}
+                               {(!invoiceDetails.cisApplied || !invoiceDetails.originalLineItemsBeforeCIS) && (
+                                  <Button
+                                     variant="danger-ghost" // Use a less intrusive variant
+                                     size="sm"
+                                     onClick={() => handleRemoveItem(item.id)}
+                                     className="p-1" // Reduce padding for icon-like button
+                                     aria-label="Remove item"
+                                  >
+                                     {/* Simple X icon */}
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </Button>
+                               )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="text-center py-6 text-gray-500 dark:text-gray-400 italic">
+                        No line items added yet.
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Quick Add Item Form - Render only if CIS is not applied */}
+                  {!invoiceDetails.cisApplied && (
+                    <div className="mt-4 p-4 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 rounded-b-md">
+                      <h3 className="text-md font-medium mb-3 text-gray-700 dark:text-gray-300">Quick Add Item</h3>
+                      <div className="flex flex-wrap gap-2 items-end">
+                        <FormField
+                          label="Item Description"
+                          id="newItemName"
+                          value={newItemName}
+                          onChange={(e) => setNewItemName(e.target.value)}
+                          placeholder="Service or product"
+                          className="flex-grow"
+                          labelSrOnly
+                        />
+                        <FormField
+                          label="Quantity"
+                          id="newItemQuantity"
+                          type="number"
+                          min="0"
+                          step="any" // Allow decimal quantities if needed
+                          value={newItemQuantity}
+                          onChange={(e) => setNewItemQuantity(e.target.value)}
+                          placeholder="Qty"
+                          className="w-20" // Fixed width for quantity
+                          labelSrOnly
+                        />
+                         <FormField
+                          label="Amount (£)"
+                          id="newItemAmount"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={newItemAmount}
+                          onChange={(e) => setNewItemAmount(e.target.value)}
+                          placeholder="Unit Price"
+                          className="w-28" // Fixed width for amount
+                          labelSrOnly
+                        />
+                        <Button onClick={handleAddItem} size="sm">Add Item</Button>
+                      </div>
+                    </div>
+                  )}
+                </div>{/* End card-body */}
+              </div>{/* End card */}
+
+              {/* CIS Deduction Section - Apply card structure */}
+              <div className="card mb-4">{/* Added card wrapper */}
+                <div className="card-body">{/* Added card-body wrapper */}
+                  {/* Removed explicit styling from inner div */}
+                  <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200 border-b dark:border-gray-600 pb-2">CIS Deduction (Optional)</h2>
+                  <div className="space-y-4">
+                    {!invoiceDetails.cisApplied ? (
+                      <div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                          Apply Construction Industry Scheme (CIS) deduction based on labour items. 
+                          The current rate is assumed to be {(settings?.cis?.rate || 0.20) * 100}%. 
+                          Ensure all labour items are added before applying.
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          onClick={handleApplyCIS}
+                          // disabled={!invoiceDetails.id} // Optionally disable if invoice isn't saved yet
                         >
-                          <td>{item.description}</td>
-                          <td>{item.quantity || 1}</td>
-                          <td>£{Math.abs(parseFloat(item.amount) || 0).toFixed(2)}</td>
-                          <td>£{Math.abs((parseFloat(item.amount) || 0) * (parseFloat(item.quantity) || 1)).toFixed(2)}</td>
-                          <td>{item.isLabour || item.isLabor ? 'Labour ✓' : (item.type === 'cis' ? 'CIS' : 'Material')}</td>
-                          <td>
-                            {item.type !== 'cis' && (
-                              <button 
-                                className="remove-item-btn"
-                                onClick={() => handleRemoveItem(item.id)}
-                                type="button"
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                      <tr className="total-row">
-                        <td colSpan="3" className="text-right"><strong>Total</strong></td>
-                        <td colSpan="3"><strong>£{invoiceDetails.amount.toFixed(2)}</strong></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                          Apply CIS Deduction
+                        </Button>
+                         {/* Show warning if invoice isn't saved */} 
+                         {!invoiceDetails.id && (
+                             <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">Note: Invoice will be saved before CIS can be applied.</p>
+                         )}
+                      </div>
+                    ) : (
+                      <div className="space-y-3 p-4 bg-yellow-50 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-700/50 rounded-md">
+                        <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                          CIS Deduction Applied
+                        </p>
+                        <div className="text-sm text-yellow-700 dark:text-yellow-400 space-y-1">
+                           <p>Original Gross Amount: <span className="font-semibold">£{(invoiceDetails.originalGrossAmount || 0).toFixed(2)}</span></p>
+                           <p>Identified Labour Total: <span className="font-semibold">£{(invoiceDetails.laborTotal || 0).toFixed(2)}</span></p>
+                           <p>CIS Deduction Amount ({((settings?.cis?.rate || 0.20) * 100).toFixed(0)}%): <span className="font-semibold">£{(invoiceDetails.cisDeduction || 0).toFixed(2)}</span></p>
+                           <p>New Net Invoice Amount: <span className="font-semibold">£{(invoiceDetails.amount || 0).toFixed(2)}</span></p>
+                        </div>
+                        <Button 
+                          variant="danger-outline" 
+                          size="sm"
+                          onClick={handleUndoCIS}
+                        >
+                          Undo CIS Deduction
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>{/* End card-body */}
+              </div>{/* End card */}
+
+              {/* Totals Section - Apply card structure */}
+              <div className="card mb-4">{/* Added card wrapper */}
+                 <div className="card-body">{/* Added card-body wrapper */}
+                    {/* Removed explicit styling from inner div */}
+                    <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200 border-b dark:border-gray-600 pb-2">Totals</h2>
+                    {(() => { // Immediately invoked function to calculate and render totals
+                      const totals = calculateTotals(invoiceDetails);
+                      return (
+                        <div className="space-y-2 text-right">
+                          {/* Display Subtotal (Pre-VAT, Pre-CIS if applied, or sum of items) */}
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600 dark:text-gray-300">Subtotal:</span>
+                            <span className="font-medium text-gray-800 dark:text-gray-100">£{totals.subtotal.toFixed(2)}</span>
+                          </div>
+                          
+                          {/* Display CIS Deduction if applied */}
+                          {invoiceDetails.cisApplied && (
+                              <div className="flex justify-between items-center text-red-600 dark:text-red-400">
+                                <span className="">CIS Deduction ({((settings?.cis?.rate || 0.20) * 100).toFixed(0)}%):</span>
+                                <span className="font-medium">- £{totals.cisDeduction.toFixed(2)}</span>
+                              </div>
+                          )}
+                          
+                          {/* Display VAT if enabled */}
+                          {totals.isVatEnabled && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-600 dark:text-gray-300">VAT ({invoiceDetails.vatInfo.rate}%):</span>
+                              <span className="font-medium text-gray-800 dark:text-gray-100">£{totals.vatAmount.toFixed(2)}</span>
+                            </div>
+                          )}
+
+                          {/* Grand Total */}
+                          <div className="flex justify-between items-center pt-3 border-t dark:border-gray-600 mt-3">
+                            <span className="text-lg font-semibold text-gray-900 dark:text-gray-50">Grand Total:</span>
+                            <span className="text-xl font-bold text-indigo-700 dark:text-indigo-300">£{totals.grandTotal.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      );
+                    })()} 
+                 </div>{/* End card-body */}
+              </div>{/* End card */}
             </div>
           </div>
         </div>
         
         {/* Right column - Preview Section */}
         {/* Preview panel now appears below the form panel */}
-        <div className="invoice-preview-panel">
+        {/* Add pb-20 for bottom padding */}
+        <div className="invoice-preview-panel pb-20"> 
           {/* Invoice Preview */}
           {/* Add mb-4 for margin-bottom */}
           <div className="card mb-4"> 
@@ -1491,42 +1658,42 @@ const InvoiceBuilder = () => {
         isOpen={showEmailDialog}
         onClose={() => setShowEmailDialog(false)}
         title="Email Invoice"
-        className="email-dialog"
       >
-        <div className="email-dialog-content">
-          <div className="email-instructions">
-            <p className="email-description">How would you like to proceed?</p>
+        <div className="p-4 sm:p-6 space-y-6"> 
+          <p className="text-base text-gray-700">
+            How would you like to proceed?
+          </p>
             
-            <div className="email-actions-container">
-              <Button
-                variant="primary"
-                onClick={handleExportAndOpenEmail}
-                className="email-action-button-primary"
-              >
-                Export PDF and Open Email
-              </Button>
+          <div className="flex flex-col space-y-4"> 
+            <Button
+              variant="primary"
+              onClick={handleExportAndOpenEmail}
+              className="w-full justify-center"
+            >
+              Export PDF and Open Email
+            </Button>
               
-              <div className="email-actions-row">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 sm:space-x-3 pt-4 border-t border-gray-200">
+              <Button
+                variant="secondary"
+                onClick={() => setShowEmailDialog(false)}
+                className="w-full sm:w-auto justify-center"
+              >
+                Cancel
+              </Button>
+              <div className="flex space-x-3 justify-center sm:justify-end"> 
                 <Button
                   variant="secondary"
-                  onClick={() => setShowEmailDialog(false)}
+                  onClick={handleExportPDF}
                 >
-                  Cancel
+                  Export PDF Only
                 </Button>
-                <div className="email-actions-group">
-                  <Button
-                    variant="secondary"
-                    onClick={handleExportPDF}
-                  >
-                    Export PDF Only
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={handleOpenEmailClient}
-                  >
-                    Email Only
-                  </Button>
-                </div>
+                <Button
+                  variant="secondary"
+                  onClick={handleOpenEmailClient}
+                >
+                  Email Only
+                </Button>
               </div>
             </div>
           </div>
@@ -1569,6 +1736,43 @@ const InvoiceBuilder = () => {
           }}
         />
       </Dialog>
+
+      {/* NEW FOOTER CONTAINER FOR SAVE BUTTON - Updated for full width */}
+      <div className="fixed bottom-0 left-0 w-full p-4 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-10 shadow-lg flex justify-center gap-4"> {/* Added gap-4 */}
+        <Button
+          variant="primary"
+          onClick={() => handleSaveInvoice()}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
+        >
+          <span className="btn-icon">💾</span>
+          Save Invoice
+        </Button>
+        
+        {/* ADDING CONDITIONAL CIS BUTTON HERE */}
+        {settings?.cis?.enabled && (
+          <> {/* Use fragment to group conditional buttons */}
+            {invoiceDetails.cisApplied ? (
+              <Button
+                variant="warning" // Use warning color for undo
+                onClick={handleUndoCIS}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
+              >
+                <span className="btn-icon">↩️</span>
+                Undo CIS
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                onClick={handleApplyCIS}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
+              >
+                <span className="btn-icon">🔧</span>
+                Apply CIS
+              </Button>
+            )}
+          </>
+        )}
+      </div>
     </PageLayout>
   );
 };

@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react'; // Update this line to include useEffect
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useAppContext } from '../../context/AppContext';
 import api from '../../services/api';
 
-// Components
+// Components (Assuming these use Tailwind now)
 import PageLayout from '../../components/common/PageLayout';
 import Button from '../../components/common/Button';
 import Loading from '../../components/common/Loading';
 import ActionButtonContainer from '../../components/common/ActionButtonContainer';
-
+import FormField from '../../components/common/FormField'; // Import FormField for search input
 
 const InvoiceList = () => {
   const navigate = useNavigate();
@@ -42,23 +42,18 @@ const InvoiceList = () => {
   
   // Filter invoices based on search and status
   const filteredInvoices = React.useMemo(() => {
-    if (!invoices) return [];
+    if (!Array.isArray(invoices)) return []; // Ensure invoices is an array
     
     return invoices.filter(invoice => {
-      // Search filter
+      const searchLower = searchTerm.toLowerCase();
       const searchMatch = !searchTerm || 
-        (invoice.invoiceNumber && invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (invoice.clientName && invoice.clientName.toLowerCase().includes(searchTerm.toLowerCase()));
+        (invoice.invoiceNumber && String(invoice.invoiceNumber).toLowerCase().includes(searchLower)) ||
+        (invoice.clientName && String(invoice.clientName).toLowerCase().includes(searchLower)) ||
+        (invoice.clientCompany && String(invoice.clientCompany).toLowerCase().includes(searchLower));
       
-      // Status filter
-      let statusMatch = true;
-      if (statusFilter !== 'all') {
-        if (statusFilter === 'paid') {
-          statusMatch = invoice.status === 'paid';
-        } else if (statusFilter === 'pending') {
-          statusMatch = invoice.status !== 'paid';
-        }
-      }
+      const statusMatch = statusFilter === 'all' || 
+                          (statusFilter === 'paid' && invoice.status === 'paid') ||
+                          (statusFilter === 'pending' && invoice.status !== 'paid'); // Assuming anything not 'paid' is pending/overdue
       
       return searchMatch && statusMatch;
     });
@@ -66,12 +61,32 @@ const InvoiceList = () => {
 
   // Helper for formatting currency
   const formatCurrency = (amount) => {
-    return `£${parseFloat(amount || 0).toFixed(2)}`;
+    // Use Intl.NumberFormat for better localization and handling
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+  };
+  
+  // Helper for formatting dates
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('en-GB');
+    } catch (e) {
+      return 'Invalid Date';
+    }
   };
 
-  // Determine status badge class
-  const getStatusBadgeClass = (status) => {
-    return status === 'paid' ? 'status-badge status-badge-success' : 'status-badge status-badge-warning';
+  // Determine status badge Tailwind classes
+  const getStatusBadgeClasses = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'paid':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'overdue':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
   // Action buttons for the page header - Use the standard Button component
@@ -80,10 +95,8 @@ const InvoiceList = () => {
       variant="primary" 
       size="sm" // Use 'sm' size consistent with Quotes page if desired
       onClick={() => navigate('/invoices/new')}
+      icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 -ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>}
     >
-      <svg className="w-4 h-4 mr-1 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"> {/* Use consistent icon classes if possible */}
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-      </svg>
       New Invoice
     </Button>
   );
@@ -105,12 +118,11 @@ const InvoiceList = () => {
         <ActionButtonContainer>
           {actionButtons}
         </ActionButtonContainer>
-        <div className="error-container">
-          <p className="error-message">Error loading invoices: {error?.message}</p>
+        <div className="mt-6 p-6 bg-red-50 border border-red-200 rounded-md text-center">
+          <p className="text-red-700 font-medium mb-4">Error loading invoices: {error?.message}</p>
           <Button 
             variant="primary"
-            className="error-retry-button"
-            onClick={() => window.location.reload()}
+            onClick={() => refetch()} // Use refetch instead of reload
           >
             Retry
           </Button>
@@ -120,109 +132,48 @@ const InvoiceList = () => {
   }
   
   return (
-    <PageLayout title="Invoices">
-      <ActionButtonContainer>
-        {actionButtons}
+    <PageLayout title="Invoices" subtitle="Create, view, and manage your invoices">
+      {/* Stick the button container to the top under the header */}
+      <ActionButtonContainer className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm px-4 py-3 border-b border-gray-200 -mx-4 md:-mx-6 lg:-mx-8 mb-6">
+          {actionButtons}
       </ActionButtonContainer>
 
-      {/* Page Header - Styled like Dashboard */}
-      <div className="page-header">
-        <h1 className="page-title">Invoice Management</h1>
-        <p className="page-subtitle">Create, view, and manage your invoices</p>
-      </div>
-
-      {/* Quick Actions - Same styling as Dashboard */}
-      <div className="section-container">
-        <h2 className="section-title">Quick Actions</h2>
-        <div className="quick-actions">
-          <div onClick={() => navigate('/invoices/new')} className="quick-action-btn">
-            <svg className="quick-action-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            <span>New Invoice</span>
-          </div>
-          
-          <div onClick={() => navigate('/quotes')} className="quick-action-btn">
-            <svg className="quick-action-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span>Create Quote</span>
-          </div>
-          
-          <div onClick={() => navigate('/contacts')} className="quick-action-btn">
-            <svg className="quick-action-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <span>Manage Contacts</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Search and Filters - in a card like Dashboard */}
-      <div className="card search-filter-container">
-        <div className="filter-row">
-          <div className="search-container">
-            <input
-              type="text"
-              className="search-input"
-              placeholder="Search invoices by number or client..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+      {/* Search and Filters Card - Use theme variables */}
+      <div className="mb-6 bg-card-background border border-card-border p-4 shadow rounded-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          {/* Search Input */}
+          <div className="flex-grow sm:max-w-xs">
+            <FormField
+               id="search-invoices"
+               placeholder="Search # or client..."
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+               label="Search Invoices"
+               labelSrOnly // Hide label visually
+               // Optional: Add a search icon prefix using prefix prop of FormField if supported
             />
           </div>
           
-          <div className="filter-group">
-            <button
-              className={`filter-button ${statusFilter === 'all' ? 'active' : ''}`}
-              onClick={() => setStatusFilter('all')}
-              style={{
-                backgroundColor: statusFilter === 'all' ? '#0073cf' : '#f0f4f8',
-                color: statusFilter === 'all' ? 'white' : '#4a5568',
-                padding: '8px 16px',
-                marginRight: '10px',
-                borderRadius: '4px',
-                border: 'none',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              All
-            </button>
-            <button
-              className={`filter-button ${statusFilter === 'pending' ? 'active' : ''}`}
-              onClick={() => setStatusFilter('pending')}
-              style={{
-                backgroundColor: statusFilter === 'pending' ? '#0073cf' : '#f0f4f8',
-                color: statusFilter === 'pending' ? 'white' : '#4a5568',
-                padding: '8px 16px',
-                marginRight: '10px',
-                borderRadius: '4px',
-                border: 'none',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              Pending
-            </button>
-            <button
-              className={`filter-button ${statusFilter === 'paid' ? 'active' : ''}`}
-              onClick={() => setStatusFilter('paid')}
-              style={{
-                backgroundColor: statusFilter === 'paid' ? '#0073cf' : '#f0f4f8',
-                color: statusFilter === 'paid' ? 'white' : '#4a5568',
-                padding: '8px 16px',
-                borderRadius: '4px',
-                border: 'none',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              Paid
-            </button>
-          </div>
+          {/* Filter Buttons */}
+          <div className="flex items-center space-x-2 flex-wrap">
+             {/* Define filters array */} 
+            {[ 
+              {value: 'all', label: 'All'}, 
+              {value: 'pending', label: 'Pending/Overdue'}, 
+              {value: 'paid', label: 'Paid'} 
+            ].map(filter => (
+               <Button
+                 key={filter.value}
+                 size="sm"
+                 variant={statusFilter === filter.value ? 'solid' : 'outline'} // Use solid variant for active filter
+                 colorScheme={statusFilter === filter.value ? 'indigo' : 'gray'} // Use color schemes if Button supports it
+                 onClick={() => setStatusFilter(filter.value)}
+                 className="whitespace-nowrap" // Prevent button text wrapping
+               >
+                 {filter.label}
+               </Button>
+             ))}
+           </div>
         </div>
       </div>
       
@@ -259,48 +210,45 @@ const InvoiceList = () => {
             )}
           </div>
         ) : (
-          <div className="recent-items">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredInvoices.map((invoice) => (
               <div 
                 key={invoice.id} 
-                className="recent-item"
+                className="bg-card-background border border-card-border rounded-lg shadow-sm p-4 flex flex-col justify-between hover:bg-background-tertiary cursor-pointer transition-shadow duration-200 ease-in-out"
                 onClick={() => navigate(`/invoices/${invoice.id}`)}
-                style={{ padding: '16px 24px' }} // Add more padding to the item
+                // style={{ padding: '16px 24px' }} // Remove inline style, use padding class
               >
-                <div className="item-row">
-                  <div className="item-details" style={{ paddingLeft: '8px' }}> {/* Add left padding */}
-                    <p className="item-title">
-                      {invoice.invoiceNumber || `INV-${invoice.id.substring(0, 8)}`}
-                      {invoice.clientName && (
-                        <span className="client-name"> {invoice.clientName}</span>
-                      )}
-                    </p>
-                    <p className="item-subtitle">
-                      {invoice.clientCompany || ''}
-                      {invoice.clientCompany && invoice.invoiceDate && ' • '}
-                      {invoice.invoiceDate ? `Date: ${new Date(invoice.invoiceDate).toLocaleDateString()}` : ''}
-                    </p>
-                  </div>
-                  <div className="item-actions">
-                    <p className="invoice-amount">
-                      {formatCurrency(invoice.amount)}
-                    </p>
-                    {/* Combine status and buttons */}
-                    <div className="status-button-container">
-                      <span className={`${getStatusBadgeClass(invoice.status)}`}>
-                        {invoice.status === 'paid' ? 'Paid' : 'Pending'}
-                      </span>
-                      {/* Use Button component with new classes */}
-                      <Button
-                        className="btn-list-item btn-list-item--secondary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/invoices/${invoice.id}`);
-                        }}
-                      >
-                        View
-                      </Button>
-                    </div>
+                {/* Top section of card */}
+                <div className="mb-3">
+                  <p className="font-medium text-text-primary truncate">
+                    {invoice.invoiceNumber || `INV-${invoice.id.substring(0, 8)}`}
+                    {invoice.clientName && (
+                      <span className="text-sm text-text-secondary"> - {invoice.clientName}</span>
+                    )}
+                  </p>
+                  <p className="text-sm text-text-secondary mt-1 truncate">
+                    {invoice.clientCompany || ''}
+                    {invoice.clientCompany && invoice.invoiceDate && ' • '}
+                    {invoice.invoiceDate ? `Date: ${new Date(invoice.invoiceDate).toLocaleDateString('en-GB')}` : ''}
+                  </p>
+                </div>
+
+                {/* Bottom section of card */}
+                <div className="flex items-center justify-between mt-auto">
+                  <p className="text-lg font-semibold text-text-primary">
+                    {formatCurrency(invoice.amount)}
+                  </p>
+                  <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}> {/* Prevent card click */} 
+                    <span className={`${getStatusBadgeClasses(invoice.status)} px-2.5 py-0.5 rounded-full text-xs font-medium`}>
+                      {invoice.status === 'paid' ? 'Paid' : 'Pending'}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline" // Changed to outline for less emphasis
+                      onClick={() => navigate(`/invoices/${invoice.id}`)} // No need for stopPropagation here, already stopped on parent
+                    >
+                      View
+                    </Button>
                   </div>
                 </div>
               </div>

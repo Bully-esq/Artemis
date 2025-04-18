@@ -25,11 +25,16 @@ const NetworkStatus = () => {
       setIsOnline(false);
       setVisible(true);
       
-      // Clear any timeout if we go offline
+      // Clear any existing hide timeout
       if (hideTimeout) {
         clearTimeout(hideTimeout);
         hideTimeout = null;
       }
+      
+      // NEW: Automatically hide the offline message after 5 seconds
+      hideTimeout = setTimeout(() => {
+        setVisible(false);
+      }, 5000); // 5 seconds duration
     };
     
     window.addEventListener('online', handleOnline);

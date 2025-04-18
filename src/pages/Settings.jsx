@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMutation } from 'react-query';
-import '../styles/index.css';
 import PageLayout from '../components/common/PageLayout';
 import Tabs from '../components/common/Tabs';
 import FormField from '../components/common/FormField';
 import Button from '../components/common/Button';
 import Loading from '../components/common/Loading';
-import ToggleSwitch from '../components/common/ToggleSwitch'; 
+import ToggleSwitch from '../components/common/ToggleSwitch';
 import { useAppContext } from '../context/AppContext';
 import api from '../services/api';
 import { deepMerge } from '../utils/deepMerge';
@@ -228,463 +227,401 @@ const Settings = () => {
   console.log("Rendering Settings component with theme:", localSettings?.general?.theme);
 
   return (
-    <PageLayout title="Settings">
-      <div className="settings-header">
-        <h1 className="page-title">Settings</h1>
-        <p className="page-description">Configure your business settings</p>
+    <PageLayout title="Settings" subtitle="Configure your business and application settings">
+      <div className="flex justify-end mb-6">
+        <Button
+          variant="primary"
+          onClick={handleSaveSettings}
+          isLoading={saveSettingsMutation.isLoading}
+          disabled={saveSettingsMutation.isLoading}
+        >
+          {saveSettingsMutation.isLoading ? 'Saving...' : 'Save Changes'}
+        </Button>
       </div>
 
-      <div className="card settings-card">
-        <div className="card-content">
+      <div className="bg-white dark:bg-card-background shadow rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="overflow-x-auto">
           <Tabs
             tabs={[
-              { id: 'general', label: 'General Settings' },
-              { id: 'company', label: 'Company Details' },
-              { id: 'quote', label: 'Quote Settings' },
-              { id: 'invoice', label: 'Invoice Settings' },
-              { id: 'bank', label: 'Bank Details' },
-              { id: 'cis', label: 'CIS Settings' },
-              { id: 'vat', label: 'VAT Settings' }
+              { id: 'general', label: 'General' },
+              { id: 'company', label: 'Company' },
+              { id: 'quote', label: 'Quotes' },
+              { id: 'invoice', label: 'Invoices' },
+              { id: 'bank', label: 'Bank' },
+              { id: 'cis', label: 'CIS' },
+              { id: 'vat', label: 'VAT' }
             ]}
             activeTab={activeTab}
             onChange={setActiveTab}
-            variant="underline"
-            className="settings-tabs"
-            style={{ gap: '2rem', display: 'flex' }}
           />
+        </div>
 
-          {/* General Settings */}
+        <div className="p-4 sm:p-6 md:p-8 dark:bg-card-background">
           {activeTab === 'general' && (
-            <div className="settings-section">
-              <h2>Theme Settings</h2>
-              <p className="helper-text">Select your preferred application theme.</p>
-              
-              <div className="form-field-radio-group" style={{ marginTop: '1rem' }}>
-                <label className="radio-label">
-                  Light Mode
-                  <input 
-                    type="radio" 
-                    name="theme" 
-                    value="light" 
-                    checked={localSettings.general?.theme === 'light'} 
-                    onChange={() => handleChange('general', 'theme', 'light')} 
-                  />
-                </label>
-                <label className="radio-label">
-                  Dark Mode
-                  <input 
-                    type="radio" 
-                    name="theme" 
-                    value="dark" 
-                    checked={localSettings.general?.theme === 'dark'} 
-                    onChange={() => handleChange('general', 'theme', 'dark')} 
-                  />
-                </label>
-                <label className="radio-label">
-                  Match System Theme
-                  <input 
-                    type="radio" 
-                    name="theme" 
-                    value="system" 
-                    checked={localSettings.general?.theme === 'system'} 
-                    onChange={() => handleChange('general', 'theme', 'system')} 
-                  />
-                </label>
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">General Settings</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <FormField
+                    label="Theme Preference"
+                    id="theme-preference"
+                    type="select"
+                    value={localSettings?.general?.theme || 'system'}
+                    onChange={(e) => handleChange('general', 'theme', e.target.value)}
+                 >
+                    <option value="light">Light Mode</option>
+                    <option value="dark">Dark Mode</option>
+                    <option value="system">System Default</option>
+                 </FormField>
               </div>
-              {/* Add a visual separator */}
-              <hr style={{ margin: '2rem 0' }} /> 
-              {/* Placeholder for future general settings */}
-              <p><i>More general settings can be added here later.</i></p>
+              <p className="text-sm text-gray-500">
+                Select your preferred theme or use the system default. Changes will apply immediately for preview.
+              </p>
             </div>
           )}
 
-          {/* Company Details */}
           {activeTab === 'company' && (
-            <div className="settings-section">
-              <div className="logo-upload-container">
-                <label className="field-label">Company Logo</label>
-                <div className="logo-upload-area">
-                  <div>
-                    <Button
-                      variant="secondary"
-                      onClick={() => fileInputRef.current.click()}
-                    >
-                      Upload Logo
-                    </Button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden-input"
-                      onChange={handleLogoUpload}
-                    />
-                    <p className="helper-text">Recommended size: 300x100px</p>
-                  </div>
-                  {logoPreview && (
-                    <div className="logo-preview">
-                      <img
-                        src={logoPreview}
-                        alt="Company logo"
-                        className="logo-image"
-                      />
-                      <button
-                        className="delete-button"
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Company Details</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  label="Company Name"
+                  id="company-name"
+                  value={localSettings?.company?.name || ''}
+                  onChange={(e) => handleChange('company', 'name', e.target.value)}
+                  placeholder="Your Company Ltd"
+                />
+                <FormField
+                  label="Contact Name"
+                  id="contact-name"
+                  value={localSettings?.company?.contactName || ''}
+                  onChange={(e) => handleChange('company', 'contactName', e.target.value)}
+                  placeholder="John Doe"
+                />
+                <FormField
+                  label="Email Address"
+                  id="company-email"
+                  type="email"
+                  value={localSettings?.company?.email || ''}
+                  onChange={(e) => handleChange('company', 'email', e.target.value)}
+                  placeholder="contact@yourcompany.com"
+                />
+                <FormField
+                  label="Phone Number"
+                  id="company-phone"
+                  type="tel"
+                  value={localSettings?.company?.phone || ''}
+                  onChange={(e) => handleChange('company', 'phone', e.target.value)}
+                  placeholder="01234 567890"
+                />
+                <FormField
+                  label="Website"
+                  id="company-website"
+                  type="url"
+                  value={localSettings?.company?.website || ''}
+                  onChange={(e) => handleChange('company', 'website', e.target.value)}
+                  placeholder="https://yourcompany.com"
+                />
+                <FormField
+                  label="Company Address"
+                  id="company-address"
+                  type="textarea"
+                  rows={3}
+                  value={localSettings?.company?.address || ''}
+                  onChange={(e) => handleChange('company', 'address', e.target.value)}
+                  placeholder="123 Business Street, City, Postcode"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Company Logo</label>
+                <div className="mt-1 flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-4 sm:space-y-0">
+                   <div className="flex-shrink-0 h-16 w-32 bg-gray-100 rounded-md flex items-center justify-center border border-gray-300 overflow-hidden">
+                     {logoPreview ? (
+                       <img src={logoPreview} alt="Logo Preview" className="h-full w-full object-contain" />
+                     ) : (
+                       <span className="text-xs text-gray-500 px-2 text-center">No Logo Uploaded</span>
+                     )}
+                   </div>
+                  <div className="flex flex-col space-y-2">
+                     <input
+                       type="file"
+                       ref={fileInputRef}
+                       onChange={handleLogoUpload}
+                       accept="image/*"
+                       className="hidden"
+                       id="logo-upload-input"
+                     />
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => fileInputRef.current?.click()}
+                     >
+                        {logoPreview ? 'Change Logo' : 'Upload Logo'}
+                     </Button>
+                    {logoPreview && (
+                      <Button
+                        variant="danger-outline"
+                        size="sm"
                         onClick={() => {
                           setLogoPreview(null);
                           handleChange('company', 'logo', null);
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = '';
+                          }
                         }}
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="delete-icon"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
+                        Remove Logo
+                      </Button>
+                    )}
+                  </div>
                 </div>
+                <p className="mt-2 text-xs text-gray-500">Upload a PNG, JPG, or GIF (Max 2MB recommended).</p>
               </div>
-
-              <FormField
-                label="Company Name"
-                name="company-name"
-                value={localSettings.company?.name || ''}
-                onChange={(e) => handleChange('company', 'name', e.target.value)}
-              />
-
-              <FormField
-                label="Contact Name"
-                name="contact-name"
-                value={localSettings.company?.contactName || ''}
-                onChange={(e) => handleChange('company', 'contactName', e.target.value)}
-              />
-
-              <div className="form-row">
-                <FormField
-                  label="Email"
-                  name="email"
-                  type="email"
-                  value={localSettings.company?.email || ''}
-                  onChange={(e) => handleChange('company', 'email', e.target.value)}
-                />
-                <FormField
-                  label="Phone"
-                  name="phone"
-                  value={localSettings.company?.phone || ''}
-                  onChange={(e) => handleChange('company', 'phone', e.target.value)}
-                />
-              </div>
-
-              <FormField
-                label="Website"
-                name="website"
-                value={localSettings.company?.website || ''}
-                onChange={(e) => handleChange('company', 'website', e.target.value)}
-              />
-
-              <FormField
-                label="Address"
-                name="address"
-                type="textarea"
-                value={localSettings.company?.address || ''}
-                onChange={(e) => handleChange('company', 'address', e.target.value)}
-                rows={4}
-              />
             </div>
           )}
 
-          {/* Quote Settings */}
           {activeTab === 'quote' && (
-            <div className="settings-section">
-              <FormField
-                label="Default Markup (%)"
-                name="default-markup"
-                type="number"
-                min={0}
-                max={100}
-                value={localSettings.quote?.defaultMarkup ?? ''}
-                onChange={(e) =>
-                  handleChange('quote', 'defaultMarkup', e.target.value)
-                }
-                helpText="Default markup percentage applied to new quotes"
-              />
-
-              <FormField
-                label="Quote Number Prefix"
-                name="quote-prefix"
-                value={localSettings.quote?.prefix || 'Q-'}
-                onChange={(e) => handleChange('quote', 'prefix', e.target.value)}
-                helpText="Prefix added to quote numbers (e.g. Q-2025-001)"
-              />
-
-              <FormField
-                label="Default Validity Period (days)"
-                name="validity-period"
-                type="number"
-                min={1}
-                value={localSettings.quote?.validityPeriod ?? ''}
-                onChange={(e) =>
-                  handleChange('quote', 'validityPeriod', e.target.value)
-                }
-                helpText="How long quotes are valid for by default"
-              />
-
-              <FormField
-                label="Default Payment Terms"
-                name="default-terms"
-                type="select"
-                value={localSettings.quote?.defaultTerms || '1'}
-                onChange={(e) => handleChange('quote', 'defaultTerms', e.target.value)}
-              >
-                <option value="1">50% deposit, 50% on completion</option>
-                <option value="2">50% deposit, 25% on joinery completion, 25% final</option>
-                <option value="4">Full payment before delivery</option>
-                <option value="3">Custom terms</option>
-              </FormField>
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Quote Settings</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  label="Default Markup (%)"
+                  id="quote-markup"
+                  type="number"
+                  value={localSettings?.quote?.defaultMarkup || ''}
+                  onChange={(e) => handleChange('quote', 'defaultMarkup', e.target.value)}
+                  placeholder="e.g., 15"
+                  min="0"
+                  step="0.01"
+                />
+                <FormField
+                  label="Quote Number Prefix"
+                  id="quote-prefix"
+                  value={localSettings?.quote?.prefix || ''}
+                  onChange={(e) => handleChange('quote', 'prefix', e.target.value)}
+                  placeholder="e.g., Q-"
+                />
+                <FormField
+                  label="Quote Validity Period (Days)"
+                  id="quote-validity"
+                  type="number"
+                  value={localSettings?.quote?.validityPeriod || ''}
+                  onChange={(e) => handleChange('quote', 'validityPeriod', e.target.value)}
+                  placeholder="e.g., 30"
+                  min="1"
+                />
+                <FormField
+                  label="Default Terms & Conditions Template"
+                  id="quote-terms"
+                  type="textarea"
+                  rows={5}
+                  value={localSettings?.quote?.defaultTerms || ''}
+                  onChange={(e) => handleChange('quote', 'defaultTerms', e.target.value)}
+                  placeholder="Enter your standard quote terms here..."
+                  className="md:col-span-2"
+                />
+              </div>
             </div>
           )}
 
-          {/* Invoice Settings */}
           {activeTab === 'invoice' && (
-            <div className="settings-section">
-              <FormField
-                label="Invoice Number Prefix"
-                name="invoice-prefix"
-                value={localSettings.invoice?.prefix || 'INV-'}
-                onChange={(e) => handleChange('invoice', 'prefix', e.target.value)}
-                helpText="Prefix added to invoice numbers (e.g. INV-2025-001)"
-              />
-
-              <FormField
-                label="Default Payment Terms (days)"
-                name="payment-terms"
-                type="number"
-                min={0}
-                value={localSettings.invoice?.defaultPaymentTerms ?? ''}
-                onChange={(e) =>
-                  handleChange('invoice', 'defaultPaymentTerms', e.target.value)
-                }
-                helpText="Number of days before payment is due"
-              />
-
-              <FormField
-                label="Default Invoice Notes"
-                name="notes-template"
-                type="textarea"
-                value={localSettings.invoice?.notesTemplate || ''}
-                onChange={(e) =>
-                  handleChange('invoice', 'notesTemplate', e.target.value)
-                }
-                rows={4}
-                helpText="Default notes to include on new invoices"
-              />
-
-              <FormField
-                label="Invoice Footer Text"
-                name="invoice-footer"
-                type="textarea"
-                value={localSettings.invoice?.footer || ''}
-                onChange={(e) => handleChange('invoice', 'footer', e.target.value)}
-                rows={3}
-                helpText="Text to appear at the bottom of all invoices"
-              />
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Invoice Settings</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  label="Invoice Number Prefix"
+                  id="invoice-prefix"
+                  value={localSettings?.invoice?.prefix || ''}
+                  onChange={(e) => handleChange('invoice', 'prefix', e.target.value)}
+                  placeholder="e.g., INV-"
+                />
+                <FormField
+                  label="Default Payment Terms (Days)"
+                  id="invoice-payment-terms"
+                  type="number"
+                  value={localSettings?.invoice?.defaultPaymentTerms || ''}
+                  onChange={(e) => handleChange('invoice', 'defaultPaymentTerms', e.target.value)}
+                  placeholder="e.g., 14"
+                  min="0"
+                />
+                 <FormField
+                   label="Default Invoice Notes"
+                   id="invoice-notes"
+                   type="textarea"
+                   rows={4}
+                   value={localSettings?.invoice?.notesTemplate || ''}
+                   onChange={(e) => handleChange('invoice', 'notesTemplate', e.target.value)}
+                   placeholder="e.g., Thank you for your business. Payment is due within X days."
+                   className="md:col-span-2"
+                 />
+                <FormField
+                  label="Default Invoice Footer"
+                  id="invoice-footer"
+                  type="textarea"
+                  rows={3}
+                  value={localSettings?.invoice?.footer || ''}
+                  onChange={(e) => handleChange('invoice', 'footer', e.target.value)}
+                  placeholder="e.g., Company Reg No: 123456 | VAT No: GB123456789"
+                  className="md:col-span-2"
+                />
+              </div>
             </div>
           )}
 
-          {/* Bank Details */}
           {activeTab === 'bank' && (
-            <div className="settings-section">
-              <FormField
-                label="Bank Name"
-                name="bank-name"
-                value={localSettings.bank?.name || ''}
-                onChange={(e) => handleChange('bank', 'name', e.target.value)}
-              />
-
-              <FormField
-                label="Account Name"
-                name="account-name"
-                value={localSettings.bank?.accountName || ''}
-                onChange={(e) => handleChange('bank', 'accountName', e.target.value)}
-              />
-
-              <div className="form-row">
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Bank Details (for Invoices)</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  label="Bank Name"
+                  id="bank-name"
+                  value={localSettings?.bank?.name || ''}
+                  onChange={(e) => handleChange('bank', 'name', e.target.value)}
+                  placeholder="e.g., Starling Bank"
+                />
+                <FormField
+                  label="Account Name"
+                  id="bank-account-name"
+                  value={localSettings?.bank?.accountName || ''}
+                  onChange={(e) => handleChange('bank', 'accountName', e.target.value)}
+                  placeholder="Your Company Ltd"
+                />
                 <FormField
                   label="Account Number"
-                  name="account-number"
-                  value={localSettings.bank?.accountNumber || ''}
+                  id="bank-account-number"
+                  value={localSettings?.bank?.accountNumber || ''}
                   onChange={(e) => handleChange('bank', 'accountNumber', e.target.value)}
+                  placeholder="12345678"
                 />
                 <FormField
                   label="Sort Code"
-                  name="sort-code"
-                  value={localSettings.bank?.sortCode || ''}
+                  id="bank-sort-code"
+                  value={localSettings?.bank?.sortCode || ''}
                   onChange={(e) => handleChange('bank', 'sortCode', e.target.value)}
+                  placeholder="12-34-56"
                 />
+                 <FormField
+                   label="IBAN"
+                   id="bank-iban"
+                   value={localSettings?.bank?.iban || ''}
+                   onChange={(e) => handleChange('bank', 'iban', e.target.value)}
+                   placeholder="GB00 ABCD 1234 5678 9012 34"
+                   className="md:col-span-2"
+                 />
+                 <FormField
+                   label="BIC / Swift"
+                   id="bank-bic"
+                   value={localSettings?.bank?.bic || ''}
+                   onChange={(e) => handleChange('bank', 'bic', e.target.value)}
+                   placeholder="ABCDGB2L"
+                 />
               </div>
-
-              <FormField
-                label="IBAN (Optional)"
-                name="iban"
-                value={localSettings.bank?.iban || ''}
-                onChange={(e) => handleChange('bank', 'iban', e.target.value)}
-                helpText="International Bank Account Number"
-              />
-
-              <FormField
-                label="BIC/SWIFT (Optional)"
-                name="bic"
-                value={localSettings.bank?.bic || ''}
-                onChange={(e) => handleChange('bank', 'bic', e.target.value)}
-                helpText="Bank Identifier Code"
-              />
             </div>
           )}
 
-          {/* CIS Settings */}
           {activeTab === 'cis' && (
-            <div className="settings-section">
-              <ToggleSwitch
-                label="Enable CIS Features"
-                checked={Boolean(localSettings?.cis?.enabled)}
-                onChange={(isChecked) => handleChange('cis', 'enabled', isChecked)}
-                helpText="Enable to configure and use CIS features for invoicing and reporting."
-                name="cis-enabled-toggle"
-              />
+             <div className="space-y-6">
+               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">CIS Settings (Construction Industry Scheme)</h2>
 
-              {/* Conditionally render the rest of the CIS settings */}
-              {localSettings?.cis?.enabled && (
-                <>
-                  <div className="notification-box warning" style={{ marginTop: '1rem' }}>
-                    <h3 className="notification-title">Construction Industry Scheme</h3>
-                    <p className="notification-text">
-                      These settings are used for CIS tax deductions on invoices. 
-                      Make sure these details are correct to comply with HMRC regulations.
-                    </p>
-                  </div>
-
-                  <FormField
-                    label="Company Name for CIS"
-                    name="cis-company-name"
-                    value={localSettings.cis?.companyName || ''}
-                    onChange={(e) => handleChange('cis', 'companyName', e.target.value)}
+               <div className="flex items-center space-x-0 md:space-x-2 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md">
+                  <ToggleSwitch
+                     id="cis-enabled"
+                     checked={localSettings?.cis?.enabled || false}
+                     onChange={(checked) => handleChange('cis', 'enabled', checked)}
                   />
+                  <label htmlFor="cis-enabled" className="text-sm font-medium text-gray-900 dark:text-blue-100 cursor-pointer whitespace-nowrap">
+                    Enable CIS Deductions
+                  </label>
+                  {saveSettingsMutation.isLoading && localSettings?.cis?.enabled !== settings?.cis?.enabled && (
+                    <span className="text-xs text-gray-500 italic ml-2">Saving...</span>
+                  )}
+               </div>
 
-                  <FormField
-                    label="UTR Number"
-                    name="cis-utr"
-                    value={localSettings.cis?.utr || ''}
-                    onChange={(e) => handleChange('cis', 'utr', e.target.value)}
-                    helpText="Your Unique Taxpayer Reference number"
-                  />
+               {localSettings?.cis?.enabled && (
+                 <>
+                   <p className="text-sm text-gray-600">
+                     When enabled, CIS deductions will be calculated and displayed on relevant invoices.
+                     Please ensure your company details are accurate.
+                   </p>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-200">
+                     <FormField
+                       label="Company Name (for CIS)"
+                       id="cis-company-name"
+                       value={localSettings?.cis?.companyName || localSettings?.company?.name || ''}
+                       onChange={(e) => handleChange('cis', 'companyName', e.target.value)}
+                       placeholder="Enter the name registered for CIS"
+                       required={localSettings?.cis?.enabled}
+                     />
+                     <FormField
+                       label="Unique Taxpayer Reference (UTR)"
+                       id="cis-utr"
+                       value={localSettings?.cis?.utr || ''}
+                       onChange={(e) => handleChange('cis', 'utr', e.target.value)}
+                       placeholder="10-digit UTR number"
+                       required={localSettings?.cis?.enabled}
+                     />
+                     <FormField
+                       label="National Insurance (NI) Number"
+                       id="cis-ni-number"
+                       value={localSettings?.cis?.niNumber || ''}
+                       onChange={(e) => handleChange('cis', 'niNumber', e.target.value)}
+                       placeholder="e.g., QQ123456C (if applicable)"
+                       required={localSettings?.cis?.enabled}
+                     />
+                     <div className="md:col-span-2 mt-4 pt-4 border-t border-gray-200">
+                        <CisDownloader mode="settings" />
+                     </div>
+                   </div>
+                 </>
+               )}
+             </div>
+           )}
 
-                  <FormField
-                    label="National Insurance Number (NI)"
-                    id="cisNiNumber"
-                    value={localSettings.cis?.niNumber || ''}
-                    onChange={(e) => handleChange('cis', 'niNumber', e.target.value)}
-                  />
+           {activeTab === 'vat' && (
+             <div className="space-y-6">
+               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">VAT Settings</h2>
 
-                  <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <CisDownloader mode="settings" />
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+                <div className="flex items-center space-x-0 md:space-x-2 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                   <ToggleSwitch
+                      id="vat-enabled"
+                      checked={localSettings?.vat?.enabled || false}
+                      onChange={(checked) => handleChange('vat', 'enabled', checked)}
+                   />
+                   <label htmlFor="vat-enabled" className="text-sm font-medium text-gray-900 dark:text-yellow-100 cursor-pointer whitespace-nowrap">
+                     Enable VAT Calculation
+                   </label>
+                 </div>
 
-          {/* VAT Settings */}
-          {activeTab === 'vat' && (
-            <div className="settings-section">
-              <div className="notification-box info">
-                <h3 className="notification-title">VAT Configuration</h3>
-                <p className="notification-text">
-                  Enable VAT to automatically apply it to quotes and invoices. 
-                  The VAT number will be displayed on relevant documents when enabled.
-                </p>
-              </div>
-
-              <div 
-                style={{ 
-                  border: '1px solid #ddd', 
-                  padding: '15px', 
-                  borderRadius: '5px',
-                  marginBottom: '20px' 
-                }}
-              >
-                <h3 style={{ marginTop: 0 }}>Current VAT Status:</h3>
-                <p>VAT is currently <strong>{localSettings?.vat?.enabled ? 'ENABLED' : 'DISABLED'}</strong></p>
-                <p>Click the toggle below to change this setting.</p>
-                
-                {/* Fallback direct button in case the toggle has issues */}
-                <Button
-                  variant={localSettings?.vat?.enabled ? "danger" : "primary"}
-                  onClick={() => {
-                    const newValue = !localSettings?.vat?.enabled;
-                    console.log(`Direct VAT toggle button clicked. Current: ${localSettings?.vat?.enabled}, New: ${newValue}`);
-                    handleChange('vat', 'enabled', newValue);
-                  }}
-                  style={{ marginTop: '10px' }}
-                >
-                  {localSettings?.vat?.enabled ? "Disable VAT" : "Enable VAT"}
-                </Button>
-              </div>
-
-              <ToggleSwitch
-                label="Enable VAT"
-                checked={Boolean(localSettings?.vat?.enabled)}
-                onChange={(isChecked) => {
-                  console.log(`VAT Toggle onChange fired with value: ${isChecked}`);
-                  handleChange('vat', 'enabled', isChecked);
-                }}
-                helpText="Apply VAT calculations and display VAT details on documents."
-                name="vat-enabled-toggle"
-              />
-
-              {/* Only show rate and number fields if VAT is enabled */}
-              {localSettings?.vat?.enabled && (
-                <>
-                  <FormField
-                    label="VAT Rate (%)"
-                    name="vat-rate"
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={localSettings.vat?.rate ?? ''}
-                    onChange={(e) => handleChange('vat', 'rate', e.target.value)}
-                    helpText="Standard VAT rate to apply (e.g., 20 for 20%)"
-                  />
-
-                  <FormField
-                    label="VAT Registration Number"
-                    name="vat-number"
-                    value={localSettings.vat?.number || ''}
-                    onChange={(e) => handleChange('vat', 'number', e.target.value)}
-                    helpText="Your company's VAT registration number."
-                  />
-                </>
-              )}
-            </div>
-          )}
-
-          <div className="action-buttons">
-            <Button
-              variant="green"
-              onClick={handleSaveSettings}
-              isLoading={saveSettingsMutation.isLoading}
-            >
-              Save Settings
-            </Button>
-          </div>
+               {localSettings?.vat?.enabled && (
+                 <>
+                   <p className="text-sm text-gray-600">
+                     When enabled, VAT will be calculated and added to quotes and invoices where applicable.
+                   </p>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-200">
+                     <FormField
+                       label="Standard VAT Rate (%)"
+                       id="vat-rate"
+                       type="number"
+                       value={localSettings?.vat?.rate || ''}
+                       onChange={(e) => handleChange('vat', 'rate', e.target.value)}
+                       placeholder="e.g., 20"
+                       min="0"
+                       step="0.01"
+                       required={localSettings?.vat?.enabled}
+                     />
+                     <FormField
+                       label="VAT Registration Number"
+                       id="vat-number"
+                       value={localSettings?.vat?.number || ''}
+                       onChange={(e) => handleChange('vat', 'number', e.target.value)}
+                       placeholder="e.g., GB123456789"
+                       required={localSettings?.vat?.enabled}
+                     />
+                   </div>
+                 </>
+               )}
+             </div>
+           )}
         </div>
       </div>
     </PageLayout>

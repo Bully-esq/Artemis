@@ -58,42 +58,41 @@ const ContactSelector = ({ searchTerm = '', onContactSelect }) => {
   // Error state
   if (isError) {
     return (
-      <div className="error-message">
+      <div className="p-4 text-center text-red-600 bg-red-100 border border-red-200 rounded-md">
         <p>Error loading contacts: {error?.message || 'Unknown error'}</p>
       </div>
     );
   }
 
   return (
-    <div className="contact-selector-list">
+    <div className="space-y-3 max-h-96 overflow-y-auto p-1">
       {sortedContacts.length === 0 ? (
-        <div className="empty-list-message">
+        <div className="text-center text-gray-500 py-6">
           {searchTerm 
             ? `No contacts match "${searchTerm}"`
             : 'No contacts found'
           }
         </div>
       ) : (
-        <div className="contacts-list">
+        <div className="divide-y divide-gray-200">
           {sortedContacts.map(contact => (
-            <div key={contact.id} className="contact-item">
-              <div className="contact-info">
-                <div className="contact-name">
-                  <span className={`contact-badge ${contact.customerType === 'company' ? 'badge-indigo' : 'badge-blue'}`}>
+            <div key={contact.id} className="flex items-center justify-between p-3 hover:bg-gray-50">
+              <div className="flex-grow min-w-0 mr-4">
+                <div className="flex items-center space-x-2 mb-1">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${contact.customerType === 'company' ? 'bg-indigo-100 text-indigo-800' : 'bg-blue-100 text-blue-800' }`}>
                     {contact.customerType === 'company' ? 'Company' : 'Individual'}
                   </span>
-                  <h3>{getDisplayName(contact)}</h3>
+                  <h3 className="text-sm font-medium text-gray-900 truncate">{getDisplayName(contact)}</h3>
                 </div>
-                <div className="contact-details">
-                  {contact.email && <p className="contact-email">{contact.email}</p>}
-                  {contact.phone && <p className="contact-phone">{contact.phone}</p>}
+                <div className="text-xs text-gray-500 space-y-0.5">
+                  {contact.email && <p className="truncate">{contact.email}</p>}
+                  {contact.phone && <p>{contact.phone}</p>}
                 </div>
               </div>
-              <Button 
-                variant="primary" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="xs"
                 onClick={() => onContactSelect(contact)}
-                className="select-contact-btn"
               >
                 Select
               </Button>

@@ -1,109 +1,119 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, Fragment } from 'react';
 import Button from './Button';
+import { Dialog as HeadlessDialog, Transition } from '@headlessui/react';
 
 /**
- * Modal dialog component
+ * Modal dialog component using Headless UI and Tailwind CSS
  * 
  * @param {Object} props - Component props
  * @param {boolean} props.isOpen - Whether the dialog is open 
  * @param {Function} props.onClose - Function to call when dialog is closed
- * @param {string} props.title - Dialog title
+ * @param {string} [props.title] - Dialog title
  * @param {React.ReactNode} props.children - Dialog content
- * @param {React.ReactNode} props.footer - Custom footer content
- * @param {string} props.size - Dialog size (sm, md, lg, xl)
- * @param {string} props.className - Additional classes for dialog container
- * @param {string} props.overlayClassName - Additional classes for overlay
+ * @param {React.ReactNode} [props.footer] - Custom footer content (replaces default close button)
+ * @param {'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl'} [props.size='md'] - Dialog size
+ * @param {string} [props.panelClassName] - Additional classes for dialog panel
+ * @param {boolean} [props.showCloseButton=true] - Whether to show the default top-right close button
+ * @param {React.MutableRefObject} [props.initialFocusRef] - Ref for the element to focus on open
  */
 const Dialog = ({
-  isOpen = true,
+  isOpen = false,
   onClose,
   title,
   children,
   footer,
   size = 'md',
-  className = '',
-  overlayClassName = ''
+  panelClassName = '',
+  showCloseButton = true,
+  initialFocusRef
 }) => {
-  const dialogRef = useRef(null);
-  
-  // Close when clicking outside the dialog
-  const handleBackdropClick = (e) => {
-    if (dialogRef.current && !dialogRef.current.contains(e.target)) {
-      onClose();
-    }
+
+  // Map size prop to Tailwind max-width classes
+  const sizeClasses = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
   };
-  
-  // Close on escape key
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden'; // Prevent scrolling when open
-    }
-    
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = ''; // Restore scrolling when closed
-    };
-  }, [isOpen, onClose]);
-  
-  if (!isOpen) return null;
-  
+
   return (
-    <div className={`dialog-container ${className}`}>
-      {/* Backdrop */}
-      <div 
-        className={`dialog-overlay ${overlayClassName}`}
-        onClick={handleBackdropClick}
-      />
-      
-      {/* Dialog position wrapper */}
-      <div className="dialog-wrapper">
-        {/* Dialog panel */}
-        <div 
-          ref={dialogRef}
-          className={`dialog-panel dialog-size-${size}`}
+    <Transition appear show={isOpen} as={Fragment}>
+      <HeadlessDialog 
+        as="div" 
+        className="relative z-50"
+        onClose={onClose}
+        initialFocus={initialFocusRef}
+       >
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-200"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-150"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
         >
-          {/* Close button */}
-          <button
-            className="dialog-close-button"
-            onClick={onClose}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="dialog-close-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          
-          {/* Title */}
-          {title && (
-            <div className="dialog-header">
-              <h3 className="dialog-title">{title}</h3>
-            </div>
-          )}
-          
-          {/* Content */}
-          <div className="dialog-content">
-            {children}
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4 text-center">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-200"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-150"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <HeadlessDialog.Panel 
+                 className={`w-full ${sizeClasses[size] || sizeClasses.md} transform overflow-hidden rounded-lg bg-[var(--card-background)] text-left align-middle shadow-xl transition-all ${panelClassName}`}
+              >
+                {title && (
+                  <HeadlessDialog.Title
+                    as="h3"
+                    className="text-lg font-medium leading-6 text-[var(--text-primary)] px-4 py-3 sm:px-6 border-b border-[var(--border-color)]"
+                  >
+                    {title}
+                  </HeadlessDialog.Title>
+                )}
+
+                {showCloseButton && (
+                  <button
+                     type="button"
+                     className="absolute top-2 right-2 p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)]"
+                     onClick={onClose}
+                     aria-label="Close"
+                  >
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+                
+                <div className="px-4 py-4 sm:px-6 sm:py-5">
+                  {children}
+                </div>
+
+                {(footer || (!footer && !showCloseButton)) && (
+                  <div className="px-4 py-3 sm:px-6 border-t border-[var(--border-color)] flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+                    {footer ? footer : (
+                      <Button variant="secondary" onClick={onClose}>
+                        Close
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </HeadlessDialog.Panel>
+            </Transition.Child>
           </div>
-          
-          {/* Footer */}
-          {(footer || onClose) && (
-            <div className="dialog-footer">
-              {footer || (
-                <Button variant="secondary" onClick={onClose}>
-                  Close
-                </Button>
-              )}
-            </div>
-          )}
         </div>
-      </div>
-    </div>
+      </HeadlessDialog>
+    </Transition>
   );
 };
 

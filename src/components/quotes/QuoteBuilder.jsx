@@ -11,51 +11,92 @@ import html2pdf from 'html2pdf.js';
 import PageLayout from '../common/PageLayout';
 import Button, { ActionButtons } from '../common/Button';
 import Loading from '../common/Loading';
-import Tabs from '../common/Tabs';
-import Dialog from '../common/Dialog';
-import FormField from '../common/FormField';
-import ContactSelector from '../contacts/ContactSelector';
-import ActionButtonContainer from '../common/ActionButtonContainer';
+import Tabs, { TabPanel } from '../common/Tabs'; // Assumed Tailwind
+import Dialog from '../common/Dialog'; // Assumed Tailwind (Headless UI)
+import FormField from '../common/FormField'; // Assumed Tailwind
+import ContactSelector from '../contacts/ContactSelector'; // Assumed Tailwind
+import ActionButtonContainer from '../common/ActionButtonContainer'; // Assumed Tailwind
+import QuotePreview from './QuotePreview'; // NEW - Extracted PDF Preview Logic
+import ItemSelector from './ItemSelector'; // Corrected import name
 
-// Add this near the top of your file with the other imports
-import '../../styles/components/quotes.css';
+// CSS Imports (Keep PDF styles for now, remove others if fully converted)
+// import '../../styles/components/quotes.css'; 
+
+// Helper function for currency formatting (if not already in utils)
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+};
+
+// Helper function for date formatting (if not already in utils)
+const formatDateForInput = (dateString) => {
+  if (!dateString) return '';
+  try {
+    return new Date(dateString).toISOString().split('T')[0];
+  } catch (e) {
+    return '';
+  }
+};
 
 const QuoteBuilder = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { addNotification, settings } = useAppContext();
-  const queryClient = useQueryClient(); // Add QueryClient
+  const queryClient = useQueryClient();
   
-  // Local state
+  // === STATE MANAGEMENT ===
   const [activeTab, setActiveTab] = useState('details');
-  const [itemSearchTerm, setItemSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [quoteDetails, setQuoteDetails] = useState({
+    id: id || null,
+    clientName: '',
+    clientCompany: '',
+    clientEmail: '',
+    clientPhone: '',
+    clientAddress: '',
+    date: new Date().toISOString().split('T')[0],
+    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    paymentTerms: settings?.quote?.defaultPaymentTerms || '1',
+    customTerms: '',
+    notes: '',
+    includeDrawingOption: false,
+    exclusions: settings?.quote?.defaultExclusions || [
+      'Boarding or fixing the underside of the new staircase.',
+      'Forming any under-stair cupboard or paneling.',
+      'Making good to any plastered walls or ceilings.',
+      'All components will arrive in their natural state, ready for fine sanding and finishing by others.'
+    ],
+    client: {
+      name: '',
+      company: '',
+      email: '',
+      phone: '',
+      address: ''
+    }
+  });
   const [selectedItems, setSelectedItems] = useState([]);
   const [hiddenCosts, setHiddenCosts] = useState([]);
-  const [globalMarkup, setGlobalMarkup] = useState(settings?.quote?.defaultMarkup !== undefined ? settings?.quote?.defaultMarkup : 30);
-  const [distributionMethod, setDistributionMethod] = useState('even');
+  const [globalMarkup, setGlobalMarkup] = useState(settings?.quote?.defaultMarkup ?? 30);
+  const [distributionMethod, setDistributionMethod] = useState(settings?.quote?.defaultDistribution || 'even');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  
+  // Dialog States
   const [showItemDialog, setShowItemDialog] = useState(false);
   const [showHiddenCostDialog, setShowHiddenCostDialog] = useState(false);
-  const [newHiddenCost, setNewHiddenCost] = useState({ name: '', amount: 0 });
-  const [editingItem, setEditingItem] = useState(null);
-  
-  // Add these new state variables for contact selection
   const [showContactSelector, setShowContactSelector] = useState(false);
-  const [contactSearchTerm, setContactSearchTerm] = useState('');
-  
-  // Add these new state variables for the custom item feature
   const [showCustomItemForm, setShowCustomItemForm] = useState(false);
-  const [customItem, setCustomItem] = useState({
-    name: '',
-    cost: '',
-    quantity: 1,
-    category: '',
-    description: '',
-    markup: 0
-  });
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [showMissingCompanyInfoDialog, setShowMissingCompanyInfoDialog] = useState(false);
   
-  // Add debugging and more reliable dialog handling
+  // Data for Dialogs
+  const [newHiddenCost, setNewHiddenCost] = useState({ name: '', amount: '' });
+  const [customItem, setCustomItem] = useState({ name: '', cost: '', quantity: 1, category: '', description: '', markup: 0 });
+  const [contactSearchTerm, setContactSearchTerm] = useState('');
+  const [itemSearchTerm, setItemSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  
+  // Debugging and alternative dialog handling
   const [useAlternativeDialog, setUseAlternativeDialog] = useState(false);
   
   // Handle opening the item dialog with debugging
@@ -67,44 +108,16 @@ const QuoteBuilder = () => {
     setTimeout(() => {
       if (!document.querySelector('.dialog-overlay')) {
         console.log("Dialog component might be failing, switching to alternative");
-        setUseAlternativeDialog(true);
+        // setUseAlternativeDialog(true); // Avoid enabling alternative for now
       }
     }, 300);
   };
   
-  // Add this state near your other dialog states
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
-  const [showMissingCompanyInfoDialog, setShowMissingCompanyInfoDialog] = useState(false);
-  
-  // Add this state variable for tracking user's choice to bypass company info check
+  // Tracking user's choice to bypass company info check
   const [bypassCompanyInfoCheck, setBypassCompanyInfoCheck] = useState(false);
   
-  // Add these new state variables near the other state variables
+  // Save as Contact state
   const [saveAsContact, setSaveAsContact] = useState(false);
-  
-  // Quote details
-  const [quoteDetails, setQuoteDetails] = useState({
-    id: id || Date.now().toString(),
-    client: {
-      name: '',
-      company: '',
-      email: '',
-      phone: '',
-      address: ''
-    },
-    date: new Date().toISOString().split('T')[0],
-    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    paymentTerms: '1',
-    customTerms: '',
-    notes: '',
-    includeDrawingOption: false,
-    exclusions: [
-      'Boarding or fixing the underside of the new staircase.',
-      'Forming any under-stair cupboard or paneling.',
-      'Making good to any plastered walls or ceilings.',
-      'All components will arrive in their natural state, ready for fine sanding and finishing by others.'
-    ]
-  });
   
   // Fetch quote if we have an ID
   const { data: quote, isLoading: isLoadingQuote, refetch: refetchQuote } = useQuery(
@@ -130,26 +143,26 @@ const QuoteBuilder = () => {
           
           // Set quote details from the data
           setQuoteDetails({
-            id: id,
+            id: data.id || id,
+            clientName: data.client?.name || data.clientName || '',
+            clientCompany: data.client?.company || data.clientCompany || '',
+            clientEmail: data.client?.email || '',
+            clientPhone: data.client?.phone || '',
+            clientAddress: data.client?.address || '',
+            date: data.date || new Date().toISOString().split('T')[0],
+            validUntil: data.validUntil || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            paymentTerms: data.paymentTerms || settings?.quote?.defaultPaymentTerms || '1',
+            customTerms: data.customTerms || '',
+            notes: data.notes || '',
+            includeDrawingOption: !!data.includeDrawingOption,
+            exclusions: Array.isArray(data.exclusions) ? data.exclusions : settings?.quote?.defaultExclusions || [],
             client: {
               name: data.client?.name || data.clientName || '',
               company: data.client?.company || data.clientCompany || '',
               email: data.client?.email || '',
               phone: data.client?.phone || '',
               address: data.client?.address || ''
-            },
-            date: data.date || new Date().toISOString().split('T')[0],
-            validUntil: data.validUntil || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            paymentTerms: data.paymentTerms || '1',
-            customTerms: data.customTerms || '',
-            notes: data.notes || '',
-            includeDrawingOption: !!data.includeDrawingOption,
-            exclusions: Array.isArray(data.exclusions) ? data.exclusions : [
-              'Boarding or fixing the underside of the new staircase.',
-              'Forming any under-stair cupboard or paneling.',
-              'Making good to any plastered walls or ceilings.',
-              'All components will arrive in their natural state, ready for fine sanding and finishing by others.'
-            ]
+            }
           });
           
           // Process selected items
@@ -179,11 +192,15 @@ const QuoteBuilder = () => {
           // Set global markup
           if (typeof data.globalMarkup === 'number' && !isNaN(data.globalMarkup)) {
             setGlobalMarkup(data.globalMarkup);
+          } else {
+             setGlobalMarkup(settings?.quote?.defaultMarkup ?? 30); // Fallback
           }
           
           // Set distribution method
           if (data.distributionMethod && ['even', 'proportional'].includes(data.distributionMethod)) {
             setDistributionMethod(data.distributionMethod);
+          } else {
+             setDistributionMethod(settings?.quote?.defaultDistribution || 'even'); // Fallback
           }
           
           console.log("Quote data successfully processed");
@@ -228,7 +245,7 @@ const QuoteBuilder = () => {
       (item.name && item.name.toLowerCase().includes(itemSearchTerm.toLowerCase())) ||
       (item.description && item.description.toLowerCase().includes(itemSearchTerm.toLowerCase()));
     
-    // Category filter
+    // Category filter - Ensure selectedCategory is defined
     const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
     
     return matchesSearch && matchesCategory;
@@ -288,13 +305,14 @@ const QuoteBuilder = () => {
   
   // Handle client details change
   const handleClientChange = (field, value) => {
-    setQuoteDetails({
-      ...quoteDetails,
+    setQuoteDetails(prev => ({
+      ...prev,
+      [field]: value,
       client: {
-        ...quoteDetails.client,
+        ...prev.client,
         [field]: value
       }
-    });
+    }));
   };
   
   // Handle quote details change
@@ -313,6 +331,24 @@ const QuoteBuilder = () => {
       ...quoteDetails,
       exclusions: newExclusions
     });
+  };
+  
+  // Add new exclusion
+  const handleAddExclusion = () => {
+    setQuoteDetails(prev => ({
+      ...prev,
+      exclusions: [...prev.exclusions, ''] // Add empty exclusion string
+    }));
+  };
+
+  // Remove exclusion
+  const handleRemoveExclusion = (index) => {
+    const newExclusions = [...quoteDetails.exclusions];
+    newExclusions.splice(index, 1);
+    setQuoteDetails(prev => ({
+      ...prev,
+      exclusions: newExclusions
+    }));
   };
   
   // Add hidden cost
@@ -867,1437 +903,682 @@ const QuoteBuilder = () => {
   };
 
   return (
-    <PageLayout title={id ? 'Edit Quote' : 'Create Quote'}>
-      {/* Add ActionButtonContainer below the header */}
-      <ActionButtonContainer>
-        <Button
-          variant="primary"
-          onClick={() => navigate('/quotes')}
-        >
-          Back to Quotes
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSaveQuote}
-        >
-          Save Quote
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleEmailQuote}
-        >
-          Email Quote
-        </Button>
-        <Button
-          variant="primary"
-          onClick={safeExportPDF}
-        >
-          Export PDF
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleGenerateInvoice}
-        >
-          Generate Invoice
-        </Button>
-      </ActionButtonContainer>
-      
-      <div className="tabs-container">
-        <div className="card">
-          <div className="card-body">
-            <div className="tabs-with-actions">
-              <Tabs
-                tabs={[
-                  { id: 'details', label: 'Quote Details' },
-                  { id: 'items', label: 'Items & Costs' },
-                  { id: 'preview', label: 'Preview' }
-                ]}
-                activeTab={activeTab}
-                onChange={setActiveTab}
-                variant="underline"
-              />
-            </div>
+    <PageLayout title={id ? 'Edit Quote' : 'Create Quote'} subtitle={id ? `Ref: ${id}` : 'Create a new quote'}>
+      {isLoadingQuote ? (
+        <Loading message="Loading quote details..." />
+      ) : (
+        <>
+          <div className="mb-6">
+            <Tabs
+              tabs={[
+                { id: 'details', label: 'Client & Details' },
+                { id: 'items', label: 'Items & Costs' },
+                { id: 'exclusions', label: 'Exclusions & Notes' },
+                { id: 'preview', label: 'Preview' },
+              ]}
+              activeTab={activeTab}
+              onChange={setActiveTab}
+              variant="underline" // Or 'pills' or 'default' based on your preference
+            />
           </div>
-        </div>
-      </div>
-      
-      {/* Details Tab */}
-      {activeTab === 'details' && (
-        <div className="quote-details-grid">
-          {/* Client Information Card */}
-          <div className="card">
-            <div className="card-body">
-              <h2 className="card-title">Client Information</h2><br></br>
-              
-              <div className="form-row" style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
-                gap: '1.5rem',
-                alignItems: 'start' 
-              }}>
-                <FormField
-                  label="Contact Name"
-                  value={quoteDetails.client.name}
-                  onChange={(e) => handleClientChange('name', e.target.value)}
-                />
-                
-                <Button 
-                  variant="primary"
-                  size="sm"
-                  onClick={() => setShowContactSelector(true)}
-                  style={{ marginBottom: '12px' }}
-                >
-                  Select Existing Contact
-                </Button>
-                
-                <FormField
-                  label="Company Name"
-                  value={quoteDetails.client.company}
-                  onChange={(e) => handleClientChange('company', e.target.value)}
-                />
-                
-                <FormField
-                  label="Email"
-                  type="email"
-                  value={quoteDetails.client.email}
-                  onChange={(e) => handleClientChange('email', e.target.value)}
-                />
-                
-                <FormField
-                  label="Phone"
-                  value={quoteDetails.client.phone}
-                  onChange={(e) => handleClientChange('phone', e.target.value)}
-                />
-              </div>
-              
-              <FormField
-                label="Address"
-                type="textarea"
-                value={quoteDetails.client.address}
-                onChange={(e) => handleClientChange('address', e.target.value)}
-                rows={3}
-              />
-              
-              {/* Add Save as Contact checkbox */}
-              <div className="form-field" style={{ marginTop: '10px' }}>
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={saveAsContact}
-                    onChange={(e) => setSaveAsContact(e.target.checked)}
-                    className="form-checkbox"
-                  />
-                  <span className="checkbox-text">Save as contact when quote is saved</span>
-                </label>
-              </div>
-            </div>
-          </div>
-          
-          {/* Quote Settings Card */}
-          <div className="card">
-            <div className="card-body">
-              <h2 className="card-title">Quote Settings</h2><br></br>              
-              <div className="form-row" style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
-                gap: '1.5rem',
-                alignItems: 'start' 
-              }}>
-                <FormField
-                  label="Quote Date"
-                  type="date"
-                  value={quoteDetails.date}
-                  onChange={(e) => handleQuoteChange('date', e.target.value)}
-                />
-                
-                <FormField
-                  label="Valid Until"
-                  type="date"
-                  value={quoteDetails.validUntil}
-                  onChange={(e) => handleQuoteChange('validUntil', e.target.value)}
-                />
-              </div>
-              
-              <FormField
-                label="Payment Terms"
-                type="select"
-                value={quoteDetails.paymentTerms}
-                onChange={(e) => handleQuoteChange('paymentTerms', e.target.value)}
-              >
-                <option value="1">50% deposit, 50% on completion</option>
-                <option value="2">50% deposit, 25% on joinery completion, 25% final</option>
-                <option value="4">Full payment before delivery</option>
-                <option value="3">Custom terms</option>
-              </FormField>
-              
-              {quoteDetails.paymentTerms === '3' && (
-                <FormField
-                  label="Custom Terms"
-                  type="textarea"
-                  value={quoteDetails.customTerms}
-                  onChange={(e) => handleQuoteChange('customTerms', e.target.value)}
-                  rows={2}
-                />
-              )}
-              
-              <div className="form-field">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={quoteDetails.includeDrawingOption}
-                    onChange={(e) => handleQuoteChange('includeDrawingOption', e.target.checked)}
-                    className="form-checkbox"
-                  />
-                  <span className="checkbox-text">Include drawing option (£150, deducted from project total if order proceeds)</span>
-                </label>
-              </div>
-            </div>
-          </div>
-          
-          {/* Additional Details Card */}
-          <div className="card full-width">
-            <div className="card-body">
-              <h2 className="card-title">Additional Details</h2>
-              
-              <FormField
-                label="Notes"
-                type="textarea"
-                value={quoteDetails.notes}
-                onChange={(e) => handleQuoteChange('notes', e.target.value)}
-                rows={3}
-              />
-              
-              <h3 className="section-title">Exclusions</h3>
 
-              {/* Predefined exclusions with checkboxes */}
-              <div className="exclusions-list">
-                {[
-                  'Boarding or fixing the underside of the new staircase.',
-                  'Forming any under-stair cupboard or paneling.',
-                  'Making good to any plastered walls or ceilings.',
-                  'All components will arrive in their natural state, ready for fine sanding and finishing by others.'
-                ].map((exclusion, index) => (
-                  <div key={index} className="form-field">
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={quoteDetails.exclusions.includes(exclusion)}
-                        onChange={(e) => {
-                          const newExclusions = e.target.checked
-                            ? [...quoteDetails.exclusions, exclusion]
-                            : quoteDetails.exclusions.filter(item => item !== exclusion);
-                          setQuoteDetails({
-                            ...quoteDetails,
-                            exclusions: newExclusions
-                          });
-                        }}
-                        className="form-checkbox"
-                      />
-                      <span className="checkbox-text">{exclusion}</span>
-                    </label>
-                  </div>
-                ))}
-              </div>
-
-              {/* Custom exclusions */}
-              {quoteDetails.exclusions
-                .filter(item => ![
-                  'Boarding or fixing the underside of the new staircase.',
-                  'Forming any under-stair cupboard or paneling.',
-                  'Making good to any plastered walls or ceilings.',
-                  'All components will arrive in their natural state, ready for fine sanding and finishing by others.'
-                ].includes(item))
-                .map((exclusion, index) => (
-                  <div key={`custom-${index}`} className="form-field custom-exclusion">
-                    <FormField
-                      value={exclusion}
-                      onChange={(e) => {
-                        const customExclusions = quoteDetails.exclusions.filter(item => ![
-                          'Boarding or fixing the underside of the new staircase.',
-                          'Forming any under-stair cupboard or paneling.',
-                          'Making good to any plastered walls or ceilings.',
-                          'All components will arrive in their natural state, ready for fine sanding and finishing by others.'
-                        ].includes(item));
-                        
-                        customExclusions[index] = e.target.value;
-                        
-                        setQuoteDetails({
-                          ...quoteDetails,
-                          exclusions: [
-                            ...quoteDetails.exclusions.filter(item => [
-                              'Boarding or fixing the underside of the new staircase.',
-                              'Forming any under-stair cupboard or paneling.',
-                              'Making good to any plastered walls or ceilings.',
-                              'All components will arrive in their natural state, ready for fine sanding and finishing by others.'
-                            ].includes(item)),
-                            ...customExclusions
-                          ]
-                        });
-                      }}
+          {/* Client & Details Tab */}
+          <TabPanel id="details" activeTab={activeTab}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {/* Client Details Card */}
+              <div className="bg-white shadow sm:rounded-lg p-6 border border-gray-200">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Client Information</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    label="Client Name"
+                    id="clientName"
+                    value={quoteDetails.clientName}
+                    onChange={(e) => handleClientChange('clientName', e.target.value)}
+                    placeholder="e.g., John Doe"
+                    required
+                  />
+                  <FormField
+                    label="Company Name (Optional)"
+                    id="clientCompany"
+                    value={quoteDetails.clientCompany}
+                    onChange={(e) => handleClientChange('clientCompany', e.target.value)}
+                    placeholder="e.g., Acme Corp"
+                  />
+                  <FormField
+                    label="Email Address"
+                    id="clientEmail"
+                    type="email"
+                    value={quoteDetails.clientEmail}
+                    onChange={(e) => handleClientChange('clientEmail', e.target.value)}
+                    placeholder="e.g., john.doe@example.com"
+                  />
+                  <FormField
+                    label="Phone Number"
+                    id="clientPhone"
+                    type="tel"
+                    value={quoteDetails.clientPhone}
+                    onChange={(e) => handleClientChange('clientPhone', e.target.value)}
+                    placeholder="e.g., 01234 567890"
+                  />
+                  <FormField
+                    label="Address (Optional)"
+                    id="clientAddress"
+                    type="textarea"
+                    rows={3}
+                    value={quoteDetails.clientAddress}
+                    onChange={(e) => handleClientChange('clientAddress', e.target.value)}
+                    className="sm:col-span-2"
+                    placeholder="e.g., 123 Main Street, Anytown, AT1 2BT"
+                  />
+                </div>
+                <div className="mt-4 flex justify-end items-center space-x-3">
+                   <FormField
+                      label="Save as New Contact?"
+                      id="saveAsContact"
+                      type="checkbox"
+                      checked={saveAsContact}
+                      onChange={(e) => setSaveAsContact(e.target.checked)}
+                      labelClassName="text-sm"
                     />
-                    <button
-                      className="delete-button-small"
-                      style={{ marginLeft: '8px' }}
-                      onClick={() => {
-                        const newExclusions = [...quoteDetails.exclusions];
-                        const customIndex = newExclusions.findIndex(item => item === exclusion);
-                        if (customIndex !== -1) {
-                          newExclusions.splice(customIndex, 1);
-                          setQuoteDetails({
-                            ...quoteDetails,
-                            exclusions: newExclusions
-                          });
-                        }
-                      }}
-                    >
-                      <svg className="delete-icon-small" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-
-              <Button
-                variant="primary"  // Changed from "secondary" to "primary" to make it blue
-                size="sm"
-                onClick={() => setQuoteDetails({
-                  ...quoteDetails,
-                  exclusions: [...quoteDetails.exclusions, '']
-                })}
-              >
-                Add Custom Exclusion
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Items Tab */}
-      {activeTab === 'items' && (
-        <div className="quote-items-grid">
-          {/* Selected Items Card */}
-          <div className="card items-card">
-            <div className="card-body">
-              <div className="card-header-flex">
-                <h2 className="card-title">Selected Items</h2>
-                <Button
-                  variant="primary"
-                  onClick={handleOpenItemDialog}
-                >
-                  Add Item
-                </Button>
-              </div>
-              
-              <div className="form-field">
-                <label className="form-label">Global Markup: {globalMarkup}%</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={globalMarkup}
-                  onChange={(e) => setGlobalMarkup(parseInt(e.target.value))}
-                  className="form-range"
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  style={{ marginTop: '5px' }}
-                  onClick={() => {
-                    const updatedItems = selectedItems.map(item => ({
-                      ...item,
-                      markup: globalMarkup
-                    }));
-                    setSelectedItems(updatedItems);
-                    addNotification(`Applied ${globalMarkup}% markup to all items`, 'success');
-                  }}
-                >
-                  Apply to All Items
-                </Button>
-              </div>
-              
-              {/* Add Custom Item Section */}
-              <div className="custom-item-form">
-                <div className="form-field">
-                  <Button 
-                    variant="primary"
-                    size="sm"
-                    onClick={() => setShowCustomItemForm(!showCustomItemForm)}
-                    style={{ marginBottom: '10px' }}
-                  >
-                    {showCustomItemForm ? 'Hide Quick Add Form' : 'Quick Add Item'}
-                  </Button>
-                </div>
-                
-                {showCustomItemForm && (
-                  <div className="card" style={{ padding: '15px', marginBottom: '20px' }}>
-                    <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      <FormField
-                        label="Item Name"
-                        value={customItem.name}
-                        onChange={(e) => setCustomItem({...customItem, name: e.target.value})}
-                        className="form-input"
-                      />
-                      <FormField
-                        label="Cost (£)"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={customItem.cost}
-                        onChange={(e) => setCustomItem({...customItem, cost: e.target.value === '' ? '' : parseFloat(e.target.value) || 0})}
-                        className="form-input"
-                      />
-                      <FormField
-                        label="Quantity"
-                        type="number"
-                        min="0.1"
-                        step="0.1"
-                        value={customItem.quantity}
-                        onChange={(e) => setCustomItem({...customItem, quantity: e.target.value === '' ? '' : parseFloat(e.target.value) || 1})}
-                        className="form-input"
-                      />
-                      <FormField
-                        label="Category (optional)"
-                        value={customItem.category}
-                        onChange={(e) => setCustomItem({...customItem, category: e.target.value})}
-                        className="form-input"
-                      />
-                      <div className="form-field" style={{ gridColumn: 'span 2' }}>
-                        <label className="form-label">Description (optional)</label>
-                        <textarea
-                          value={customItem.description}
-                          onChange={(e) => setCustomItem({...customItem, description: e.target.value})}
-                          className="form-textarea"
-                          rows="2"
-                        />
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
-                      <Button
-                        variant="primary"
-                        onClick={handleAddCustomItem}
-                        disabled={!customItem.name || customItem.cost === ''}
-                      >
-                        Add to Quote
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {selectedItems.length === 0 ? (
-                <div className="empty-message">
-                  No items selected yet. Click "Add Item" to add an item to this quote.
-                </div>
-              ) : (
-                <div className="items-container">
-                  {selectedItems.map((item, index) => {
-                    const itemTotal = quoteData.itemTotals.find(i => i.id === item.id) || {
-                      finalTotal: (item.cost || 0) * (item.quantity || 1)
-                    };
-                    
-                    // Don't apply defaults in safeItem if we have empty string values
-                    const safeItem = {
-                      ...item,
-                      name: item.name || 'Unnamed Item',
-                      // Don't use parseFloat here if we want to preserve empty string
-                      quantity: item.quantity,
-                      markup: item.markup,
-                      hideInQuote: !!item.hideInQuote // Convert to boolean
-                    };
-                    
-                    return (
-                      <div
-                        key={index}
-                        className={`item-card ${safeItem.hideInQuote ? 'item-card-hidden' : ''}`}
-                      >
-                        <div className="item-card-header">
-                          <div>
-                            <h3 className="item-name">{item.name}</h3>
-                            <p className="item-supplier">{getSupplierName(item.supplier)}</p>
-                          </div>
-                          <div className="item-actions">
-                            {/* Add reorder buttons */}
-                            <div className="reorder-buttons">
-                              <button
-                                className="reorder-button"
-                                onClick={(e) => {
-                                  e.stopPropagation(); // Prevent triggering item click
-                                  handleMoveItemUp(index);
-                                }}
-                                disabled={index === 0}
-                                aria-label="Move item up"
-                              >
-                                <svg className="reorder-icon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                </svg>
-                              </button>
-                              <button
-                                className="reorder-button"
-                                onClick={(e) => {
-                                  e.stopPropagation(); // Prevent triggering item click
-                                  handleMoveItemDown(index);
-                                }}
-                                disabled={index === selectedItems.length - 1}
-                                aria-label="Move item down"
-                              >
-                                <svg className="reorder-icon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </button>
-                            </div>
-                            <button
-                              className="delete-button"
-                              onClick={() => handleRemoveItem(index)}
-                              aria-label="Remove item"
-                            >
-                              <svg className="delete-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                        
-                        {/* Rest of the form fields */}
-                        <div className="item-fields-grid">
-                          <div className="form-field">
-                            <label className="field-label">Quantity</label>
-                            <input
-                              type="text" // Changed from number to text to allow empty values
-                              value={safeItem.quantity} // Use safeItem to preserve empty string
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                // Allow empty string or valid numbers
-                                if (value === '' || (!isNaN(value) && value.trim() !== '')) {
-                                  handleUpdateItem(index, { ...item, quantity: value });
-                                }
-                              }}
-                              onBlur={(e) => {
-                                // Only convert to default on blur if still empty
-                                if (e.target.value === '') {
-                                  handleUpdateItem(index, { ...item, quantity: 0.1 });
-                                }
-                              }}
-                              className="form-input"
-                            />
-                          </div>
-                          <div className="form-field">
-                            <label className="field-label">Markup %</label>
-                            <input
-                              type="text" // Changed from number to text to allow empty values
-                              value={safeItem.markup} // Use safeItem to preserve empty string
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                // Allow empty string or valid numbers
-                                if (value === '' || (!isNaN(value) && value.trim() !== '')) {
-                                  handleUpdateItem(index, { ...item, markup: value });
-                                }
-                              }}
-                              onBlur={(e) => {
-                                // Only convert to default on blur if still empty
-                                if (e.target.value === '') {
-                                  handleUpdateItem(index, { ...item, markup: 0 });
-                                }
-                              }}
-                              className="form-input"
-                            />
-                          </div>
-                          <div className="form-field">
-                            <label className="field-label">Total</label>
-                            <div className="total-display">
-                              {formatCurrency(itemTotal.finalTotal)}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="form-field" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                          <label className="checkbox-label">
-                            <input
-                              type="checkbox"
-                              checked={item.hideInQuote}
-                              onChange={(e) => handleUpdateItem(index, { ...item, hideInQuote: e.target.checked })}
-                              className="form-checkbox"
-                            />
-                            <span className="checkbox-text">
-                              Hide in quote
-                            </span>
-                          </label>
-                          
-                          <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => setEditingItem({ ...item, index })}
-                              style={{ marginLeft: 'auto' }}
-                            >
-                              Edit Item
-                            </Button>
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => handleRemoveItem(index)}
-                            >
-                              Remove Item
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Hidden Costs & Summary Card */}
-          <div className="quote-sidebar">
-            <div className="card">
-              <div className="card-body">
-                <div className="card-header-flex">
-                  <h2 className="card-title">Hidden Costs</h2>
                   <Button
-                    variant="primary"  // Changed from "secondary" to "primary" to make it blue
+                    variant="outline"
                     size="sm"
-                    onClick={() => setShowHiddenCostDialog(true)}
+                    onClick={() => setShowContactSelector(true)}
+                    icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
                   >
-                    Add Cost
+                    Load Contact
                   </Button>
                 </div>
-                
-                <div className="form-field">
-                  <label className="form-label">Distribution Method</label>
-                  <select
-                    className="form-select"
+              </div>
+
+              {/* Quote Details Card */}
+              <div className="bg-white shadow sm:rounded-lg p-6 border border-gray-200">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Quote Details</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    label="Quote Date"
+                    id="quoteDate"
+                    type="date"
+                    value={formatDateForInput(quoteDetails.date)}
+                    onChange={(e) => handleQuoteChange('date', e.target.value)}
+                    required
+                  />
+                  <FormField
+                    label="Valid Until"
+                    id="validUntil"
+                    type="date"
+                    value={formatDateForInput(quoteDetails.validUntil)}
+                    onChange={(e) => handleQuoteChange('validUntil', e.target.value)}
+                    required
+                  />
+                  <FormField
+                    label="Payment Terms"
+                    id="paymentTerms"
+                    type="select"
+                    value={quoteDetails.paymentTerms}
+                    onChange={(e) => handleQuoteChange('paymentTerms', e.target.value)}
+                    options={[
+                      { value: '1', label: 'On Completion' },
+                      { value: '2', label: 'Net 7 Days' },
+                      { value: '3', label: 'Net 14 Days' },
+                      { value: '4', label: 'Net 30 Days' },
+                      { value: '5', label: '50% Deposit, 50% Completion' },
+                      { value: 'custom', label: 'Custom (Specify Below)' },
+                    ]}
+                    className="sm:col-span-2"
+                  />
+                  {quoteDetails.paymentTerms === 'custom' && (
+                    <FormField
+                      label="Custom Payment Terms"
+                      id="customTerms"
+                      type="textarea"
+                      rows={2}
+                      value={quoteDetails.customTerms}
+                      onChange={(e) => handleQuoteChange('customTerms', e.target.value)}
+                      className="sm:col-span-2"
+                      placeholder="Specify custom payment terms here..."
+                    />
+                  )}
+                   <FormField
+                      label="Include Drawing Option?"
+                      id="includeDrawingOption"
+                      type="checkbox"
+                      checked={quoteDetails.includeDrawingOption}
+                      onChange={(e) => handleQuoteChange('includeDrawingOption', e.target.checked)}
+                      helpText="Adds an optional line item for drawings/plans."
+                      className="sm:col-span-2"
+                    />
+                </div>
+              </div>
+            </div>
+          </TabPanel>
+
+          {/* Items & Costs Tab */}
+          <TabPanel id="items" activeTab={activeTab}>
+            <div className="space-y-6">
+              {/* Global Settings Card */}
+              <div className="bg-white shadow sm:rounded-lg p-6 border border-gray-200">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Costing & Markup</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                  <FormField
+                    label="Global Markup %"
+                    id="globalMarkup"
+                    type="number"
+                    value={globalMarkup}
+                    onChange={(e) => setGlobalMarkup(parseFloat(e.target.value) || 0)}
+                    min={0}
+                    helpText="Applied to items without a specific markup."
+                    required
+                    inputClassName="text-right"
+                  />
+                  <FormField
+                    label="Distribute Hidden Costs"
+                    id="distributionMethod"
+                    type="select"
                     value={distributionMethod}
                     onChange={(e) => setDistributionMethod(e.target.value)}
-                  >
-                    <option value="even">Distribute Evenly</option>
-                    <option value="proportional">Distribute Proportionally</option>
-                  </select>
-                  <p className="helper-text">
-                    {distributionMethod === 'even'
-                      ? 'Costs will be divided equally among all visible items.'
-                      : 'Costs will be distributed in proportion to each item\'s base cost.'}
-                  </p>
-                </div>
-                
-                {hiddenCosts.length === 0 ? (
-                  <div className="empty-message small">
-                    No hidden costs added
-                  </div>
-                ) : (
-                  <div className="hidden-costs-list">
-                    {hiddenCosts.map((cost, index) => (
-                      <div key={index} className="hidden-cost-item">
-                        <span className="cost-name">{cost.name}</span>
-                        <div className="cost-actions">
-                          <span className="cost-amount">{formatCurrency(cost.amount)}</span>
-                          <button
-                            className="delete-button-small"
-                            onClick={() => handleRemoveHiddenCost(index)}
-                          >
-                            <svg className="delete-icon-small" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Quote Summary */}
-            <div className="card">
-              <div className="card-body">
-                <h2 className="card-title">Quote Summary</h2>
-                
-                <div className="summary-items">
-                  <div className="summary-item">
-                    <span className="summary-label">Base Cost:</span>
-                    <span className="summary-value">{formatCurrency(quoteData.visibleBaseCost)}</span>
-                  </div>
-                  <div className="summary-item">
-                    <span className="summary-label">Hidden Costs:</span>
-                    <span className="summary-value">{formatCurrency(quoteData.totalHiddenCost)}</span>
-                  </div>
-                  <div className="summary-item">
-                    <span className="summary-label">Markup ({globalMarkup}%):</span>
-                    <span className="summary-value">{formatCurrency(quoteData.totalMarkup)}</span>
-                  </div>
-                  <div className="summary-total">
-                    <span className="summary-label">Total:</span>
-                    <span className="summary-value">{formatCurrency(quoteData.grandTotal)}</span>
-                  </div>
-                </div>
-                
-                <div className="summary-stats">
-                  <div className="summary-stat">
-                    <span className="stat-label">Visible Items:</span>
-                    <span className="stat-value">{quoteData.visibleItemsCount}</span>
-                  </div>
-                  <div className="summary-stat">
-                    <span className="stat-label">Hidden Items:</span>
-                    <span className="stat-value">{quoteData.hiddenItems.length}</span>
-                  </div>
-                  <div className="summary-stat">
-                    <span className="stat-label">Profit Margin:</span>
-                    <span className="stat-value">{quoteData.profitPercentage.toFixed(1)}%</span>
-                  </div>
+                    options={[
+                      { value: 'even', label: 'Evenly' },
+                      { value: 'proportional', label: 'Proportionally' },
+                    ]}
+                    helpText="How to spread hidden costs across visible items."
+                  />
+                   {/* Placeholder for potential future global settings */}
+                   <div></div>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Preview Tab */}
-      {activeTab === 'preview' && (
-        <div className="card">
-          <div className="card-body">
-            <div className="quote-preview">
-              {/* Company header */}
-              <div className="quote-preview-header">
-                <div className="quote-branding">
-                  {settings?.company?.logo ? (
-                    <div className="logo-container" style={{ maxWidth: '330px', marginBottom: '15px' }}>
-                      <img 
-                        src={settings.company.logo} 
-                        alt={settings.company?.name || 'Company Logo'} 
-                        className="quote-logo" 
-                        style={{ 
-                          width: '100%', 
-                          maxHeight: '133px', 
-                          objectFit: 'contain',
-                          display: 'block'
-                        }} 
-                      />
-                    </div>
+
+              {/* Selected Items Card */}
+              <div className="bg-white shadow sm:rounded-lg border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                  <h3 className="text-lg font-medium leading-6 text-gray-900">Selected Items</h3>
+                  <div className="space-x-2">
+                     <Button variant="outline" size="sm" onClick={handleOpenItemDialog}>
+                       Add Catalog Item
+                     </Button>
+                     <Button variant="outline" size="sm" onClick={() => setShowCustomItemForm(true)}>
+                      Add Custom Item
+                     </Button>
+                   </div>
+                </div>
+                <div className="p-6">
+                  {selectedItems.length === 0 ? (
+                    <p className="text-center text-gray-500 py-4">No items added yet.</p>
                   ) : (
-                    <div className="logo-placeholder" style={{ 
-                      height: '60px', 
-                      width: '180px', 
-                      backgroundColor: '#f3f4f6', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      marginBottom: '15px',
-                      color: '#9ca3af',
-                      fontSize: '14px',
-                      borderRadius: '4px'
-                    }}>
-                      No logo available
-                    </div>
-                  )}
-                  <h1 className="quote-title" style={{ marginTop: '5px' }}>QUOTATION</h1>
-                  <p className="quote-reference">Reference: Q-{new Date().getFullYear()}-{Math.floor(Math.random() * 1000).toString().padStart(3, '0')}</p>
-                </div>
-                
-                <div className="company-details">
-                  <p className="company-name" style={{ fontWeight: 'bold', fontSize: '16px' }}>{settings.company?.name || 'Your Company Name'}</p>
-                  <div className="company-address">{settings.company?.address || 'Company Address'}</div>
-                  <p className="company-contact">{settings.company?.email || 'company@example.com'}</p>
-                  <p className="company-contact">{settings.company?.phone || 'Phone Number'}</p>
-                  <p className="company-contact">{settings.company?.website || 'www.company.com'}</p>
-                </div>
-              </div>
-              
-              {/* Client section */}
-              <div className="client-section">
-                <h2 className="section-header">Client:</h2>
-                <p><span className="detail-label">Name:</span> {quoteDetails.client.name || '[Contact Name]'}</p>
-                {quoteDetails.client.company && (
-                  <p><span className="detail-label">Company:</span> {quoteDetails.client.company}</p>
-                )}
-                <p><span className="detail-label">Email:</span> {quoteDetails.client.email || '[Email]'}</p>
-                <p><span className="detail-label">Phone:</span> {quoteDetails.client.phone || '[Phone]'}</p>
-                {quoteDetails.client.address && (
-                  <>
-                    <p className="detail-label">Address:</p>
-                    <p className="detail-address">{quoteDetails.client.address}</p>
-                  </>
-                )}
-              </div>
-              
-              {/* Date section */}
-              <div className="date-section">
-                <p><span className="detail-label">Date:</span> {quoteDetails.date ? new Date(quoteDetails.date).toLocaleDateString('en-GB') : 'N/A'}</p>
-                <p><span className="detail-label">Valid Until:</span> {quoteDetails.validUntil ? new Date(quoteDetails.validUntil).toLocaleDateString('en-GB') : 'N/A'}</p>
-              </div>
-              
-              {/* Items table with wrapper */}
-              <div className="quote-table-wrapper">
-                <table className="quote-table">
-                  <thead>
-                    <tr>
-                      <th>Item Description</th>
-                      <th className="text-right">Qty</th>
-                      <th className="text-right">Unit Price</th>
-                      <th className="text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {quoteData.itemTotals.length === 0 ? (
-                      <tr>
-                        <td colSpan="4" className="empty-table-message">
-                          No items added to quote yet
-                        </td>
-                      </tr>
-                    ) : (
-                      quoteData.itemTotals.map((item, index) => (
-                        <tr key={index}>
-                          <td>
-                            {item.description || item.name}
-                          </td>
-                          <td className="text-right">
-                            {item.quantity}
-                          </td>
-                          <td className="text-right">
-                            {formatCurrency(item.unitPrice)}
-                          </td>
-                          <td className="text-right">
-                            {formatCurrency(item.finalTotal)}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                    
-                    {/* Subtotal row - only show when VAT is enabled */}
-                    {quoteData.vatEnabled && (
-                      <tr className="quote-table-subtotal">
-                        <td colSpan="3" className="text-right">
-                          Subtotal
-                        </td>
-                        <td className="text-right">
-                          {formatCurrency(quoteData.visibleTotal)}
-                        </td>
-                      </tr>
-                    )}
-                    
-                    {/* VAT row - only show when VAT is enabled */}
-                    {quoteData.vatEnabled && (
-                      <tr className="quote-table-vat">
-                        <td colSpan="3" className="text-right">
-                          VAT ({quoteData.vatRate}%)
-                        </td>
-                        <td className="text-right">
-                          {formatCurrency(quoteData.vatAmount)}
-                        </td>
-                      </tr>
-                    )}
-                    
-                    {/* Total row */}
-                    <tr className="quote-table-total">
-                      <td colSpan="3" className="text-right">
-                        Total
-                      </td>
-                      <td className="text-right">
-                        {formatCurrency(quoteData.grandTotal)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              
-              {/* Terms section */}
-              <div className="terms-section">
-                <h2 className="terms-heading">Terms and Conditions:</h2>
-                
-                <h3 className="terms-subheading">Payment Terms:</h3>
-                <p>
-                  {quoteDetails.paymentTerms === '1'
-                    ? '50% deposit required, remainder due on completion.'
-                    : quoteDetails.paymentTerms === '2'
-                    ? '50% deposit required, 25% on completion of joinery, final 25% on completion.'
-                    : quoteDetails.paymentTerms === '4'
-                    ? 'Full amount to be paid before delivery.'
-                    : quoteDetails.customTerms || 'Custom payment terms'}
-                </p>
-                <p>This quote is valid for the period specified above.</p>
-                
-                {/* Exclusions */}
-                {quoteDetails.exclusions.length > 0 && (
-                  <>
-                    <h3 className="terms-subheading">Exclusions:</h3>
-                    <ul className="terms-list">
-                      {quoteDetails.exclusions.map((exclusion, index) => (
-                        <li key={index}>{exclusion}</li>
+                    <ul className="divide-y divide-gray-200">
+                      {selectedItems.map((item, index) => (
+                        <li key={item.id || index} className="py-4">
+                          {/* Replicated QuoteItemCard structure with Tailwind */}
+                          <div className="flex flex-col md:flex-row md:items-start md:justify-between space-y-3 md:space-y-0 md:space-x-4">
+                            <div className="flex-grow min-w-0">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-base font-semibold text-gray-800 truncate mr-2">
+                                  {item.name || 'Unnamed Item'}
+                                  {item.category && <span className="ml-2 text-xs font-medium text-gray-500">({item.category})</span>}
+                                </h4>
+                                 {/* Item Actions (Move, Delete) */}
+                                <div className="flex items-center space-x-1 flex-shrink-0">
+                                  {/* Reorder Buttons */} 
+                                  <div className="flex flex-col">
+                                    <button
+                                      onClick={() => handleMoveItemUp(index)}
+                                      disabled={index === 0}
+                                      className="p-0.5 rounded text-gray-400 hover:text-indigo-600 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                                      aria-label="Move item up"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
+                                    </button>
+                                    <button
+                                      onClick={() => handleMoveItemDown(index)}
+                                      disabled={index === selectedItems.length - 1}
+                                      className="p-0.5 rounded text-gray-400 hover:text-indigo-600 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                                      aria-label="Move item down"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </button>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    onClick={() => handleRemoveItem(index)}
+                                    className="text-red-500 hover:bg-red-100"
+                                    aria-label="Remove item"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                  </Button>
+                                </div>
+                              </div>
+                              {item.description && (
+                                <p className="text-sm text-gray-600 mb-2 line-clamp-2">{item.description}</p>
+                              )}
+                               {item.supplier && (
+                                  <p className="text-xs text-gray-500 mb-3">Supplier: {item.supplier || 'N/A'}</p>
+                               )}
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <FormField
+                                  label="Cost Price"
+                                  id={`item-cost-${index}`}
+                                  type="number"
+                                  value={item.cost}
+                                  onChange={(e) => handleUpdateItem(index, { ...item, cost: parseFloat(e.target.value) || 0 })}
+                                  prefix="£"
+                                  step="0.01"
+                                  min={0}
+                                  required
+                                  labelSrOnly
+                                  placeholder="Cost"
+                                />
+                                <FormField
+                                  label="Quantity"
+                                  id={`item-quantity-${index}`}
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => handleUpdateItem(index, { ...item, quantity: parseFloat(e.target.value) || 0 })}
+                                  min={0}
+                                  step="any"
+                                  required
+                                  labelSrOnly
+                                  placeholder="Quantity"
+                                />
+                                <FormField
+                                  label="Markup %"
+                                  id={`item-markup-${index}`}
+                                  type="number"
+                                  value={item.markup}
+                                  onChange={(e) => handleUpdateItem(index, { ...item, markup: parseInt(e.target.value) || 0 })}
+                                  suffix="%"
+                                  min={0}
+                                  placeholder="Global"
+                                  helpText="Overrides global markup."
+                                  labelSrOnly
+                                />
+                                <FormField
+                                  label="Hide in Quote"
+                                  id={`item-hide-${index}`}
+                                  type="checkbox"
+                                  checked={item.hideInQuote}
+                                  onChange={(e) => handleUpdateItem(index, { ...item, hideInQuote: e.target.checked })}
+                                  labelSrOnly
+                                  labelText="Hide"
+                                  className="flex items-center justify-end pt-1"
+                                  labelClassName="text-sm ml-2"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </li>
                       ))}
                     </ul>
-                  </>
-                )}
-                
-                {/* Drawing option */}
-                {quoteDetails.includeDrawingOption && (
-                  <>
-                    <h3 className="terms-subheading">Drawings:</h3>
-                    <p>Drawings are available before accepting the quote at a cost of £150, which will be deducted from the project total if the order proceeds.</p>
-                  </>
-                )}
-                
-                {/* Notes */}
-                {quoteDetails.notes && (
-                  <>
-                    <h3 className="terms-subheading">Additional Notes:</h3>
-                    <p className="terms-notes">{quoteDetails.notes}</p>
-                  </>
-                )}
-                
-                {/* Add company footer */}
-                <div className="quote-footer">
-                  <p>{settings?.company?.name || 'Your Company'} {settings?.company?.address ? `| ${settings.company.address}` : ''}</p>
-                  <p>
-                    {settings?.company?.phone ? `${settings.company.phone} | ` : ''}
-                    {settings?.company?.email ? `${settings.company.email} | ` : ''}
-                    {settings?.company?.website || 'www.example.com'}
-                  </p>
-                  {settings?.company?.registration && (
-                    <p>Company Registration: {settings.company.registration}</p>
-                  )}
-                  {settings?.company?.vat && (
-                    <p>VAT Registration: {settings.company.vat}</p>
                   )}
                 </div>
               </div>
+
+              {/* Hidden Costs Card */}
+              <div className="bg-white shadow sm:rounded-lg border border-gray-200">
+                 <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                   <h3 className="text-lg font-medium leading-6 text-gray-900">Additional Costs (Hidden)</h3>
+                   <Button variant="outline" size="sm" onClick={handleAddHiddenCost}>
+                     Add Hidden Cost
+                   </Button>
+                 </div>
+                 <div className="p-6">
+                    {hiddenCosts.length === 0 ? (
+                     <p className="text-center text-gray-500 py-4">No hidden costs added yet.</p>
+                   ) : (
+                     <ul className="divide-y divide-gray-200">
+                       {hiddenCosts.map((cost, index) => (
+                         <li key={cost.id || index} className="py-3 flex items-center justify-between space-x-4">
+                           {/* Replicated HiddenCostItem structure with Tailwind */}
+                           <div className="flex-grow grid grid-cols-2 gap-4 items-center">
+                             <FormField
+                               label="Cost Name"
+                               id={`hidden-cost-name-${index}`}
+                               value={cost.name}
+                               onChange={(e) => {
+                                 const updatedCosts = [...hiddenCosts];
+                                 updatedCosts[index].name = e.target.value;
+                                 setHiddenCosts(updatedCosts);
+                               }}
+                               placeholder="e.g., Labour, Travel"
+                               required
+                               labelSrOnly
+                             />
+                             <FormField
+                               label="Amount"
+                               id={`hidden-cost-amount-${index}`}
+                               type="number"
+                               value={cost.amount}
+                               onChange={(e) => {
+                                 const updatedCosts = [...hiddenCosts];
+                                 updatedCosts[index].amount = parseFloat(e.target.value) || 0;
+                                 setHiddenCosts(updatedCosts);
+                               }}
+                               prefix="£"
+                               step="0.01"
+                               min={0}
+                               required
+                               labelSrOnly
+                             />
+                           </div>
+                           <Button
+                             variant="ghost"
+                             size="icon-sm"
+                             onClick={() => handleRemoveHiddenCost(index)}
+                             className="text-red-500 hover:bg-red-100 flex-shrink-0"
+                             aria-label="Remove hidden cost"
+                           >
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                           </Button>
+                         </li>
+                       ))}
+                     </ul>
+                   )}
+                 </div>
+              </div>
+
+               {/* Calculated Totals (Read Only) */}
+               <div className="bg-gray-50 shadow sm:rounded-lg p-6 border border-gray-200">
+                 <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Calculated Totals</h3>
+                 <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+                   <div className="sm:col-span-1">
+                     <dt className="font-medium text-gray-500">Subtotal (Visible Items)</dt>
+                     <dd className="mt-1 text-gray-900 font-semibold">{formatCurrency(quoteData.subtotalVisible)}</dd>
+                   </div>
+                   <div className="sm:col-span-1">
+                     <dt className="font-medium text-gray-500">Total Hidden Costs</dt>
+                     <dd className="mt-1 text-gray-900">{formatCurrency(quoteData.totalHiddenCosts)}</dd>
+                   </div>
+                   <div className="sm:col-span-1">
+                     <dt className="font-medium text-gray-500">Total Markup Added</dt>
+                     <dd className="mt-1 text-gray-900">{formatCurrency(quoteData.totalMarkup)}</dd>
+                   </div>
+                   <div className="sm:col-span-1">
+                      <dt className="font-medium text-gray-500">Total Base Cost</dt>
+                      <dd className="mt-1 text-gray-900">{formatCurrency(quoteData.totalBaseCost)}</dd>
+                    </div>
+                   <div className="sm:col-span-2">
+                     <dt className="font-medium text-gray-500">Final Quote Total</dt>
+                     <dd className="mt-1 text-xl text-indigo-700 font-bold">{formatCurrency(quoteData.finalTotal)}</dd>
+                   </div>
+                 </dl>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Add Item Dialog */}
-      {!useAlternativeDialog && (
-        <Dialog
-          isOpen={showItemDialog}
-          onClose={() => setShowItemDialog(false)}
-          title="Add Item to Quote"
-        >
-          {/* Outer wrapper with padding */}
-          <div style={{ 
-            width: '100%',
-            maxWidth: '800px',
-            // Removed padding here, will be handled by inner elements or dialog-content
-            boxSizing: 'border-box',
-            display: 'flex', // Use flexbox for overall layout
-            flexDirection: 'column', // Stack header, body, footer
-            height: '100%' // Allow flex children to grow/shrink
-          }}>
-            {/* New wrapper for the scrollable body content */}
-            <div className="dialog-body-content" style={{ flexGrow: 1, overflowY: 'auto', minHeight: 0, padding: '0 16px' /* Restore padding here */ }}>
-              {/* Search Field */}
-              <div className="form-field">
-                <label className="form-label">
-                  Search
-                </label>
-                <input
-                  type="text"
-                  value={itemSearchTerm}
-                  onChange={(e) => setItemSearchTerm(e.target.value)}
-                  placeholder="Search by name or description..."
-                  className="form-input"
-                />
-              </div>
-              
-              {/* Category Select */}
-              <div className="form-field">
-                <label className="form-label">
-                  Category
-                </label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="form-select"
-                >
-                  <option value="all">All Categories</option>
-                  {Array.from(new Set(catalogItems.map(item => item.category)))
-                    .filter(Boolean)
-                    .sort()
-                    .map(category => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                </select>
-              </div>
-              
-              {/* Item List - Removed inline maxHeight and overflow */}
-              <div className="catalog-items-list"> 
-                {filteredCatalogItems.length === 0 ? (
-                  <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-                    No items match your search criteria
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gap: '10px' }}>
-                    {filteredCatalogItems.map(item => (
-                      <div
-                        key={item.id}
-                        style={{ 
-                          // Keep existing base styles for desktop
-                          padding: '10px', 
-                          border: '1px solid #ddd',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          overflow: 'hidden'
-                        }}
-                        // Add the new class for mobile targeting
-                        className="catalog-item-mobile" 
-                        onClick={() => {
-                          handleAddItem(item);
-                          setShowItemDialog(false);
-                        }}
+          </TabPanel>
+
+          {/* Exclusions & Notes Tab */}
+          <TabPanel id="exclusions" activeTab={activeTab}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Exclusions Card */}
+              <div className="bg-white shadow sm:rounded-lg p-6 border border-gray-200">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Exclusions</h3>
+                <p className="text-sm text-gray-500 mb-4">Items or services explicitly not included in the quote.</p>
+                <div className="space-y-3">
+                  {quoteDetails.exclusions.map((exclusion, index) => (
+                    <div key={index} className="flex items-start space-x-2">
+                      <FormField
+                        label={`Exclusion ${index + 1}`}
+                        id={`exclusion-${index}`}
+                        type="textarea"
+                        rows={2}
+                        value={exclusion}
+                        onChange={(e) => handleExclusionsChange(index, e.target.value)}
+                        className="flex-grow"
+                        labelSrOnly
+                        placeholder="e.g., Removal of old materials"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => handleRemoveExclusion(index)}
+                        className="text-red-500 hover:bg-red-100 mt-1"
+                        aria-label="Remove exclusion"
                       >
-                        <div style={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between',
-                          width: '100%'
-                        }}>
-                          {/* Add class to left side */}
-                          <div className="item-details-left" style={{ flexGrow: 1, minWidth: 0, paddingRight: '10px', maxWidth: '70%' }}>
-                            <h3 style={{ margin: '0 0 5px 0', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</h3>
-                            <p style={{ margin: '0 0 5px 0', color: '#666' }}>{getSupplierName(item.supplier)}</p>
-                            {item.description && (
-                              <p style={{ margin: '0', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.description}</p>
-                            )}
-                          </div>
-                          {/* Add class to right side */}
-                          <div className="item-details-right" style={{ textAlign: 'right', flexShrink: 0, minWidth: '80px' }}>
-                            <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{formatCurrency(item.cost)}</p>
-                            {item.category && (
-                              <p style={{ margin: '0', fontSize: '12px', color: '#666' }}>{item.category}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div> {/* End of dialog-body-content */}
-          </div> {/* End of outer wrapper */}
-        </Dialog>
-      )}
-      
-      {/* Alternative Dialog Implementation */}
-      {useAlternativeDialog && showItemDialog && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            zIndex: 1000,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowItemDialog(false);
-          }}
-        >
-          <div 
-            style={{
-              backgroundColor: 'white',
-              padding: '20px',
-              borderRadius: '5px',
-              width: '90%',
-              maxWidth: '800px',
-              maxHeight: '80vh',
-              overflow: 'auto'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0 }}>Add Item to Quote</h2>
-              <button 
-                style={{ 
-                  background: 'none', 
-                  border: 'none',
-                  cursor: 'pointer', 
-                  fontSize: '20px'
-                }}
-                onClick={() => setShowItemDialog(false)}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="form-field">
-              <label className="form-label">
-                Search
-              </label>
-              <input
-                type="text"
-                value={itemSearchTerm}
-                onChange={(e) => setItemSearchTerm(e.target.value)}
-                placeholder="Search by name or description..."
-                className="form-input"
-              />
-            </div>
-            
-            <div className="form-field">
-              <label className="form-label">
-                Category
-              </label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="form-select"
-              >
-                <option value="all">All Categories</option>
-                {Array.from(new Set(catalogItems.map(item => item.category)))
-                  .filter(Boolean)
-                  .sort()
-                  .map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-              </select>
-            </div>
-            
-            <div className="catalog-items-list" style={{ maxHeight: '50vh', overflow: 'auto' }}>
-              {filteredCatalogItems.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-                  No items match your search criteria
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gap: '10px' }}>
-                  {filteredCatalogItems.map(item => (
-                    <div
-                      key={item.id}
-                      style={{ 
-                        // Keep existing base styles for desktop
-                        padding: '10px', 
-                        border: '1px solid #ddd',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        overflow: 'hidden'
-                      }}
-                      // Add the new class for mobile targeting
-                      className="catalog-item-mobile" 
-                      onClick={() => {
-                        handleAddItem(item);
-                        setShowItemDialog(false);
-                      }}
-                    >
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between',
-                        width: '100%'
-                      }}>
-                        {/* Add class to left side */}
-                        <div className="item-details-left" style={{ flexGrow: 1, minWidth: 0, paddingRight: '10px', maxWidth: '70%' }}>
-                          <h3 style={{ margin: '0 0 5px 0', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</h3>
-                          <p style={{ margin: '0 0 5px 0', color: '#666' }}>{getSupplierName(item.supplier)}</p>
-                          {item.description && (
-                            <p style={{ margin: '0', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.description}</p>
-                          )}
-                        </div>
-                        {/* Add class to right side */}
-                        <div className="item-details-right" style={{ textAlign: 'right', flexShrink: 0, minWidth: '80px' }}>
-                          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{formatCurrency(item.cost)}</p>
-                          {item.category && (
-                            <p style={{ margin: '0', fontSize: '12px', color: '#666' }}>{item.category}</p>
-                          )}
-                        </div>
-                      </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </Button>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Hidden Cost Dialog */}
-      <Dialog
-        isOpen={showHiddenCostDialog}
-        onClose={() => setShowHiddenCostDialog(false)}
-        title="Add Hidden Cost"
-      >
-        <div className="form-field">
-          <label className="form-label">
-            Name
-          </label>
-          <input
-            type="text"
-            value={newHiddenCost.name}
-            onChange={(e) => setNewHiddenCost({ ...newHiddenCost, name: e.target.value })}
-            placeholder="e.g., Delivery, Installation, etc."
-            className="form-input"
-          />
-        </div>
-        
-        <div className="form-field">
-          <label className="form-label">
-            Amount (£)
-          </label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={newHiddenCost.amount || 0} // Add fallback for undefined
-            onChange={(e) => setNewHiddenCost({ 
-              ...newHiddenCost, 
-              amount: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 
-            })}
-            className="form-input"
-          />
-        </div>
-        
-        <div className="dialog-actions">
-          <Button
-            variant="secondary"
-            onClick={() => setShowHiddenCostDialog(false)}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleAddHiddenCost}
-          >
-            Add Cost
-          </Button>
-        </div>
-      </Dialog>
-      
-      {/* Email Instructions Dialog */}
-      <Dialog
-        isOpen={showEmailDialog}
-        onClose={() => setShowEmailDialog(false)}
-        title="Email Quote"
-        className="email-dialog"
-      >
-        <div className="email-dialog-content">
-          <div className="email-instructions">
-            <p className="email-description">How would you like to proceed?</p>
-            
-            <div className="email-actions-container">
-              <Button
-                variant="primary"
-                onClick={handleExportAndOpenEmail}
-                className="email-action-button-primary"
-              >
-                Export PDF and Open Email
-              </Button>
-              
-              <div className="email-actions-row">
-               
-                <div className="email-actions-group">
-                  <Button
-                    variant="primary"
-                    onClick={safeExportPDF}
-                  >
-                    Export PDF Only
-                  </Button>
-                  <Button
-                    variant="primary"
-                    onClick={handleOpenEmailClient}
-                  >
-                    Email Only
-                  </Button>
-                </div>
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={handleAddExclusion}
+                  className="mt-3"
+                >
+                  + Add Exclusion
+                </Button>
               </div>
-            </div>
-          </div>
-        </div>
-      </Dialog>
 
-      {/* Edit Item Dialog */}
-      <Dialog
-        isOpen={!!editingItem}
-        onClose={() => setEditingItem(null)}
-        title="Edit Item"
-      >
-        {editingItem && (
-          <>
-            <div className="form-field">
-              <label className="form-label">
-                Item Name
-              </label>
-              <input
-                type="text"
-                value={editingItem.name}
-                onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
-                className="form-input"
-              />
-            </div>
-            
-            <div className="form-field">
-              <label className="form-label">
-                Description
-              </label>
-              <textarea
-                value={editingItem.description || ''}
-                onChange={(e) => setEditingItem({...editingItem, description: e.target.value})}
-                rows="3"
-                className="form-textarea"
-              />
-            </div>
-            
-                                  <div className="form-row" style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(2, 1fr)', 
-              gap: '1rem' 
-            }}>
-              <div className="form-field">
-                <label className="form-label">
-                  Cost (£)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editingItem.cost}
-                  onChange={(e) => setEditingItem({
-                    ...editingItem, 
-                    cost: e.target.value === '' ? '' : parseFloat(e.target.value) || 0
-                  })}
-                  className="form-input"
-                />
-              </div>
-              
-              <div className="form-field">
-                <label className="form-label">
-                  Category
-                </label>
-                <input
-                  type="text"
-                  value={editingItem.category || ''}
-                  onChange={(e) => setEditingItem({...editingItem, category: e.target.value})}
-                  className="form-input"
-                />
+              {/* Notes Card */}
+              <div className="bg-white shadow sm:rounded-lg p-6 border border-gray-200">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Internal Notes</h3>
+                 <FormField
+                   label="Notes"
+                   id="notes"
+                   type="textarea"
+                   rows={8} // Increased rows for better usability
+                   value={quoteDetails.notes}
+                   onChange={(e) => handleQuoteChange('notes', e.target.value)}
+                   helpText="Internal notes for your reference, not shown to the client."
+                   placeholder="Add any internal notes about this quote..."
+                   labelSrOnly
+                 />
               </div>
             </div>
-            
-            <div className="dialog-actions">
+          </TabPanel>
+
+          {/* Preview Tab */} 
+          <TabPanel id="preview" activeTab={activeTab}>
+             {/* Apply Tailwind classes to QuotePreview - Needs separate refactoring step if it's complex */}
+             <QuotePreview 
+               quoteDetails={quoteDetails} 
+               selectedItems={selectedItems} 
+               hiddenCosts={hiddenCosts} 
+               globalMarkup={globalMarkup}
+               distributionMethod={distributionMethod}
+               quoteData={quoteData}
+               settings={settings}
+               formatCurrency={formatCurrency} // Pass helper
+             />
+           </TabPanel>
+
+          {/* Action Buttons */}
+          <ActionButtonContainer>
               <Button
-                variant="secondary"
-                onClick={() => setEditingItem(null)}
+                  variant="secondary"
+                  onClick={() => navigate('/quotes')}
               >
-                Cancel
+                  Cancel
               </Button>
               <Button
-                variant="primary"
-                onClick={() => {
-                  if (editingItem.index !== undefined) {
-                    const newItems = [...selectedItems];
-                    const { index, ...itemWithoutIndex } = editingItem;
-                    newItems[index] = itemWithoutIndex;
-                    setSelectedItems(newItems);
-                    setEditingItem(null);
-                    addNotification("Item updated successfully", "success");
-                  }
+                  variant="primary"
+                  onClick={handleSaveQuote}
+                  isLoading={isSaving}
+                  disabled={isSaving}
+              >
+                  {id ? 'Update Quote' : 'Save Quote'}
+              </Button>
+              {id && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={safeExportPDF} // Use the safe version
+                    isLoading={isGeneratingPdf}
+                    disabled={isGeneratingPdf || isSaving}
+                    icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>}
+                  >
+                    Export PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleExportAndOpenEmail}
+                    isLoading={isGeneratingPdf} // Assuming export happens first
+                    disabled={isGeneratingPdf || isSaving}
+                    icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
+                   >
+                     Email Quote
+                   </Button>
+                   <Button
+                      variant="outline"
+                      onClick={handleGenerateInvoice}
+                      // Add loading/disabled states if needed
+                   >
+                      Generate Invoice
+                   </Button>
+                </>
+              )}
+          </ActionButtonContainer>
+
+          {/* Dialogs */}
+          {/* Ensure Dialog component uses Tailwind internally */}
+          <Dialog isOpen={showContactSelector} onClose={() => setShowContactSelector(false)} title="Select Contact">
+            <FormField
+              label="Search Contacts"
+              id="contactSearch"
+              value={contactSearchTerm}
+              onChange={(e) => setContactSearchTerm(e.target.value)}
+              placeholder="Search by name, company, email..."
+              className="mb-4"
+              labelSrOnly
+            />
+            <ContactSelector searchTerm={contactSearchTerm} onContactSelect={(contact) => {
+                handleClientChange('name', `${contact.firstName || ''} ${contact.lastName || ''}`.trim());
+                handleClientChange('company', contact.company || '');
+                handleClientChange('email', contact.email || '');
+                handleClientChange('phone', contact.phone || '');
+                handleClientChange('address', contact.address || '');
+                setShowContactSelector(false);
+                setContactSearchTerm('');
+              }} />
+          </Dialog>
+
+           {/* Catalog Item Selector Dialog */}
+           <Dialog isOpen={showItemDialog} onClose={() => setShowItemDialog(false)} title="Add Item from Catalog" size="3xl"> 
+              <p className="text-sm text-gray-600 mb-4">Select items from your catalog to add to the quote.</p>
+              {/* Needs CatalogItemSelector component refactored or implemented with Tailwind */}
+              {/* <CatalogItemSelector 
+                onItemSelected={(item) => {
+                  handleAddItem({ ...item, quantity: 1, markup: 0 }); // Add default quantity/markup
+                  setShowItemDialog(false);
                 }}
-              >
-                Save Changes
-              </Button>
-            </div>
-          </>
-        )}
-      </Dialog>
-      
-      {/* Contact Selector Dialog */}
-      <Dialog
-        isOpen={showContactSelector}
-        onClose={() => setShowContactSelector(false)}
-        title="Select Contact"
-        size="md"
-      >
-        <div className="form-field">
-          <label className="form-label">
-            Search Contacts
-          </label>
-          <input
-            type="text"
-            value={contactSearchTerm}
-            onChange={(e) => setContactSearchTerm(e.target.value)}
-            placeholder="Search by name, company, email..."
-            className="form-input"
-          />
-        </div>
-        
-        <ContactSelector 
-          searchTerm={contactSearchTerm} 
-          onContactSelect={(contact) => {
-            setQuoteDetails(prev => ({
-              ...prev,
-              clientName: contact.customerType === 'individual' 
-                ? `${contact.firstName} ${contact.lastName}`.trim()
-                : `${contact.firstName || ''} ${contact.lastName || ''}`.trim(),
-              clientCompany: contact.company || '',
-              clientEmail: contact.email || '',
-              clientPhone: contact.phone || '',
-              clientAddress: contact.address || ''
-            }));
-            setShowContactSelector(false);
-            addNotification(`Contact selected: ${contact.firstName} ${contact.lastName}`, 'success');
-          }}
-        />
-      </Dialog>
-      
-      {/* Missing Company Information Dialog */}
-      <Dialog
-        isOpen={showMissingCompanyInfoDialog}
-        onClose={() => setShowMissingCompanyInfoDialog(false)}
-        title="Missing Company Information"
-      >
-        <div style={{ maxWidth: '500px' }}>
-          <div style={{ 
-                       backgroundColor: '#fff3cd', 
-            color: '#856404', 
-            padding: '12px 16px', 
-            borderRadius: '4px',
-            marginBottom: '16px'
-          }}>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px' }}>Company information is incomplete</h3>
-            <p style={{ margin: '0', fontSize: '14px' }}>
-              To create professional quotes, please update your company information in the settings.
-              {!settings?.company?.name && <strong>Yourcompany name is missing.</strong>}
-              {!settings?.company?.address && <strong> Your company address is missing.</strong>}
-            </p>
-          </div>
-          
-          <p>
-            You can continue without company information, but your quotes will look incomplete
-            and may appear unprofessional to clients.
-          </p>
-          
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between',
-            marginTop: '20px'
-          }}>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                // Set the bypass flag to true when user chooses to continue without company info
-                setBypassCompanyInfoCheck(true);
-                setShowMissingCompanyInfoDialog(false);
-                
-                // Continue with PDF export
-                if (activeTab !== 'preview') {
-                  setActiveTab('preview');
-                  // Wait for tab change and then export
-                  setTimeout(() => handleExportPDF(), 300);
-                } else {
-                  handleExportPDF();
-                }
-              }}
-            >
-              Continue without company information
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                setShowMissingCompanyInfoDialog(false);
-                navigate('/settings');
-              }}
-            >
-              Go to Settings
-            </Button>
-          </div>
-        </div>
-      </Dialog>
+                currentItems={selectedItems} // Pass current items to potentially disable already added ones
+              /> */}
+              <p className="p-4 text-center text-orange-600 bg-orange-100 border border-orange-200 rounded-md">
+                Catalog Item Selector component needs to be created/refactored with Tailwind.
+              </p>
+           </Dialog>
+
+           {/* Custom Item Form Dialog */}
+            <Dialog isOpen={showCustomItemForm} onClose={() => setShowCustomItemForm(false)} title="Add Custom Item">
+              <form onSubmit={(e) => { e.preventDefault(); handleAddCustomItem(); }} className="space-y-4">
+                 <FormField
+                   label="Item Name"
+                   id="customItemName"
+                   value={customItem.name}
+                   onChange={(e) => setCustomItem({ ...customItem, name: e.target.value })}
+                   required
+                 />
+                  <FormField
+                   label="Category (Optional)"
+                   id="customItemCategory"
+                   value={customItem.category}
+                   onChange={(e) => setCustomItem({ ...customItem, category: e.target.value })}
+                 />
+                 <FormField
+                   label="Description (Optional)"
+                   id="customItemDesc"
+                   type="textarea"
+                   rows={3}
+                   value={customItem.description}
+                   onChange={(e) => setCustomItem({ ...customItem, description: e.target.value })}
+                 />
+                 <div className="grid grid-cols-2 gap-4">
+                   <FormField
+                     label="Cost Price"
+                     id="customItemCost"
+                     type="number"
+                     prefix="£"
+                     step="0.01"
+                     min={0}
+                     value={customItem.cost}
+                     onChange={(e) => setCustomItem({ ...customItem, cost: e.target.value })}
+                     required
+                   />
+                   <FormField
+                     label="Quantity"
+                     id="customItemQuantity"
+                     type="number"
+                     step="any"
+                     min={0}
+                     value={customItem.quantity}
+                     onChange={(e) => setCustomItem({ ...customItem, quantity: e.target.value })}
+                     required
+                   />
+                 </div>
+                 <FormField
+                   label="Markup % (Optional)"
+                   id="customItemMarkup"
+                   type="number"
+                   suffix="%"
+                   min={0}
+                   value={customItem.markup}
+                   onChange={(e) => setCustomItem({ ...customItem, markup: parseInt(e.target.value) || 0 })}
+                   helpText="Leave at 0 to use global markup."
+                 />
+
+                 <div className="flex justify-end space-x-3 pt-4">
+                   <Button variant="secondary" onClick={() => setShowCustomItemForm(false)} type="button">
+                     Cancel
+                   </Button>
+                   <Button variant="primary" type="submit">
+                     Add Item
+                   </Button>
+                 </div>
+               </form>
+             </Dialog>
+             
+            {/* Hidden Cost Dialog (If needed, currently inline) */}
+            {/* ... */}
+
+            {/* Email Dialog (If needed) */}
+            <Dialog isOpen={showEmailDialog} onClose={() => setShowEmailDialog(false)} title="Email Quote">
+              {/* Content for emailing - potentially preview, recipients, message */}
+              <p className="mb-4">Configure email options here (Not fully implemented).</p>
+               <div className="flex justify-end space-x-3">
+                   <Button variant="secondary" onClick={() => setShowEmailDialog(false)}>
+                     Cancel
+                   </Button>
+                   <Button variant="primary" onClick={handleOpenEmailClient} >
+                     Open Email Client
+                   </Button>
+                 </div>
+            </Dialog>
+
+           {/* Missing Company Info Dialog */}
+            <Dialog isOpen={showMissingCompanyInfoDialog} onClose={() => setShowMissingCompanyInfoDialog(false)} title="Missing Company Information">
+              <p className="mb-4 text-sm text-gray-700">
+                Your company details (name, address, etc.) are needed for the PDF header.
+                Please update them in <Link to="/settings/company" className="text-indigo-600 hover:underline font-medium">Company Settings</Link>.
+              </p>
+              <p className="mb-6 text-sm text-gray-600">
+                Alternatively, you can export the PDF without the company header information for now.
+              </p>
+               <div className="flex justify-end space-x-3">
+                   <Button variant="secondary" onClick={() => setShowMissingCompanyInfoDialog(false)}>
+                     Cancel Export
+                   </Button>
+                   <Button variant="outline" onClick={exportPDFWithoutCompanyCheck} >
+                     Export Anyway
+                   </Button>
+                   <Button variant="primary" onClick={() => { setShowMissingCompanyInfoDialog(false); navigate('/settings/company'); }}>
+                     Go to Settings
+                   </Button>
+                 </div>
+            </Dialog>
+
+        </>
+      )}
     </PageLayout>
   );
-};
+}
 
 export default QuoteBuilder;

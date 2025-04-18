@@ -108,7 +108,7 @@ function App() {
         <AppProvider>
           <ThemeProvider> {/* Wrap app with ThemeProvider */}
             <Router>
-              <div className="app-container">
+              <div className="min-h-screen flex flex-col"> {/* Updated class */}
                 <FaviconUpdater /> {/* Add the FaviconUpdater component */}
                 <Notifications />
                 <NetworkStatus />

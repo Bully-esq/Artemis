@@ -1,7 +1,7 @@
 import React from 'react';
 import '../../styles/components/common/toggleSwitch.css';
 
-const ToggleSwitch = ({ label, checked, onChange, helpText, name }) => {
+const ToggleSwitch = ({ label, checked, onChange, helpText, name, className = '' }) => {
   // Create direct click handler to bypass potential event issues
   const handleClick = () => {
     console.log(`ToggleSwitch clicked - current checked state: ${checked}`);
@@ -20,23 +20,18 @@ const ToggleSwitch = ({ label, checked, onChange, helpText, name }) => {
   
   console.log(`Rendering ToggleSwitch: ${label}, checked=${checked}, id=${switchId}`);
 
+  // Render ONLY the container and apply className directly to it
   return (
-    <div className="toggle-switch-field">
-      <label htmlFor={switchId} className="toggle-switch-label" onClick={handleClick}>
-        {label}
-      </label>
-      <div className="toggle-switch-container" onClick={handleClick}>
-        <input
-          type="checkbox"
-          id={switchId}
-          className="toggle-switch-checkbox"
-          checked={Boolean(checked)}
-          onChange={handleChange}
-          name={name}
-        />
-        <span className="toggle-switch-slider"></span>
-      </div>
-      {helpText && <p className="toggle-switch-help">{helpText}</p>}
+    <div className={`toggle-switch-container ${className}`} onClick={handleClick}>
+      <input
+        type="checkbox"
+        id={switchId}
+        className="toggle-switch-checkbox"
+        checked={Boolean(checked)}
+        onChange={handleChange}
+        name={name}
+      />
+      <span className="toggle-switch-slider"></span>
     </div>
   );
 };

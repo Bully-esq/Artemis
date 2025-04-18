@@ -2,91 +2,89 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import PageLayout from '../components/common/PageLayout';
 import Button from '../components/common/Button';
+import Loading from '../components/common/Loading';
+import Dialog from '../components/common/Dialog';
 import { useApiCustomQuery } from '../hooks/useApi';
 import { useAuth } from '../context/AuthContext';
 import api, { apiClient } from '../services/api';
 import ActionButtonContainer from '../components/common/ActionButtonContainer';
-import { useNotification } from '../hooks/useNotification';
-
-// Import the necessary styles
-import '../styles/components/lists.css';
-import '../styles/components/tables.css';
+import { useAppContext } from '../context/AppContext';
 
 const Users = () => {
   const { user: currentUser } = useAuth();
-  const [selectedUser, setSelectedUser] = useState(null);
-  const { showNotification } = useNotification();
+  const { addNotification } = useAppContext();
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [userToEdit, setUserToEdit] = useState(null);
   const queryClient = useQueryClient();
   
-  // Fetch users data using the direct hook
   const { data: users, isLoading, error } = useApiCustomQuery(
-    ['users'], 
+    ['users'],
     () => {
       return apiClient.get('/users').then(response => response.data);
     },
     {
       enabled: currentUser?.role === 'admin',
-      refetchOnWindowFocus: true
-    }
-  );
-
-  // Delete user mutation
-  const deleteUserMutation = useMutation(
-    (userId) => apiClient.delete(`/users/${userId}`),
-    {
-      onSuccess: () => {
-        // Invalidate and refetch users query
-        queryClient.invalidateQueries('users');
-        showNotification({
-          type: 'success',
-          title: 'Success',
-          message: 'User has been successfully deleted'
-        });
-      },
-      onError: (error) => {
-        console.error('Error deleting user:', error);
-        showNotification({
-          type: 'error',
-          title: 'Error',
-          message: error?.response?.data?.message || 'Failed to delete user. Please try again.'
-        });
+      refetchOnWindowFocus: true,
+      onError: (err) => {
+        addNotification(`Error loading users: ${err?.message || 'Unknown error'}`, 'error');
       }
     }
   );
 
-  // Handle user deletion
-  const handleDeleteUser = async (user) => {
+  const deleteUserMutation = useMutation(
+    (userId) => apiClient.delete(`/users/${userId}`),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('users');
+        addNotification('User deleted successfully', 'success');
+        setShowDeleteDialog(false);
+        setUserToDelete(null);
+      },
+      onError: (err) => {
+        console.error('Error deleting user:', err);
+        addNotification(`Error deleting user: ${err?.response?.data?.message || 'Please try again.'}`, 'error');
+      }
+    }
+  );
+
+  const handleDeleteUser = (user) => {
     if (!user || !user.id) return;
-    
-    // Prevent deleting the current user
+
     if (user.id === currentUser.id) {
-      showNotification({
-        type: 'warning',
-        title: 'Warning',
-        message: 'You cannot delete your own account.'
-      });
+      addNotification('You cannot delete your own account.', 'warning');
       return;
     }
+    setUserToDelete(user);
+    setShowDeleteDialog(true);
+  };
 
-    try {
-      await deleteUserMutation.mutateAsync(user.id);
-    } catch (error) {
-      // Error is handled in the mutation's onError
+  const confirmDeleteUser = () => {
+    if (userToDelete) {
+      deleteUserMutation.mutate(userToDelete.id);
     }
   };
-  
+
+  const handleAddUser = () => {
+    addNotification('Add/Edit User functionality not implemented yet.', 'info');
+  };
+
+  const handleEditUser = (user) => {
+    addNotification('Add/Edit User functionality not implemented yet.', 'info');
+  };
+
   if (currentUser?.role !== 'admin') {
     return (
       <PageLayout title="Users">
-        <div className="card max-w-md mx-auto mt-10">
+        <div className="bg-card-background border border-card-border rounded-lg shadow-sm max-w-md mx-auto mt-10 p-6 sm:p-8">
           <div className="text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full status-badge-danger mb-4">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-danger-bg-light text-danger-icon mb-4">
               <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold mb-2 list-item-title">Access Denied</h2>
-            <p className="list-item-subtitle">You don't have permission to access this page.</p>
+            <h2 className="text-xl font-semibold mb-2 text-text-primary">Access Denied</h2>
+            <p className="text-sm text-text-secondary">You don't have permission to view this page.</p>
           </div>
         </div>
       </PageLayout>
@@ -96,14 +94,24 @@ const Users = () => {
   if (isLoading) {
     return (
       <PageLayout title="Users">
-        <div className="p-4">
-          <div className="card w-full">
-            <div className="animate-pulse space-y-4">
-              <div className="h-8 bg-skeleton rounded w-1/4"></div>
-              <div className="h-4 bg-skeleton rounded w-full"></div>
-              <div className="h-4 bg-skeleton rounded w-5/6"></div>
-              <div className="h-64 bg-skeleton rounded w-full"></div>
-            </div>
+        <ActionButtonContainer>
+          <Button variant="primary" disabled>
+            <span className="flex items-center">
+              <svg className="w-5 h-5 mr-2 -ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Add User
+            </span>
+          </Button>
+        </ActionButtonContainer>
+        <div className="bg-card-background border border-card-border rounded-lg shadow-sm p-4 md:p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-6 bg-skeleton rounded w-1/4"></div>
+            <div className="h-4 bg-skeleton rounded w-1/2"></div>
+            <div className="h-4 bg-skeleton rounded w-full"></div>
+            <div className="h-4 bg-skeleton rounded w-5/6"></div>
+            <div className="h-4 bg-skeleton rounded w-full"></div>
+            <div className="h-4 bg-skeleton rounded w-3/4"></div>
           </div>
         </div>
       </PageLayout>
@@ -113,15 +121,36 @@ const Users = () => {
   if (error) {
     return (
       <PageLayout title="Users">
-        <div className="p-4">
-          <div className="card">
-            <div className="flex items-center status-badge-danger mb-4">
-              <svg className="h-6 w-6 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <ActionButtonContainer>
+          <Button variant="primary" onClick={handleAddUser}>
+            <span className="flex items-center">
+              <svg className="w-5 h-5 mr-2 -ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
               </svg>
-              <h3 className="text-lg font-medium">Error Loading Users</h3>
+              Add User
+            </span>
+          </Button>
+        </ActionButtonContainer>
+        <div className="bg-danger-bg-light border-l-4 border-danger-border p-4 rounded-md shadow-sm">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-danger-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-10a1 1 0 10-2 0v4a1 1 0 102 0V8zm-1 7a1 1 0 110-2 1 1 0 010 2z" clipRule="evenodd" />
+              </svg>
             </div>
-            <p className="list-item-subtitle">{error.message}</p>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-danger-text-dark">Error Loading Users</h3>
+              <p className="mt-1 text-sm text-danger-text">{error.message || 'Could not fetch user data.'}</p>
+              <div className="mt-4">
+                <Button
+                  variant="danger_outline"
+                  size="sm"
+                  onClick={() => queryClient.refetchQueries('users')}
+                >
+                  Retry
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </PageLayout>
@@ -130,14 +159,13 @@ const Users = () => {
   
   return (
     <PageLayout title="Users">
-      {/* Add ActionButtonContainer matching the QuoteBuilder style */}
       <ActionButtonContainer>
         <Button
           variant="primary"
-          onClick={() => setSelectedUser({})}
+          onClick={handleAddUser}
         >
-          <span className="button-content">
-            <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+          <span className="flex items-center">
+            <svg className="w-5 h-5 mr-2 -ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
             </svg>
             Add User
@@ -145,122 +173,121 @@ const Users = () => {
         </Button>
       </ActionButtonContainer>
       
-      <div className="p-4">
-        <div className="card">
-          <div className="card-body">
-            <div className="px-4 py-5 border-b border-color-light sm:px-6">
-              <h3 className="text-lg leading-6 font-medium card-title">
-                User Management
-              </h3>
-              <p className="mt-1 text-sm list-item-subtitle">
-                View and manage user accounts and permissions
-              </p>
-            </div>
-            
-            <div className="responsive-table-wrapper w-full">
-              <div className="overflow-x-auto">
-                <table className="table spaced-table w-full">
-                  <thead>
-                    <tr>
-                      <th scope="col" className="w-1/5">Name</th>
-                      <th scope="col" className="w-1/5">Email</th>
-                      <th scope="col" className="w-1/10">Role</th>
-                      <th scope="col" className="w-1/7">Created</th>
-                      <th scope="col" className="w-1/7">Last Login</th>
-                      <th scope="col" className="w-1/5 action-cell">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users && users.length > 0 ? (
-                      users.map((user) => (
-                        <tr key={user.id}>
-                          <td>
-                            <div className="cell-content truncate max-w-full">{user.name}</div>
-                          </td>
-                          <td>
-                            <div className="cell-content truncate max-w-full">{user.email}</div>
-                          </td>
-                          <td>
-                            <div className="status-button-container">
-                              <span className={`status-badge ${user.role === 'admin' ? 'status-badge-info' : 'status-badge-success'}`}>
-                                {user.role}
-                              </span>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="cell-content whitespace-nowrap">
-                              {new Date(user.createdAt).toLocaleDateString()}
-                            </div>
-                          </td>
-                          <td>
-                            <div className="cell-content whitespace-nowrap">
-                              {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
-                            </div>
-                          </td>
-                          <td className="action-cell">
-                            <div className="action-row">
-                              <button
-                                onClick={() => setSelectedUser(user)}
-                                className="btn btn-list-item btn-list-item--secondary"
-                              >
-                                <span className="button-content">
-                                  <svg className="button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                                  </svg>
-                                  Edit
-                                </span>
-                              </button>
-                              <button
-                                className="btn btn-list-item btn-list-item--danger"
-                                disabled={deleteUserMutation.isLoading || user.id === currentUser.id}
-                                onClick={() => {
-                                  if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
-                                    handleDeleteUser(user);
-                                  }
-                                }}
-                              >
-                                <span className="button-content">
-                                  {deleteUserMutation.isLoading && deleteUserMutation.variables === user.id ? (
-                                    <svg className="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                  ) : (
-                                    <svg className="button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                                    </svg>
-                                  )}
-                                  Delete
-                                </span>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="6" className="text-center py-4 empty-state-description">
-                          No users found
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            
-            {users && users.length > 0 && (
-              <div className="px-4 py-3 table-footer border-t border-color-light sm:px-6">
-                <div className="text-sm list-item-subtitle">
-                  Showing <span className="font-medium list-item-title">{users.length}</span> users
-                </div>
-              </div>
-            )}
-          </div>
+      <div className="bg-card-background border border-card-border rounded-lg shadow-sm overflow-hidden mt-6">
+        <div className="px-4 py-4 sm:px-6 border-b border-border-color">
+          <h3 className="text-lg leading-6 font-medium text-text-primary">
+            User Management
+          </h3>
+          <p className="mt-1 text-sm text-text-secondary">
+            View and manage user accounts and permissions
+          </p>
         </div>
+        
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-border-color">
+            <thead className="bg-background-secondary">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider w-1/4">Name</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider w-1/4">Email</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider w-[10%]">Role</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider w-[15%]">Created</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider w-[15%]">Last Login</th>
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider w-[10%]">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-card-background divide-y divide-border-color">
+              {users && users.length > 0 ? (
+                users.map((user) => (
+                  <tr key={user.id} className="hover:bg-background-tertiary transition-colors duration-150">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">{user.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">{user.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        user.role === 'admin'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-100'
+                          : 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100'
+                      }`}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                      {new Date(user.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end space-x-2">
+                        <Button
+                          variant="secondary"
+                          size="xs"
+                          onClick={() => handleEditUser(user)}
+                          tooltip="Edit User"
+                        >
+                          <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          </svg>
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="xs"
+                          disabled={deleteUserMutation.isLoading && deleteUserMutation.variables === user.id || user.id === currentUser.id}
+                          onClick={() => handleDeleteUser(user)}
+                          tooltip={user.id === currentUser.id ? "Cannot delete self" : "Delete User"}
+                        >
+                          {!(deleteUserMutation.isLoading && deleteUserMutation.variables === user.id) && (
+                            <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="px-6 py-10 text-center text-sm text-text-secondary">
+                    No users found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {users && users.length > 0 && (
+          <div className="px-4 py-3 sm:px-6 border-t border-border-color bg-background-secondary text-right">
+            <p className="text-xs text-text-secondary">
+              Total Users: <span className="font-medium text-text-primary">{users.length}</span>
+            </p>
+          </div>
+        )}
       </div>
       
-      {/* You would add a modal here for adding/editing users */}
+      <Dialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        title="Delete User"
+        size="sm"
+      >
+        <p className="text-sm text-text-secondary mb-4">
+          Are you sure you want to delete the user{' '}
+          <strong className="font-medium text-text-primary">{userToDelete?.name}</strong>?
+          This action cannot be undone.
+        </p>
+        <div className="flex justify-end space-x-2 mt-6">
+          <Button variant="secondary" onClick={() => setShowDeleteDialog(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={confirmDeleteUser}
+            isLoading={deleteUserMutation.isLoading}
+          >
+            {deleteUserMutation.isLoading ? 'Deleting...' : 'Delete User'}
+          </Button>
+        </div>
+      </Dialog>
     </PageLayout>
   );
 };

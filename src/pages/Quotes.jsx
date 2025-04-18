@@ -109,9 +109,9 @@ const Quotes = () => {
     navigate('/quotes/new');
   };
 
-  // Navigation to edit quote - FIX THE ROUTE PATH
+  // Navigation to edit quote
   const handleEditQuote = (quoteId) => {
-    navigate(`/quotes/${quoteId}`);  // Remove the "edit/" part
+    navigate(`/quotes/${quoteId}`);
   };
   
   // Create invoice from quote
@@ -119,13 +119,25 @@ const Quotes = () => {
     navigate(`/invoices/new?quoteId=${quoteId}`);
   };
 
-  // Status badge component
+  // Status badge component - Converted to Tailwind
   const StatusBadge = ({ status }) => {
-    const badgeClasses = {
-      active: 'status-badge status-badge-active',
-      expiring: 'status-badge status-badge-expiring',
-      expired: 'status-badge status-badge-expired'
-    };
+    const baseClasses = "inline-flex items-center px-3 py-1 text-xs font-semibold leading-none rounded-full";
+    let statusClasses = "";
+
+    switch (status) {
+      case 'active':
+        statusClasses = "bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100";
+        break;
+      case 'expiring':
+        statusClasses = "bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100";
+        break;
+      case 'expired':
+        statusClasses = "bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100";
+        break;
+      default:
+        statusClasses = "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100";
+        break;
+    }
     
     const statusLabels = {
       active: 'Active',
@@ -134,21 +146,24 @@ const Quotes = () => {
     };
     
     return (
-      <span className={badgeClasses[status] || 'status-badge'}>
+      <span className={`${baseClasses} ${statusClasses}`}>
         {statusLabels[status] || status}
       </span>
     );
   };
 
-  // Action buttons for the page header
+  // Action buttons for the page header (Passed to PageLayout)
+  // Uses Button component, assuming it's Tailwind-styled
   const pageActions = (
     <Button 
       variant="primary" 
       onClick={handleCreateQuote}
+      icon={
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+      }
     >
-      <svg className="w-4 h-4 mr-1 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-      </svg>
       New Quote
     </Button>
   );
@@ -162,16 +177,17 @@ const Quotes = () => {
     );
   }
 
-  // Show error state
+  // Show error state (already uses Tailwind)
   if (isError) {
     return (
       <PageLayout title="Quotes" actions={pageActions}>
-        <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded shadow">
-          <p className="text-red-700">
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow mb-6" role="alert">
+          <p className="font-bold">Error</p>
+          <p>
             Error loading quotes: {error?.message || 'Unknown error'}
           </p>
           <Button 
-            variant="primary" 
+            variant="danger" // Match style to error
             size="sm" 
             className="mt-2" 
             onClick={() => refetch()}
@@ -184,87 +200,61 @@ const Quotes = () => {
   }
 
   return (
-    <PageLayout title="Quotes">
-      {/* Add ActionButtonContainer below the header */}
-      <ActionButtonContainer>
-        <Button 
-          variant="primary" 
-          onClick={handleCreateQuote}
-        >
-          <svg className="w-4 h-4 mr-1 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          New Quote
-        </Button>
-      </ActionButtonContainer>
-
-      {/* Page Header - Styled like Dashboard */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Quote Management</h1>
-        <p className="text-gray-600">Create and manage quotes for your clients</p>
-      </div>
-
-      {/* Quick Actions - Same styling as Dashboard */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-        <div className="quick-actions">
-          <div onClick={handleCreateQuote} className="quick-action-btn">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>New Quote</span>
-          </div>
-          
-          <div onClick={() => navigate('/invoices')} className="quick-action-btn">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            <span>Create Invoice</span>
-          </div>
-          
-          <div onClick={() => navigate('/contacts')} className="quick-action-btn">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <span>Manage Contacts</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters and search - in a card like Dashboard */}
-      <div className="card mb-6">
+    <PageLayout title="Quotes" actions={pageActions}>
+      {/* Filters and search - Use Card styling */}
+      <div className="bg-card-background border border-card-border rounded-lg shadow-sm p-4 md:p-6 mb-6 transition-colors duration-300 ease-linear">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="w-full md:w-1/3">
+          {/* Search Input */}
+          <div className="w-full md:w-auto md:flex-grow">
             <input
               type="text"
-              className="search-input w-full"
+              // Applied search-input styles
+              className="w-full px-3 py-2 border border-input-border rounded-md bg-input-background text-sm text-input-text placeholder:text-text-muted focus:outline-none focus:border-primary-accent focus:ring-2 focus:ring-primary-accent/20 shadow-sm"
               placeholder="Search quotes by client or name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           
-          <div className="filter-group">
+          {/* Filter Buttons */}
+          <div className="flex items-center flex-wrap gap-2 md:flex-shrink-0"> {/* Applied filter-group styles */} 
             <button
-              className={`filter-button ${filterStatus === 'all' ? 'active' : ''}`}
+              // Applied filter-button styles + active state logic
+              className={`px-4 py-2 rounded border-none font-medium cursor-pointer transition-colors duration-200 ease-linear text-sm 
+                ${filterStatus === 'all' 
+                  ? 'bg-primary text-text-accent-contrast'
+                  : 'bg-bg-light text-text-secondary hover:bg-bg-hover dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                }`}
               onClick={() => setFilterStatus('all')}
             >
               All
             </button>
             <button
-              className={`filter-button ${filterStatus === 'active' ? 'active' : ''}`}
+              className={`px-4 py-2 rounded border-none font-medium cursor-pointer transition-colors duration-200 ease-linear text-sm 
+                ${filterStatus === 'active' 
+                  ? 'bg-primary text-text-accent-contrast'
+                  : 'bg-bg-light text-text-secondary hover:bg-bg-hover dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                }`}
               onClick={() => setFilterStatus('active')}
             >
               Active
             </button>
             <button
-              className={`filter-button ${filterStatus === 'expiring' ? 'active' : ''}`}
+              className={`px-4 py-2 rounded border-none font-medium cursor-pointer transition-colors duration-200 ease-linear text-sm 
+                ${filterStatus === 'expiring' 
+                  ? 'bg-primary text-text-accent-contrast'
+                  : 'bg-bg-light text-text-secondary hover:bg-bg-hover dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                }`}
               onClick={() => setFilterStatus('expiring')}
             >
-              Expiring Soon
+              Expiring
             </button>
             <button
-              className={`filter-button ${filterStatus === 'expired' ? 'active' : ''}`}
+              className={`px-4 py-2 rounded border-none font-medium cursor-pointer transition-colors duration-200 ease-linear text-sm 
+                ${filterStatus === 'expired' 
+                  ? 'bg-primary text-text-accent-contrast'
+                  : 'bg-bg-light text-text-secondary hover:bg-bg-hover dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                }`}
               onClick={() => setFilterStatus('expired')}
             >
               Expired
@@ -272,135 +262,111 @@ const Quotes = () => {
           </div>
         </div>
       </div>
-      
-      {/* Quotes list - in a card with header like Dashboard */}
-      <div className="card">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Quotes</h2>
-          <div>
-            <span className="text-sm text-gray-600">
-              {filteredQuotes.length} quotes found
-            </span>
-          </div>
-        </div>
 
-        {filteredQuotes.length === 0 ? (
-          <div className="empty-state">
-            <svg className="empty-state-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="12" y1="18" x2="12" y2="12"></line>
-              <line x1="9" y1="15" x2="15" y2="15"></line>
-            </svg>
-            <h3 className="empty-state-title">
-              {searchTerm || filterStatus !== 'all' ? 
-                'No quotes match your search criteria' : 
-                'You haven\'t created any quotes yet'}
-            </h3>
-            <p className="empty-state-description">
-              {searchTerm || filterStatus !== 'all' ? 
-                'Try adjusting your search or filters to find what you\'re looking for.' : 
-                'Get started by creating your first quote for a client.'}
-            </p>
-            {!searchTerm && filterStatus === 'all' && (
-              <Button variant="primary" onClick={handleCreateQuote}>
-                Create Your First Quote
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="recent-items">
+      {/* Quotes List - Use list-container styling */}
+      <div className="transition-colors duration-300 ease-linear">
+        {filteredQuotes.length > 0 ? (
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 p-4 md:p-6">
             {filteredQuotes.map((quote) => {
               const status = getQuoteStatus(quote);
               return (
-                <div 
+                <li 
                   key={quote.id} 
-                  className="recent-item"
-                  onClick={() => handleEditQuote(quote.id)}
+                  // Card styles applied to li for grid layout
+                  className="bg-card-background border border-card-border rounded-lg shadow-sm overflow-hidden transition-colors duration-300 ease-linear hover:bg-background-tertiary cursor-pointer p-4 flex flex-col justify-between h-full"
+                  onClick={() => handleEditQuote(quote.id)} // Make whole item clickable to edit
                 >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {quote.clientName || 'Unknown Client'}
-                        {quote.clientCompany && (
-                          <span className="text-sm text-gray-500"> ({quote.clientCompany})</span>
-                        )}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {quote.name || `Quote #${quote.id.substr(0, 8)}`}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">
-                        {quote.date ? formatDate(quote.date) : 'No date'}
-                      </p>
-                      <div className="action-buttons-container">
-                        <StatusBadge status={status} />
-                        {/* Use Button components with new classes */}
-                        <Button
-                          className="btn-list-item btn-list-item--primary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCreateInvoice(quote.id);
-                          }}
-                        >
-                          Invoice
-                        </Button>
-                        <Button
-                          className="btn-list-item btn-list-item--danger"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteClick(quote);
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
+                  {/* Content within the card */}
+                  {/* Top section: Client/Quote Name */}
+                  <div className="flex-grow mb-3"> {/* Added flex-grow and margin-bottom */}
+                    {/* Client Name/Company */}
+                    <p className="font-medium text-text-primary truncate">
+                      {quote.clientName || 'Unnamed Client'} 
+                      {quote.clientCompany && <span className="text-sm text-text-secondary">({quote.clientCompany})</span>}
+                    </p>
+                    {/* Quote Name/ID */}
+                    <p className="text-sm text-text-secondary mt-1 truncate">
+                      {quote.name || `Quote #${quote.id.substring(0, 8)}`}
+                    </p>
                   </div>
-                </div>
+                  
+                  {/* Bottom section: Details, Status, Actions */}
+                  <div className="flex-shrink-0"> {/* Grouping bottom elements */}
+                     {/* Details (Date/Total) */}
+                     <div className="text-left text-sm mb-2"> {/* Added margin-bottom */}
+                        <p className="font-medium text-text-primary">
+                          {quote.totalPrice}
+                        </p>
+                        <p className="text-text-secondary">
+                          {quote.date ? formatDate(quote.date) : 'No date'}
+                        </p>
+                     </div>
+                     {/* Status Badge */}
+                     <div className="mb-3"> {/* Added margin-bottom */}
+                        <StatusBadge status={status} />
+                     </div>
+                     {/* Action Buttons */}
+                     <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()} /* Prevent click propagation to edit */>
+                       <Button 
+                         variant="info" 
+                         size="xs" 
+                         onClick={() => handleCreateInvoice(quote.id)}
+                         tooltip="Create Invoice"
+                       >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2zM12 9v4m0 4h.01" /></svg>
+                       </Button>
+                       <Button 
+                         variant="secondary" 
+                         size="xs" 
+                         onClick={() => handleEditQuote(quote.id)}
+                         tooltip="Edit Quote"
+                       >
+                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                       </Button>
+                        <Button 
+                         variant="danger" 
+                         size="xs" 
+                         onClick={() => handleDeleteClick(quote)}
+                         tooltip="Delete Quote"
+                       >
+                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                       </Button>
+                     </div>
+                  </div>
+                </li>
               );
             })}
+          </ul>
+        ) : (
+          // Empty State - Simplified, could use styles from dashboard.css if needed
+          <div className="text-center py-12 px-6">
+            <svg className="mx-auto h-12 w-12 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 className="mt-2 text-sm font-medium text-text-primary">No quotes found</h3>
+            <p className="mt-1 text-sm text-text-secondary">Get started by creating a new quote.</p>
+            <div className="mt-6">
+              {pageActions} {/* Reuse the New Quote button */}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Delete confirmation dialog */}
+      {/* Delete Confirmation Dialog */}
       <Dialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         title="Delete Quote"
-        size="sm"
       >
-        <div className="p-6">
-          <p className="text-gray-600 mb-4">
-            Are you sure you want to delete this quote? This action cannot be undone.
-          </p>
-          {quoteToDelete && (
-            <div className="mt-4 bg-gray-50 p-4 rounded border border-gray-200">
-              <p><strong>Client:</strong> {quoteToDelete.clientName || 'Unknown Client'}</p>
-              {quoteToDelete.clientCompany && (
-                <p><strong>Company:</strong> {quoteToDelete.clientCompany}</p>
-              )}
-              <p><strong>Quote:</strong> {quoteToDelete.name || `Quote #${quoteToDelete.id.substr(0, 8)}`}</p>
-            </div>
-          )}
-          <div className="mt-6 flex justify-end gap-3">
-            <Button 
-              variant="secondary" 
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="danger" 
-              onClick={confirmDelete}
-            >
-              Delete Quote
-            </Button>
-          </div>
+        <p className="text-sm text-text-secondary mb-4">
+          Are you sure you want to delete the quote "{quoteToDelete?.name || quoteToDelete?.id}" for {quoteToDelete?.clientName}? This action cannot be undone.
+        </p>
+        <div className="flex justify-end space-x-2">
+          <Button variant="secondary" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+          <Button variant="danger" onClick={confirmDelete}>Delete</Button>
         </div>
       </Dialog>
+
     </PageLayout>
   );
 };
