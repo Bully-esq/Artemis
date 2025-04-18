@@ -588,11 +588,15 @@ const Settings = () => {
                   />
 
                   <FormField
-                    label="National Insurance Number"
-                    name="cis-ni-number"
+                    label="National Insurance Number (NI)"
+                    id="cisNiNumber"
                     value={localSettings.cis?.niNumber || ''}
                     onChange={(e) => handleChange('cis', 'niNumber', e.target.value)}
                   />
+
+                  <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <CisDownloader mode="settings" />
+                  </div>
                 </>
               )}
             </div>

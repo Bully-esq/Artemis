@@ -265,8 +265,7 @@ const Dashboard = () => {
         {/* Conditionally render CIS Downloader Card based on settings */}
         {settings?.cis?.enabled && (
           <div className="stat-card">
-            <p className="stat-label mb-2">CIS Records</p>
-            <CisDownloader compact />
+            <CisDownloader mode="dashboard" />
           </div>
         )}
       </div>

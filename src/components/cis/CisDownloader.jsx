@@ -3,6 +3,7 @@ import { useQuery } from 'react-query';
 import api from '../../services/api';
 import Button from '../common/Button';
 import Loading from '../common/Loading';
+import FormField from '../common/FormField'; // Import FormField for consistent styling
 
 // Helper function to get the current tax year string (e.g., "2023-2024")
 // (Duplicated from cisTracker or move to a shared utils file if used elsewhere)
@@ -43,7 +44,8 @@ const generateCsvContent = (records, taxYear) => {
   const rows = records.map(record => [
     `"${new Date(record.date).toLocaleDateString('en-GB')}"`, // Enclose date in quotes
     `"${record.invoiceNumber || ''}"`, // Enclose strings in quotes
-    `"${record.clientName || ''}"`,    `"${record.clientCompany || ''}"`,
+    `"${record.clientName || ''}"`,
+    `"${record.clientCompany || ''}"`,
     (parseFloat(record.laborAmount) || 0).toFixed(2),
     ((parseFloat(record.cisRate) || 0) * 100).toFixed(0),
     (parseFloat(record.cisDeduction) || 0).toFixed(2)
@@ -64,7 +66,7 @@ const generateCsvContent = (records, taxYear) => {
   const csv = [
     headers.join(','),
     ...rows.map(row => row.join(','))
-  ].join('\n');
+  ].join('\\n');
 
   return csv;
 };
@@ -89,7 +91,8 @@ const downloadCsvFile = (csvContent, fileName) => {
   }
 };
 
-const CisDownloader = ({ className = '', compact = false }) => {
+// Accept 'mode' prop ('dashboard' or 'settings') instead of 'compact'
+const CisDownloader = ({ className = '', mode = 'dashboard' }) => { 
   const [selectedTaxYear, setSelectedTaxYear] = useState(getCurrentTaxYear());
   const [taxYears, setTaxYears] = useState([]);
   const [filteredRecords, setFilteredRecords] = useState([]);
@@ -196,123 +199,73 @@ const CisDownloader = ({ className = '', compact = false }) => {
   }
 
   if (error) {
-      return <div className="error-message">Error loading CIS records: {error.message}</div>;
+      return <div className="error-message text-sm text-red-600">Error loading CIS records: {error.message}</div>;
   }
 
-  if (compact) {
-    // Compact version - Simpler 2-column layout
+  // --- Render based on mode ---
+  if (mode === 'dashboard') {
+    // Dashboard mode: Show only stats
     return (
-      // Add a class for the 2-column layout
-      <div className={`cis-downloader-compact cis-compact-2col ${className}`}> 
-         {/* Stats Area (Column 1) */} 
-         <div className="cis-compact-stats">
-            <p className="stat-number"> 
-               £{totalCis.toFixed(2)}
-            </p>
-            <p className="stat-detail"> 
-               Total CIS Deducted ({recordCount} {recordCount === 1 ? 'record' : 'records'}) 
-            </p>
-         </div>
-
-         {/* Controls Area (Column 2) */} 
-         <div 
-            className="cis-compact-controls" 
-            style={{ marginTop: '-0.7rem' }} // Add negative top margin
-         >
-             {/* Select */} 
-             <select
-                 value={selectedTaxYear}
-                 onChange={handleTaxYearChange}
-                 className="tax-year-select"
-                 style={{ /* Basic appearance */
-                     width: '100%', 
-                     padding: '0.25rem 0.5rem', 
-                     border: '1px solid #ccc',
-                     borderRadius: '4px',
-                     fontSize: '0.9rem',
-                     boxSizing: 'border-box',
-                     marginBottom: '3rem' // Set space to 3rem
-                 }} 
-                 disabled={taxYears.length === 0}
-             >
-                 {taxYears.length > 0 ? (
-                     taxYears.map(year => (
-                         <option key={year} value={year}>{year} Tax Year</option>
-                     ))
-                 ) : (
-                     <option value={selectedTaxYear}>{selectedTaxYear} Tax Year</option>
-                 )}
-             </select>
-
-             {/* Button */} 
-             <Button
-                 variant="primary" 
-                 size="sm" 
-                 onClick={handleDownload}
-                 disabled={recordCount === 0}
-                 style={{ /* Basic appearance */
-                     width: '100%', // Make button fill its column area
-                     padding: '0.25rem 0.5rem', 
-                     fontSize: '0.8rem',
-                     boxSizing: 'border-box'
-                 }} 
-             >
-                 Download
-             </Button>
-         </div>
+      <div className={className}>
+        {/* Mimic stat-card structure */}
+        <p className="stat-label mb-2">CIS Records</p>
+        <p className="stat-number">
+           £{totalCis.toFixed(2)}
+        </p>
+        <p className="stat-detail">
+           This tax year
+        </p>
+      </div>
+    );
+  } 
+  
+  if (mode === 'settings') {
+    // Settings mode: Show controls
+    return (
+      <div className={`cis-downloader-settings ${className}`}>
+        <h3 className="text-lg font-semibold mb-3">Download CIS Records</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Select a tax year to download a CSV file of your CIS deductions for that period.
+        </p>
+        <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+          <div className="flex-grow"> 
+            <label htmlFor="cis-tax-year-select-settings" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Tax Year
+            </label>
+            <select
+              id="cis-tax-year-select-settings"
+              value={selectedTaxYear}
+              onChange={handleTaxYearChange}
+              className="block w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
+              disabled={taxYears.length === 0}
+            >
+              {taxYears.length > 0 ? (
+                taxYears.map(year => (
+                  <option key={year} value={year}>{year} Tax Year</option>
+                ))
+              ) : (
+                <option value={selectedTaxYear}>{selectedTaxYear} Tax Year</option>
+              )}
+            </select>
+          </div>
+          <Button
+            variant="primary"
+            onClick={handleDownload}
+            disabled={filteredRecords.length === 0 || isLoading}
+            className="w-full sm:w-auto"
+          >
+            {isLoading ? 'Loading...' : 'Download CSV'}
+          </Button>
+        </div>
+        {filteredRecords.length === 0 && !isLoading && (
+          <p className="text-sm text-gray-500 mt-2">No records found for {selectedTaxYear}.</p>
+        )}
       </div>
     );
   }
 
-  // Full version with stats
-  return (
-    <div className={`cis-downloader ${className}`}>
-      <div className="cis-downloader-header">
-        <h3 className="cis-title">CIS Records Tracker</h3>
-        <div className="tax-year-selector">
-          <label htmlFor="cis-tax-year-select">Tax Year:</label>
-          <select
-            id="cis-tax-year-select"
-            value={selectedTaxYear}
-            onChange={handleTaxYearChange}
-            className="tax-year-select"
-            disabled={taxYears.length === 0} // Disable if no years found
-          >
-            {taxYears.length > 0 ? (
-                taxYears.map(year => (
-                    <option key={year} value={year}>{year}</option>
-                ))
-             ) : (
-                <option value={selectedTaxYear}>{selectedTaxYear}</option> // Show current if empty
-             )}
-          </select>
-        </div>
-      </div>
-
-      <div className="cis-stats">
-        <div className="cis-stat">
-          <span className="stat-label">Total CIS Deducted:</span>
-          <span className="stat-value">£{totalCis.toFixed(2)}</span>
-        </div>
-        <div className="cis-stat">
-          <span className="stat-label">Number of Records:</span>
-          <span className="stat-value">{recordCount}</span>
-        </div>
-      </div>
-
-      <div className="cis-actions">
-        <Button
-          variant="primary"
-          onClick={handleDownload}
-          disabled={recordCount === 0} // Disable download if no records for selected year
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}
-        >
-          <span className="btn-icon">📊</span>
-          Download as CSV
-        </Button>
-      </div>
-    </div>
-  );
+  // Default or invalid mode - render nothing or an error message
+  return null; 
 };
 
 export default CisDownloader; 
