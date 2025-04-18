@@ -926,8 +926,8 @@ const QuoteBuilder = () => {
           <TabPanel id="details" activeTab={activeTab}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {/* Client Details Card */}
-              <div className="bg-white shadow sm:rounded-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Client Information</h3>
+              <div className="bg-card-background shadow-sm sm:rounded-lg p-6 border border-card-border transition-colors duration-300 ease-linear">
+                <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Client Information</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     label="Client Name"
@@ -992,8 +992,8 @@ const QuoteBuilder = () => {
               </div>
 
               {/* Quote Details Card */}
-              <div className="bg-white shadow sm:rounded-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Quote Details</h3>
+              <div className="bg-card-background shadow-sm sm:rounded-lg p-6 border border-card-border transition-colors duration-300 ease-linear">
+                <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Quote Details</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     label="Quote Date"
@@ -1057,8 +1057,8 @@ const QuoteBuilder = () => {
           <TabPanel id="items" activeTab={activeTab}>
             <div className="space-y-6">
               {/* Global Settings Card */}
-              <div className="bg-white shadow sm:rounded-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Costing & Markup</h3>
+              <div className="bg-card-background shadow-sm sm:rounded-lg p-6 border border-card-border transition-colors duration-300 ease-linear">
+                <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Costing & Markup</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
                   <FormField
                     label="Global Markup %"
@@ -1089,9 +1089,9 @@ const QuoteBuilder = () => {
               </div>
 
               {/* Selected Items Card */}
-              <div className="bg-white shadow sm:rounded-lg border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                  <h3 className="text-lg font-medium leading-6 text-gray-900">Selected Items</h3>
+              <div className="bg-card-background shadow-sm sm:rounded-lg border border-card-border transition-colors duration-300 ease-linear">
+                <div className="px-6 py-4 border-b border-card-border flex justify-between items-center">
+                  <h3 className="text-lg font-medium leading-6 text-text-primary">Selected Items</h3>
                   <div className="space-x-2">
                      <Button variant="outline" size="sm" onClick={handleOpenItemDialog}>
                        Add Catalog Item
@@ -1214,9 +1214,9 @@ const QuoteBuilder = () => {
               </div>
 
               {/* Hidden Costs Card */}
-              <div className="bg-white shadow sm:rounded-lg border border-gray-200">
-                 <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                   <h3 className="text-lg font-medium leading-6 text-gray-900">Additional Costs (Hidden)</h3>
+              <div className="bg-card-background shadow-sm sm:rounded-lg border border-card-border transition-colors duration-300 ease-linear">
+                 <div className="px-6 py-4 border-b border-card-border flex justify-between items-center">
+                   <h3 className="text-lg font-medium leading-6 text-text-primary">Additional Costs (Hidden)</h3>
                    <Button variant="outline" size="sm" onClick={handleAddHiddenCost}>
                      Add Hidden Cost
                    </Button>
@@ -1277,8 +1277,8 @@ const QuoteBuilder = () => {
               </div>
 
                {/* Calculated Totals (Read Only) */}
-               <div className="bg-gray-50 shadow sm:rounded-lg p-6 border border-gray-200">
-                 <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Calculated Totals</h3>
+               <div className="bg-background-secondary shadow-sm sm:rounded-lg p-6 border border-card-border transition-colors duration-300 ease-linear">
+                 <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Calculated Totals</h3>
                  <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
                    <div className="sm:col-span-1">
                      <dt className="font-medium text-gray-500">Subtotal (Visible Items)</dt>
@@ -1309,8 +1309,8 @@ const QuoteBuilder = () => {
           <TabPanel id="exclusions" activeTab={activeTab}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Exclusions Card */}
-              <div className="bg-white shadow sm:rounded-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Exclusions</h3>
+              <div className="bg-card-background shadow-sm sm:rounded-lg p-6 border border-card-border transition-colors duration-300 ease-linear">
+                <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Exclusions</h3>
                 <p className="text-sm text-gray-500 mb-4">Items or services explicitly not included in the quote.</p>
                 <div className="space-y-3">
                   {quoteDetails.exclusions.map((exclusion, index) => (
@@ -1349,8 +1349,8 @@ const QuoteBuilder = () => {
               </div>
 
               {/* Notes Card */}
-              <div className="bg-white shadow sm:rounded-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Internal Notes</h3>
+              <div className="bg-card-background shadow-sm sm:rounded-lg p-6 border border-card-border transition-colors duration-300 ease-linear">
+                <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Internal Notes</h3>
                  <FormField
                    label="Notes"
                    id="notes"
