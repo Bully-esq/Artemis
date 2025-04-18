@@ -1870,17 +1870,6 @@ const QuoteBuilder = () => {
                 )}
               </div>
             </div> {/* End of dialog-body-content */}
-            
-            {/* Actions/Footer - Added class */}
-            <div className="dialog-actions" style={{ marginTop: '20px', textAlign: 'right', padding: '0 16px 16px', flexShrink: 0 /* Prevent footer shrinking */ }}>
-              <Button
-                variant="secondary"
-                onClick={() => setShowItemDialog(false)}
-                style={{ marginRight: '10px' }}
-              >
-                Cancel
-              </Button>
-            </div>
           </div> {/* End of outer wrapper */}
         </Dialog>
       )}
@@ -2012,16 +2001,6 @@ const QuoteBuilder = () => {
                   ))}
                 </div>
               )}
-            </div>
-            
-            <div style={{ marginTop: '20px', textAlign: 'right' }}>
-              <Button
-                variant="secondary"
-                onClick={() => setShowItemDialog(false)}
-                style={{ marginRight: '10px' }}
-              >
-                Cancel
-              </Button>
             </div>
           </div>
         </div>

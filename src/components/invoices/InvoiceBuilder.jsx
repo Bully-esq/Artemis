@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery, useQueryClient } from 'react-query';
 import { useAppContext } from '../../context/AppContext';
 import api from '../../services/api';
 import pdfGenerator from '../../services/pdfGenerator';
@@ -40,6 +40,7 @@ const InvoiceBuilder = () => {
   const [searchParams] = useSearchParams();
   const quoteId = searchParams.get('quoteId');
   const { addNotification, settings } = useAppContext();
+  const queryClient = useQueryClient(); // Get query client instance
   
   // Update the searchParams section
   const amount = searchParams.get('amount') ? parseFloat(searchParams.get('amount')) : 0;
@@ -211,6 +212,19 @@ const InvoiceBuilder = () => {
     }
   }, [id, invoiceDetails.invoiceNumber]);
   
+  // Helper function to check for line items and confirm before proceeding
+  const checkLineItems = () => {
+    if (!invoiceDetails.lineItems || invoiceDetails.lineItems.length === 0) {
+      if (window.confirm(`This invoice currently has no line items added. Are you sure you want to proceed?`)) {
+        return true; // Proceed
+      } else {
+        addNotification(`Action cancelled: Invoice has no line items.`, 'info');
+        return false; // Cancel
+      }
+    }
+    return true; // Proceed (items exist)
+  };
+  
   // Handle form submission
   const handleSubmit = async (e, dataToSubmit = invoiceDetails) => {
     e.preventDefault();
@@ -233,19 +247,36 @@ const InvoiceBuilder = () => {
 
     try {
       console.log('handleSubmit validation passed. Preparing data...');
-      const invoiceData = {
-        ...dataToSubmit, // Use the data passed in or current state
-        id: id || Date.now().toString(),
-        updatedAt: new Date().toISOString()
-      };
+      
+      // Start with the data passed in or current state
+      const invoiceData = { ...dataToSubmit }; 
 
-      if (!id && !dataToSubmit.createdAt) { // Check if createdAt exists in dataToSubmit
-        invoiceData.createdAt = new Date().toISOString();
+      // Check if it's an existing invoice (has an ID) or a new one
+      if (invoiceData.id) { 
+        // Existing invoice: ensure 'updatedAt' is set
+        invoiceData.updatedAt = new Date().toISOString();
+        // Ensure the ID from the state is used for the update
+        // No need to explicitly set invoiceData.id = id here, as it's already in invoiceData from the spread
+        console.log('handleSubmit preparing UPDATE with ID:', invoiceData.id);
+      } else {
+        // New invoice: generate ID and set 'createdAt' and 'updatedAt'
+        invoiceData.id = Date.now().toString(); 
+        const now = new Date().toISOString();
+        invoiceData.createdAt = now;
+        invoiceData.updatedAt = now; // Set updatedAt for new invoices too
+        console.log('handleSubmit preparing CREATE with new ID:', invoiceData.id);
       }
+
+      // *** Add logging here ***
+      console.log('handleSubmit FINAL data being sent to api.invoices.save:', JSON.stringify(invoiceData, null, 2)); 
 
       console.log('handleSubmit attempting to save data:', invoiceData);
       await api.invoices.save(invoiceData);
       console.log('handleSubmit save successful.');
+      
+      // *** Invalidate the invoices query cache ***
+      queryClient.invalidateQueries('invoices');
+      
       // Avoid navigation on auto-save
       // Only show success if not called from auto-save context (how to detect?)
       // Maybe add a flag or check caller? For now, always show.
@@ -282,6 +313,8 @@ const InvoiceBuilder = () => {
 
   // Generate PDF
   const handleExportPDF = async () => {
+    if (!checkLineItems()) return; // Check for line items
+
     try {
       // First save the invoice
       await handleSaveInvoice();
@@ -350,12 +383,16 @@ const InvoiceBuilder = () => {
 
   // Handle emails
   const handleEmailInvoice = () => {
+    // The check will happen when actions are chosen in the dialog
     setShowEmailDialog(true);
   };
 
   // Handle save invoice
   const handleSaveInvoice = async (invoiceDataToSave = invoiceDetails) => {
     console.log('handleSaveInvoice called. Data received:', invoiceDataToSave);
+    // Add logging here:
+    console.log('Current invoiceDetails state ID before handleSubmit:', invoiceDetails?.id); 
+    console.log('Data being passed to handleSubmit ID:', invoiceDataToSave?.id); 
     // Use invoiceDataToSave instead of relying solely on invoiceDetails state
     try {
       // We need to manually trigger the form submission logic
@@ -866,6 +903,8 @@ const InvoiceBuilder = () => {
 
   // Create a safer export PDF function that ensures preview is visible
   const safeExportPDF = async () => {
+    if (!checkLineItems()) return false; // Check for line items
+
     try {
       // First save the invoice
       await handleSaveInvoice();
@@ -929,6 +968,10 @@ const InvoiceBuilder = () => {
         if (invoiceIdToDelete) { 
           // Delete the invoice if it exists in the database
           await api.invoices.delete(invoiceIdToDelete); // Use the ID from state
+          
+          // *** Invalidate the invoices query cache ***
+          queryClient.invalidateQueries('invoices');
+          
           addNotification('Invoice deleted successfully', 'success');
         } else {
           // If no ID in state, treat as a draft
@@ -964,6 +1007,8 @@ const InvoiceBuilder = () => {
 
   // Add function to export PDF and open email client
   const handleExportAndOpenEmail = async () => {
+    if (!checkLineItems()) return; // Check for line items
+
     try {
       // First save the invoice
       await handleSaveInvoice();
@@ -1041,6 +1086,8 @@ const InvoiceBuilder = () => {
 
   // Add handleOpenEmailClient function
   const handleOpenEmailClient = () => {
+    if (!checkLineItems()) return; // Check for line items
+
     const subject = `${invoiceDetails.client.address}`;
     const body = `Hi ${invoiceDetails.clientName},\n\nPlease find attached your invoice (${invoiceDetails.invoiceNumber}) for ${invoiceDetails.description || 'your project'}.\n\nThe invoice is due by ${
       invoiceDetails.dueDate ? new Date(invoiceDetails.dueDate).toLocaleDateString('en-GB') : 'the date specified'

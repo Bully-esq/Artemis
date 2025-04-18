@@ -26,8 +26,6 @@ const ContactList = () => {
   
   // State
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterCompanies, setFilterCompanies] = useState(true);
-  const [filterIndividuals, setFilterIndividuals] = useState(true);
   const [showAddContactDialog, setShowAddContactDialog] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
   const [alphabetFilter, setAlphabetFilter] = useState('All');
@@ -63,10 +61,6 @@ const ContactList = () => {
     if (!contacts) return [];
     
     return contacts.filter(contact => {
-      // Apply type filter
-      if (contact.customerType === 'company' && !filterCompanies) return false;
-      if (contact.customerType === 'individual' && !filterIndividuals) return false;
-      
       // Apply search filter
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
@@ -85,7 +79,7 @@ const ContactList = () => {
       
       return true;
     });
-  }, [contacts, searchTerm, filterCompanies, filterIndividuals]);
+  }, [contacts, searchTerm]);
   
   // Helper to format contact display name
   const getContactDisplayName = (contact) => {
@@ -100,11 +94,8 @@ const ContactList = () => {
   const sortedContacts = React.useMemo(() => {
     if (!contacts) return [];
     
-    // Filter first based on search and type
+    // Filter first based on search only
     let initiallyFiltered = contacts.filter(contact => {
-      if (contact.customerType === 'company' && !filterCompanies) return false;
-      if (contact.customerType === 'individual' && !filterIndividuals) return false;
-      
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         const displayName = getContactDisplayName(contact).toLowerCase();
@@ -133,7 +124,7 @@ const ContactList = () => {
     return [...initiallyFiltered].sort((a, b) => {
       return getContactDisplayName(a).localeCompare(getContactDisplayName(b));
     });
-  }, [contacts, searchTerm, filterCompanies, filterIndividuals, alphabetFilter]);
+  }, [contacts, searchTerm, alphabetFilter]);
   
   // Handle contact click
   const handleContactClick = (contact) => {
@@ -279,28 +270,6 @@ const ContactList = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
-          <div className="checkbox-filters">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                className="checkbox-input"
-                checked={filterCompanies}
-                onChange={() => setFilterCompanies(!filterCompanies)}
-              />
-              <span className="checkbox-text">Companies</span>
-            </label>
-            
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                className="checkbox-input"
-                checked={filterIndividuals}
-                onChange={() => setFilterIndividuals(!filterIndividuals)}
-              />
-              <span className="checkbox-text">Individuals</span>
-            </label>
-          </div>
         </div>
       </div>
       
@@ -334,16 +303,16 @@ const ContactList = () => {
               <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
             </svg>
             <h3 className="empty-state-title">
-              {searchTerm || alphabetFilter !== 'All' || !filterCompanies || !filterIndividuals ? 
+              {searchTerm || alphabetFilter !== 'All' ?
                 'No contacts match your search criteria' : 
                 "You haven't added any contacts yet"}
             </h3>
             <p className="empty-state-description">
-              {searchTerm || alphabetFilter !== 'All' || !filterCompanies || !filterIndividuals ? 
+              {searchTerm || alphabetFilter !== 'All' ?
                 "Try adjusting your search or filters to find what you're looking for." : 
                 'Get started by adding your first contact.'}
             </p>
-            {!searchTerm && alphabetFilter === 'All' && filterCompanies && filterIndividuals && (
+            {!searchTerm && alphabetFilter === 'All' && (
               <Button variant="primary" onClick={() => setShowAddContactDialog(true)}>
                 Add Your First Contact
               </Button>

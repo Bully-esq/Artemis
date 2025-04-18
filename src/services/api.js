@@ -250,6 +250,8 @@ export const invoicesApi = {
   },
   
   save: async (invoice) => {
+    // Reverted: Always use POST, backend handles upsert
+    console.log(`API: Saving invoice (using POST for create/update): ${invoice.id}`);
     const response = await apiClient.post('/invoices', { invoice });
     return response.data;
   },
