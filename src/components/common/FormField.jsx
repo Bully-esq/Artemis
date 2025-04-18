@@ -22,6 +22,10 @@ import React from 'react';
  * @param {number} [props.step] - Step value for number input
  * @param {React.ReactNode} [props.prefix] - Element to display before the input (e.g., currency symbol)
  * @param {React.ReactNode} [props.suffix] - Element to display after the input (e.g., unit)
+ * @param {boolean} [props.labelSrOnly] - If true, label is visually hidden but accessible
+ * @param {string} [props.labelClassName] - Additional classes for the label element
+ * @param {string} [props.labelText] - Alternative label text (e.g., for checkbox/toggle side label)
+ * @param {Array<{value: string | number, label: string, disabled?: boolean}>} [props.options] - Options array for select dropdown
  */
 const FormField = ({
   label,
@@ -42,7 +46,12 @@ const FormField = ({
   step,
   prefix,
   suffix,
-  ...rest
+  // Props passed down from parent that shouldn't reach the DOM input/select
+  labelSrOnly, // Destructure to capture it
+  labelClassName, // Destructure to capture it
+  labelText, // Capture this one too if used (e.g., for checkbox label text)
+  options, // Capture options if passed for select, prevents it going to ...rest
+  ...rest // Now 'rest' won't contain the above
 }) => {
 
   const id = name || label?.toLowerCase().replace(/\s+/g, '-');
@@ -54,14 +63,14 @@ const FormField = ({
   
   const finalInputClasses = `${baseInputStyles} ${paddingStyles} ${errorStyles} ${inputClassName}`.trim().replace(/\s+/g, ' ');
   
-  // Label component
+  // Label component - Use labelSrOnly and labelClassName here
   const labelComponent = label ? (
-    <label 
-      htmlFor={id} 
-      className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
+    <label
+      htmlFor={id}
+      className={`block text-sm font-medium text-[var(--text-secondary)] mb-1 ${labelClassName || ''} ${labelSrOnly ? 'sr-only' : ''}`} // Apply classes here
     >
       {label}
-      {required && <span className="ml-1 text-red-500">*</span>}
+      {required && !labelSrOnly && <span className="ml-1 text-red-500">*</span>}
     </label>
   ) : null;
   
@@ -88,7 +97,8 @@ const FormField = ({
           </span>
         )}
         {React.cloneElement(inputElement, {
-          className: `${inputElement.props.className} ${prefix ? 'rounded-l-none' : ''} ${suffix ? 'rounded-r-none' : ''}`
+          // Ensure correct classes applied to the input *inside* the addon wrapper
+          className: `${inputElement.props.className} ${prefix ? 'rounded-l-none focus:z-10' : ''} ${suffix ? 'rounded-r-none focus:z-10' : ''}`.trim().replace(/\s+/g, ' ')
         })}
         {suffix && (
           <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-[var(--input-border)] bg-gray-50 dark:bg-gray-700 text-[var(--text-secondary)] sm:text-sm">
@@ -112,9 +122,9 @@ const FormField = ({
             placeholder={placeholder}
             required={required}
             disabled={disabled}
-            className={finalInputClasses}
+            className={finalInputClasses} // Base classes applied here
             rows={rest.rows || 3}
-            {...rest}
+            {...rest} // Spread the sanitized rest props
           />
         );
         
@@ -127,9 +137,16 @@ const FormField = ({
             onChange={onChange}
             required={required}
             disabled={disabled}
-            className={`${finalInputClasses} pr-10 bg-none`}
-            {...rest}
+            className={`${finalInputClasses} pr-10 bg-none`} // Base classes applied here
+            {...rest} // Spread the sanitized rest props
           >
+            {/* Render options passed via the 'options' prop */}
+            {options && options.map(option => (
+              <option key={option.value} value={option.value} disabled={option.disabled}>
+                {option.label}
+              </option>
+            ))}
+            {/* Also render any direct children passed (legacy or specific use case) */}
             {children}
           </select>
         );
@@ -145,13 +162,16 @@ const FormField = ({
               checked={!!value} // Ensure boolean value
               onChange={onChange}
               disabled={disabled}
+              // Apply inputClassName, but not base styles meant for text inputs
               className={`h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-[var(--primary)] focus:ring-[var(--primary)] ${inputClassName}`}
-              {...rest}
+              {...rest} // Spread the sanitized rest props
             />
-            {label && (
-              <label htmlFor={id} className="ml-2 block text-sm text-[var(--text-secondary)] cursor-pointer">
-                {label}
-                {required && <span className="ml-1 text-red-500">*</span>}
+            {/* Use labelText prop if available, otherwise fallback to label */}
+            {(labelText || label) && (
+              <label htmlFor={id} className={`ml-2 block text-sm text-[var(--text-secondary)] cursor-pointer ${labelClassName || ''} ${labelSrOnly ? 'sr-only' : ''}`}>
+                {labelText || label}
+                {/* Don't show required star if label is sr-only */}
+                {required && !labelSrOnly && <span className="ml-1 text-red-500">*</span>}
               </label>
             )}
           </div>
@@ -163,22 +183,25 @@ const FormField = ({
            <div className="flex items-center">
              <button
                type="button"
-               className={`${ !!value ? 'bg-[var(--primary)]' : 'bg-gray-200 dark:bg-gray-600' } relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+               className={`${ !!value ? 'bg-[var(--primary)]' : 'bg-gray-200 dark:bg-gray-600' } relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${inputClassName}`} // Allow specific toggle styling
                role="switch"
                aria-checked={!!value}
                onClick={(e) => { if (!disabled && onChange) onChange({ target: { name, value: !value, type: 'toggle' } }) }}
                disabled={disabled}
+               {...rest} // Spread sanitized rest here too
              >
-               <span className="sr-only">{label}</span>
+               <span className="sr-only">{label}</span> {/* Use main label for SR */}
                <span
                  aria-hidden="true"
                  className={`${ !!value ? 'translate-x-4' : 'translate-x-0' } pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
                />
              </button>
-             {label && (
-                <label onClick={(e) => { if (!disabled && onChange) onChange({ target: { name, value: !value, type: 'toggle' } }) }} className="ml-3 text-sm text-[var(--text-secondary)] cursor-pointer">
-                  {label}
-                  {required && <span className="ml-1 text-red-500">*</span>}
+             {/* Use labelText prop if available, otherwise fallback to label */}
+             {(labelText || label) && (
+                <label onClick={(e) => { if (!disabled && onChange) onChange({ target: { name, value: !value, type: 'toggle' } }) }} className={`ml-3 text-sm text-[var(--text-secondary)] cursor-pointer ${labelClassName || ''} ${labelSrOnly ? 'sr-only' : ''}`}>
+                  {labelText || label}
+                   {/* Don't show required star if label is sr-only */}
+                  {required && !labelSrOnly && <span className="ml-1 text-red-500">*</span>}
                 </label>
              )}
           </div>
@@ -200,19 +223,20 @@ const FormField = ({
             placeholder={placeholder}
             required={required}
             disabled={disabled}
-            className={finalInputClasses}
+            className={finalInputClasses} // Base classes applied here
             min={min}
             max={max}
             step={step}
-            {...rest}
+            {...rest} // Spread the sanitized rest props
           />
         );
     }
   };
   
-  // Render the field with wrapper, label (if not checkbox), error, help text
+  // Render the field with wrapper, label (if not checkbox/toggle), error, help text
   return (
     <div className={`mb-4 ${className}`}> {/* Use default margin */}
+      {/* Render label outside checkbox/toggle */}
       {type !== 'checkbox' && type !== 'toggle' && labelComponent}
       {renderField()}
       {errorComponent}

@@ -138,6 +138,18 @@ const ItemSelector = ({
     // NOTE: Dialog closing is handled by the parent component
   };
   
+  // === NEW: Handle category change from dropdown ===
+  const handleCategoryChange = (event) => {
+    const value = event.target.value;
+    setActiveCategories(value === 'all' ? [] : [value]);
+  };
+  
+  // === NEW: Handle supplier change from dropdown ===
+  const handleSupplierChange = (event) => {
+    const value = event.target.value;
+    setActiveSuppliers(value === 'all' ? [] : [value]);
+  };
+  
   return (
     <div className="space-y-4">
       {/* Search */}
@@ -152,44 +164,44 @@ const ItemSelector = ({
       {/* Category filters */}
       <div className="space-y-2">
         <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Categories</div>
-        <div className="flex flex-wrap gap-2">
-          {categories.map(category => (
-            <button
-              key={category.id}
-              className={`
-                px-3 py-1 rounded-md text-sm font-medium transition-colors
-                ${activeCategories.includes(category.id)
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}
-              `}
-              onClick={() => toggleCategory(category.id)}
-            >
-              {category.label}
-            </button>
-          ))}
-        </div>
+        
+        {/* Category Dropdown (Always visible) */}
+        <FormField 
+          type="select"
+          id="category-filter-dropdown"
+          label="Category Filter"
+          labelSrOnly
+          value={activeCategories.length === 1 ? activeCategories[0] : 'all'}
+          onChange={handleCategoryChange}
+          options={[
+            { value: 'all', label: 'All Categories' },
+            ...categories.map(c => ({ value: c.id, label: c.label }))
+          ]}
+          className="w-full" // Make dropdown full width
+          inputClassName="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+        />
       </div>
       
       {/* Supplier filters */}
       {suppliers.length > 0 && (
         <div className="space-y-2">
           <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Suppliers</div>
-          <div className="flex flex-wrap gap-2">
-            {suppliers.map(supplier => (
-              <button
-                key={supplier.id}
-                className={`
-                  px-3 py-1 rounded-md text-sm font-medium transition-colors
-                  ${activeSuppliers.includes(supplier.id)
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}
-                `}
-                onClick={() => toggleSupplier(supplier.id)}
-              >
-                {supplier.name}
-              </button>
-            ))}
-          </div>
+          
+          {/* Supplier Dropdown (Always visible) */}
+          <FormField 
+            type="select"
+            id="supplier-filter-dropdown"
+            label="Supplier Filter"
+            labelSrOnly
+            value={activeSuppliers.length === 1 ? activeSuppliers[0] : 'all'}
+            onChange={handleSupplierChange}
+            options={[
+              { value: 'all', label: 'All Suppliers' },
+              ...suppliers.map(s => ({ value: s.id, label: s.name }))
+            ]}
+            className="w-full" // Make dropdown full width
+            inputClassName="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          />
         </div>
       )}
       
