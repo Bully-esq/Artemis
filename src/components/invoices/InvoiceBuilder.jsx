@@ -7,7 +7,6 @@ import pdfGenerator from '../../services/pdfGenerator';
 import { formatDate } from '../../utils/formatters';
 import html2pdf from 'html2pdf.js'; // Add html2pdf import
 import '../../styles/index.css'; // Updated to use modular CSS structure
-import { saveCisDeduction, deleteCisRecord } from '../../services/cisTracker'; // Import CIS tracker service
 
 // Components
 import Button from '../common/Button';
@@ -234,57 +233,78 @@ const InvoiceBuilder = () => {
     if (!dataToSubmit.clientName) {
       addNotification('Client name is required', 'error');
       console.log('handleSubmit validation failed: Missing clientName');
-      return;
+      return null; // Return null on validation error
     }
 
-    if (!dataToSubmit.amount || dataToSubmit.amount <= 0) {
-      addNotification('Amount must be greater than zero', 'error');
-      console.log('handleSubmit validation failed: Invalid amount');
-      return;
+    if (!dataToSubmit.amount || dataToSubmit.amount <= 0 && dataToSubmit.lineItems?.length > 0) { // Allow zero amount if no line items (e.g. draft)
+      // Check if CIS is applied - if so, amount can be zero or negative
+      if (!dataToSubmit.cisApplied) {
+         addNotification('Amount must be greater than zero unless CIS is applied', 'error');
+         console.log('handleSubmit validation failed: Invalid amount');
+         return null; // Return null on validation error
+      }
     }
-    
+
     // Add more validation if needed...
 
     try {
       console.log('handleSubmit validation passed. Preparing data...');
-      
-      // Start with the data passed in or current state
-      const invoiceData = { ...dataToSubmit }; 
 
-      // Check if it's an existing invoice (has an ID) or a new one
-      if (invoiceData.id) { 
-        // Existing invoice: ensure 'updatedAt' is set
+      // Start with the data passed in or current state
+      let invoiceData = { ...dataToSubmit };
+
+      // Use the ID from the URL params if available and not already in data
+      if (id && !invoiceData.id) {
+        invoiceData.id = id;
+      }
+
+      // Check if it's an existing invoice or a new one
+      if (invoiceData.id) {
         invoiceData.updatedAt = new Date().toISOString();
-        // Ensure the ID from the state is used for the update
-        // No need to explicitly set invoiceData.id = id here, as it's already in invoiceData from the spread
         console.log('handleSubmit preparing UPDATE with ID:', invoiceData.id);
       } else {
-        // New invoice: generate ID and set 'createdAt' and 'updatedAt'
-        invoiceData.id = Date.now().toString(); 
+        // Generate ID if still missing (should ideally happen earlier)
+        invoiceData.id = invoiceData.id || `inv-${Date.now().toString()}`;
         const now = new Date().toISOString();
-        invoiceData.createdAt = now;
-        invoiceData.updatedAt = now; // Set updatedAt for new invoices too
+        invoiceData.createdAt = invoiceData.createdAt || now;
+        invoiceData.updatedAt = now;
         console.log('handleSubmit preparing CREATE with new ID:', invoiceData.id);
       }
 
-      // *** Add logging here ***
-      console.log('handleSubmit FINAL data being sent to api.invoices.save:', JSON.stringify(invoiceData, null, 2)); 
+      console.log('handleSubmit FINAL data being sent to api.invoices.save:', JSON.stringify(invoiceData, null, 2));
 
       console.log('handleSubmit attempting to save data:', invoiceData);
-      await api.invoices.save(invoiceData);
-      console.log('handleSubmit save successful.');
-      
-      // *** Invalidate the invoices query cache ***
+      // *** The API save call ***
+      const response = await api.invoices.save(invoiceData);
+      console.log('handleSubmit save successful. Response:', response);
+
+      // Ensure we have the final saved invoice data from the response
+      const savedInvoice = response.invoice || { ...invoiceData, id: response.id || invoiceData.id }; // Use response data if available
+
+      // *** Update React Query Cache ***
+      // 1. Update the cache for *this specific* invoice immediately
+      if (savedInvoice.id) {
+          console.log(`Updating cache for ['invoice', ${savedInvoice.id}]`);
+          queryClient.setQueryData(['invoice', savedInvoice.id], savedInvoice);
+          // Optionally invalidate to trigger background refetch for absolute certainty
+          // queryClient.invalidateQueries(['invoice', savedInvoice.id]); 
+      }
+
+      // 2. Invalidate the query for the list of all invoices
+      console.log("Invalidating cache for ['invoices'] list.");
       queryClient.invalidateQueries('invoices');
-      
-      // Avoid navigation on auto-save
-      // Only show success if not called from auto-save context (how to detect?)
-      // Maybe add a flag or check caller? For now, always show.
+
       addNotification('Invoice saved successfully', 'success');
-      // navigate('/invoices'); // Remove navigation for auto-save
+      // navigate('/invoices'); // Keep navigation commented out for auto-save
+
+      // *** Return the saved invoice data ***
+      return savedInvoice; 
+
     } catch (error) {
       console.error('handleSubmit error during save:', error);
       addNotification(`Error saving invoice: ${error.message}`, 'error');
+      // *** Return null or throw error on failure ***
+      return null; // Or potentially throw error
     }
   };
   
@@ -390,20 +410,16 @@ const InvoiceBuilder = () => {
   // Handle save invoice
   const handleSaveInvoice = async (invoiceDataToSave = invoiceDetails) => {
     console.log('handleSaveInvoice called. Data received:', invoiceDataToSave);
-    // Add logging here:
-    console.log('Current invoiceDetails state ID before handleSubmit:', invoiceDetails?.id); 
-    console.log('Data being passed to handleSubmit ID:', invoiceDataToSave?.id); 
-    // Use invoiceDataToSave instead of relying solely on invoiceDetails state
     try {
-      // We need to manually trigger the form submission logic
-      // but use the provided data or current state
       const eventStub = { preventDefault: () => {} };
-      // Log the data being saved
       console.log("handleSaveInvoice passing data to handleSubmit:", invoiceDataToSave);
-      await handleSubmit(eventStub, invoiceDataToSave); // Pass data to handleSubmit
+      // *** Capture and return the result from handleSubmit ***
+      const savedResult = await handleSubmit(eventStub, invoiceDataToSave); 
+      return savedResult; // Return the saved invoice object or null
     } catch (error) {
       console.error('Error in handleSaveInvoice:', error);
       addNotification('Auto-save failed.', 'error');
+      return null; // Return null on error
     }
   };
 
@@ -610,397 +626,260 @@ const InvoiceBuilder = () => {
   // Handle Apply CIS
   const handleApplyCIS = async () => {
     console.log("Starting CIS application...");
-    console.log('Current line items before CIS:', JSON.stringify(invoiceDetails.lineItems, null, 2)); // DEBUG: Log current items
 
-    if (invoiceDetails.cisApplied) {
-        addNotification('CIS has already been applied to this invoice', 'info');
-        return;
+    // --- Ensure Invoice is Saved FIRST ---
+    let currentInvoiceData = { ...invoiceDetails }; // Work with a local copy
+    if (!currentInvoiceData.id) {
+      addNotification("Saving invoice before applying CIS...", "info");
+      const savedInvoice = await handleSaveInvoice(); // Call save
+      if (!savedInvoice || !savedInvoice.id) {
+        addNotification("Failed to save invoice. Cannot apply CIS.", "error");
+        return; // Stop if save failed
+      }
+      // Update local copy and potentially state (though state update might be delayed)
+      currentInvoiceData = savedInvoice; 
+      // It's generally safer to use the ID from the returned object `savedInvoice.id`
+      // than relying on `invoiceDetails.id` immediately after a state update inside the same function.
+      console.log(`Invoice saved/updated. Using ID: ${currentInvoiceData.id}`);
+    } else {
+      console.log(`Invoice already has ID: ${currentInvoiceData.id}. Proceeding with CIS.`);
     }
 
-    // Capture the original gross amount BEFORE any modifications
-    const originalGrossAmount = invoiceDetails.amount || 0;
-    console.log("DEBUG - Original Gross Amount:", originalGrossAmount);
+    // --- Proceed with existing CIS logic, using currentInvoiceData ---
+    // Use currentInvoiceData instead of invoiceDetails for checks and payload
+    
+    if (currentInvoiceData.cisApplied) {
+      addNotification('CIS has already been applied to this invoice', 'info');
+      return;
+    }
 
-
+    const originalGrossAmount = currentInvoiceData.amount || 0;
     if (originalGrossAmount <= 0) {
-        addNotification('Invoice amount must be greater than zero to apply CIS.', 'warning');
-        return;
+      addNotification('Invoice amount must be greater than zero to apply CIS.', 'warning');
+      return;
     }
 
     try {
-        // --- STEP 1: Find all labor items in the connected quote (Keep this) ---
-        let quoteLabourItems = [];
-        let quoteLabourTotal = 0;
-        let quoteData = null;
+      // --- Labor Calculation ---
+      let quoteLabourTotal = 0;
+      if (currentInvoiceData.quoteId) {
+         // Fetch quote data using queryClient.getQueryData or api.quotes.getById
+         const quoteData = queryClient.getQueryData(['quote', currentInvoiceData.quoteId]) || await api.quotes.getById(currentInvoiceData.quoteId);
+         if (quoteData) {
+             const quoteItems = quoteData.selectedItems || quoteData.lineItems || [];
+             const quoteLabourItems = quoteItems.filter(item =>
+                 item.category === 'labour' || item.isLabour === true || (item.type && item.type.toLowerCase() === 'labour') ||
+                 (item.description && (item.description.toLowerCase().includes('labour') || item.description.toLowerCase().includes('labor') || item.description.toLowerCase().includes('install') || item.description.toLowerCase().includes('fitting'))) ||
+                 (item.name && (item.name.toLowerCase().includes('labour') || item.name.toLowerCase().includes('labor') || item.name.toLowerCase().includes('install') || item.name.toLowerCase().includes('fitting')))
+             );
+             quoteLabourTotal = quoteLabourItems.reduce((sum, item) => {
+                 const itemAmount = parseFloat(item.cost || item.amount || 0);
+                 const itemQuantity = parseFloat(item.quantity || 1);
+                 return sum + (itemAmount * itemQuantity);
+             }, 0);
+             console.log("DEBUG - Quote Labor Total Calculated:", quoteLabourTotal);
+         }
+      }
+      
+      // Calculate manual labor total *before* using it
+      const manualLineItems = currentInvoiceData.lineItems || [];
+      const manualLabourItems = manualLineItems.filter(item =>
+          !item.type || item.type !== 'cis' // Exclude the CIS deduction itself if present
+      ).filter(item =>
+          item.isLabour === true || // Explicit flag
+          item.category === 'labour' || // Explicit category
+          (item.description && (item.description.toLowerCase().includes('labour') || item.description.toLowerCase().includes('labor') || item.description.toLowerCase().includes('install') || item.description.toLowerCase().includes('fitting'))) ||
+          (item.name && (item.name.toLowerCase().includes('labour') || item.name.toLowerCase().includes('labor') || item.name.toLowerCase().includes('install') || item.name.toLowerCase().includes('fitting')))
+      );
+      const manualLabourTotal = manualLabourItems.reduce((sum, item) => {
+          const itemAmount = parseFloat(item.amount || 0);
+          const itemQuantity = parseFloat(item.quantity || 1);
+          return sum + (itemAmount > 0 ? (itemAmount * itemQuantity) : 0); // Ignore negative amounts
+      }, 0);
+      console.log("DEBUG - Manual Invoice Labour Total Calculated:", manualLabourTotal);
+      
+      // Now calculate totalLaborAmount
+      let totalLaborAmount = quoteLabourTotal + manualLabourTotal;
+      console.log(`DEBUG - Combined Labour Total (Quote: ${quoteLabourTotal.toFixed(2)}, Manual: ${manualLabourTotal.toFixed(2)}): ${totalLaborAmount.toFixed(2)}`);
 
-        if (invoiceDetails.quoteId) {
-            quoteData = await api.quotes.getById(invoiceDetails.quoteId);
-            console.log("Quote data for CIS analysis:", quoteData);
+      if (totalLaborAmount <= 0.01) { // Check combined total
+        addNotification('No labour items found. CIS not applied.', 'warning');
+        return;
+      }
+      if (totalLaborAmount > originalGrossAmount) {
+        totalLaborAmount = originalGrossAmount; // Clamp
+      }
 
-            if (quoteData) {
-                const quoteItems = quoteData.selectedItems || quoteData.lineItems || [];
-                // Labour identification logic for quote items (keep as is)
-                quoteLabourItems = quoteItems.filter(item =>
-                    item.category === 'labour' ||
-                    item.isLabour === true ||
-                    (item.type && item.type.toLowerCase() === 'labour')
-                );
-                if (quoteLabourItems.length === 0) {
-                    quoteLabourItems = quoteItems.filter(item =>
-                        (item.description && (
-                            item.description.toLowerCase().includes('labour') ||
-                            item.description.toLowerCase().includes('labor') ||
-                            item.description.toLowerCase().includes('install') ||
-                            item.description.toLowerCase().includes('fitting')
-                        )) ||
-                        (item.name && (
-                            item.name.toLowerCase().includes('labour') ||
-                            item.name.toLowerCase().includes('labor') ||
-                            item.name.toLowerCase().includes('install') ||
-                            item.name.toLowerCase().includes('fitting')
-                        ))
-                    );
-                }
+      // --- CIS Calculation ---
+      const nonLaborAmount = originalGrossAmount - totalLaborAmount;
+      const cisRate = settings?.cis?.rate || 0.20; // Use settings rate if available
+      const cisDeduction = totalLaborAmount * cisRate;
+      const netAmount = originalGrossAmount - cisDeduction;
 
-                console.log("Quote Labor items found:", quoteLabourItems);
+      // --- Create New Line Items ---
+      const newLineItems = [];
+      if (nonLaborAmount > 0.01) { newLineItems.push({ /*...*/ description: "Materials/Non-Labour", amount: nonLaborAmount, quantity: 1 }); }
+      if (totalLaborAmount > 0.01) { newLineItems.push({ /*...*/ description: "Labour Charges", amount: totalLaborAmount, quantity: 1 }); }
+      newLineItems.push({ /*...*/ description: `CIS Deduction (${(cisRate * 100).toFixed(0)}%)`, amount: -cisDeduction, quantity: 1, type: 'cis' });
 
-                quoteLabourTotal = quoteLabourItems.reduce((sum, item) => {
-                    const itemAmount = parseFloat(item.cost || item.amount || 0);
-                    const itemQuantity = parseFloat(item.quantity || 1);
-                    return sum + (itemAmount * itemQuantity);
-                }, 0);
+      // --- Prepare Updated State (WITHOUT explicitly creating CIS record here) ---
+      const originalItems = [...currentInvoiceData.lineItems];
+      const updatedInvoiceState = {
+        ...currentInvoiceData, // Use data potentially updated by save
+        lineItems: newLineItems,
+        amount: netAmount,
+        cisApplied: true, // Signal backend to apply CIS
+        cisDeduction: cisDeduction, // Send calculated values
+        laborTotal: totalLaborAmount,
+        originalGrossAmount: originalGrossAmount,
+        originalLineItemsBeforeCIS: originalItems,
+        // Let the backend handle creating/assigning cisRecordId on save
+        cisRecordId: currentInvoiceData.cisRecordId || null // Preserve existing ID if somehow already set, otherwise null
+      };
 
-                console.log("DEBUG - Total quote labor amount calculated:", quoteLabourTotal);
-            }
-        }
+      // --- Save the final invoice state WITH CIS details prepared ---
+      console.log("Saving invoice state with CIS details prepared...");
+      // The backend /api/invoices POST should now handle CIS record creation/linking
+      const savedInvoiceWithCIS = await handleSaveInvoice(updatedInvoiceState);
 
-        // --- ADDED: Identify labour in current manual invoice items ---
-        const manualLineItems = invoiceDetails.lineItems || [];
-        const manualLabourItems = manualLineItems.filter(item =>
-            !item.type || item.type !== 'cis' // Exclude previous CIS deductions/adjustments
-        ).filter(item =>
-            // Check description for keywords
-            (item.description && (
-                item.description.toLowerCase().includes('labour') ||
-                item.description.toLowerCase().includes('labor') ||
-                item.description.toLowerCase().includes('install') ||
-                item.description.toLowerCase().includes('fitting')
-            )) ||
-            // Check name for keywords (if name property exists on manual items)
-            (item.name && (
-                item.name.toLowerCase().includes('labour') ||
-                item.name.toLowerCase().includes('labor') ||
-                item.name.toLowerCase().includes('install') ||
-                item.name.toLowerCase().includes('fitting')
-            ))
-            // Note: No category or isLabour check needed/available for typical quick-add items now
-        );
-
-        console.log("DEBUG - Manual Labour Items Found in Invoice:", manualLabourItems);
-
-        const manualLabourTotal = manualLabourItems.reduce((sum, item) => {
-            const itemAmount = parseFloat(item.amount || 0);
-            const itemQuantity = parseFloat(item.quantity || 1);
-            // Ensure we don't double-count negative CIS lines if filtering failed
-            return sum + (itemAmount > 0 ? (itemAmount * itemQuantity) : 0);
-        }, 0);
-
-        console.log("DEBUG - Manual Labour Total Calculated:", manualLabourTotal);
-
-
-        // --- STEP 2: Determine the final labor amount to use (REVISED) ---
-        // Combine labour found in quote and manually added items
-        let totalLaborAmount = quoteLabourTotal + manualLabourTotal;
-        console.log(`DEBUG - Combined Labour Total (Quote: ${quoteLabourTotal.toFixed(2)}, Manual: ${manualLabourTotal.toFixed(2)}): ${totalLaborAmount.toFixed(2)}`);
-
-        // --- ADDED: Check if any labour was found ---
-        if (totalLaborAmount <= 0.01) { // Use threshold for float comparison
-            addNotification('No labour items found in quote or invoice line items based on keywords (labour, install, fitting). CIS not applied.', 'warning');
-            return; // Exit the function if no labour identified
-        }
-
-        // --- Sanity check (Keep this) ---
-        console.log("DEBUG - Final Labour Amount before Sanity Check:", totalLaborAmount);
-        if (totalLaborAmount > originalGrossAmount) {
-            console.warn(`Combined Labour amount (£${totalLaborAmount.toFixed(2)}) exceeds invoice gross amount (£${originalGrossAmount.toFixed(2)}). Clamping to gross amount.`);
-            totalLaborAmount = originalGrossAmount;
-        }
-        console.log("DEBUG - Final Labour Amount after Sanity Check:", totalLaborAmount);
-
-
-        // --- STEP 3: Calculate CIS deduction (Keep this, uses updated totalLaborAmount) ---
-        const nonLaborAmount = originalGrossAmount - totalLaborAmount;
-        const cisRate = 0.20;
-        const cisDeduction = totalLaborAmount * cisRate;
-        const netAmount = originalGrossAmount - cisDeduction;
-
-        console.log(`
-            Original Gross: £${originalGrossAmount.toFixed(2)}
-            Total Identified Labour: £${totalLaborAmount.toFixed(2)}
-            Calculated Non-Labor: £${nonLaborAmount.toFixed(2)}
-            CIS Rate: ${(cisRate * 100).toFixed(0)}%
-            CIS Deduction: £${cisDeduction.toFixed(2)}
-            Net Amount: £${netAmount.toFixed(2)}
-        `);
-
-        // --- STEP 4: Create new line items (Keep this structure) ---
-        const newLineItems = [];
-
-        // Add non-labor item if applicable
-        if (nonLaborAmount > 0.01) {
-            newLineItems.push({
-                id: `nonlabor-${Date.now()}`,
-                description: "Materials/Non-Labour",
-                amount: nonLaborAmount,
-                quantity: 1
-            });
-        }
-
-        // Add labor item
-        if (totalLaborAmount > 0.01) {
-            newLineItems.push({
-                id: `labour-${Date.now()}`,
-                description: "Labour Charges", // Standardized description
-                amount: totalLaborAmount,
-                quantity: 1,
-                // isLabour: true, // Can optionally add this back for styling/display purposes if needed
-                // category: 'labour' // Can optionally add this back
-            });
-        }
-
-        // Add CIS deduction line
-        newLineItems.push({
-            id: `cis-${Date.now()}`,
-            description: `CIS Deduction (${(cisRate * 100).toFixed(0)}%)`,
-            amount: -cisDeduction,
-            quantity: 1,
-            type: 'cis'
-        });
-
-        // --- STEP 5: Store original line items before updating state ---
-        const originalItems = [...invoiceDetails.lineItems]; // Make a copy
-
-        // --- STEP 6: Prepare the updated state object ---
-        let updatedInvoiceState = {
-            ...invoiceDetails, // Start with current state
-            lineItems: newLineItems,
-            amount: netAmount,
-            cisApplied: true,
-            cisDeduction: cisDeduction,
-            laborTotal: totalLaborAmount,
-            originalGrossAmount: originalGrossAmount,
-            originalLineItemsBeforeCIS: originalItems, // Store original items
-            cisRecordId: null // Initialize cisRecordId
-        };
-
-        // --- STEP 7: Save the CIS deduction to the tracker and store its ID ---
-        let savedRecordId = null;
-        try {
-            const cisRecord = {
-                invoiceId: invoiceDetails.id || `temp-${Date.now()}`,
-                invoiceNumber: invoiceDetails.invoiceNumber || 'Draft Invoice',
-                clientName: invoiceDetails.clientName || 'Unknown Client',
-                clientCompany: invoiceDetails.clientCompany || '',
-                laborAmount: totalLaborAmount,
-                cisRate: cisRate,
-                cisDeduction: cisDeduction,
-                date: invoiceDetails.invoiceDate || new Date().toISOString()
-            };
-
-            // Save to CIS tracker and get the record ID
-            savedRecordId = saveCisDeduction(cisRecord);
-
-            if (savedRecordId) {
-              console.log('CIS deduction record saved to tracker:', savedRecordId);
-              // Add the record ID to the updated state object
-              updatedInvoiceState = {
-                  ...updatedInvoiceState,
-                  cisRecordId: savedRecordId
-              };
-            } else {
-               addNotification('Failed to save CIS record to tracker. CIS applied to invoice but not tracked.', 'warning');
-            }
-
-        } catch (trackerError) {
-            console.error('Error saving CIS deduction to tracker:', trackerError);
-            addNotification('Error saving CIS record to tracker. CIS applied to invoice but not tracked.', 'error');
-        }
-
-        // --- STEP 8: Update the actual React state ---
-        setInvoiceDetails(updatedInvoiceState);
-
-        // --- STEP 9: Add notification and trigger auto-save with the updated state ---
-        addNotification(`CIS deduction of £${cisDeduction.toFixed(2)} applied based on identified labour of £${totalLaborAmount.toFixed(2)}. Net amount is now £${netAmount.toFixed(2)}. Saving...`, 'success');
-        await handleSaveInvoice(updatedInvoiceState); // Pass the final state directly
+      if (savedInvoiceWithCIS && savedInvoiceWithCIS.id) {
+          console.log("Invoice state saved successfully. Backend handled CIS.");
+          // Update local state with the final data returned from the backend,
+          // including the cisRecordId assigned by the backend.
+          setInvoiceDetails(savedInvoiceWithCIS); 
+          addNotification('CIS deduction applied and invoice saved.', 'success');
+          
+          // Invalidate the query cache for CIS records
+          console.log("Invalidating cisRecordsAll query...");
+          queryClient.invalidateQueries('cisRecordsAll');
+      } else {
+          console.error("Failed to save invoice after preparing CIS state.");
+          addNotification('Failed to save invoice with CIS changes.', 'error');
+          // Potentially revert local state if save fails?
+          // setInvoiceDetails(currentInvoiceData); // Revert to state before CIS attempt
+      }
 
     } catch (error) {
-        console.error('Error applying CIS:', error);
-        addNotification(`Error applying CIS: ${error.message}`, 'error');
+      console.error("Error applying CIS:", error);
+      addNotification(`Error applying CIS: ${error.message}`, 'error');
     }
   };
 
   // Add handleUndoCIS function
-  const handleUndoCIS = async () => { // Make async to await save
-    if (!invoiceDetails.cisApplied || !invoiceDetails.cisRecordId) {
-      addNotification('CIS has not been applied or record ID is missing. Cannot undo.', 'warning');
+  const handleUndoCIS = async () => {
+    const recordIdToDelete = invoiceDetails.cisRecordId; // Keep this for logging if needed
+
+    if (!invoiceDetails.cisApplied) {
+      addNotification('CIS has not been applied to this invoice.', 'warning');
       return;
     }
+    // Check if record ID exists - it might not if the initial save failed
+    if (!recordIdToDelete) {
+        addNotification('CIS record ID is missing, cannot remove from backend. Reverting local changes.', 'warning');
+        // Fall through to revert local state anyway
+    }
 
-    // Confirm with the user
-    if (!window.confirm('Are you sure you want to undo the CIS application for this invoice? This will also remove the entry from the CIS tracker.')) {
+
+    if (!window.confirm('Are you sure you want to undo the CIS application? This will attempt to remove the record from the database.')) {
       return;
     }
 
     try {
-      // Attempt to delete the record from the tracker
-      const deleted = deleteCisRecord(invoiceDetails.cisRecordId);
-
-      if (deleted) {
-        console.log(`Deleted CIS record ${invoiceDetails.cisRecordId} from tracker.`);
-      } else {
-        // Even if deletion fails, we might still revert the UI, but warn the user
-        addNotification('Failed to delete the record from the tracker, but reverting invoice details.', 'warning');
-      }
-
-      // Revert invoice state before saving
-      const revertedState = {
-        ...invoiceDetails,
-        lineItems: invoiceDetails.originalLineItemsBeforeCIS || [], // Revert to original items
-        amount: invoiceDetails.originalGrossAmount || 0, // Revert to original amount
-        cisApplied: false,
-        cisDeduction: 0,
-        laborTotal: 0,
-        originalGrossAmount: 0,
-        cisRecordId: null,
-        originalLineItemsBeforeCIS: null
-      };
-      
-      setInvoiceDetails(revertedState);
-      
-      addNotification('CIS application undone. Saving changes...', 'info');
-
-      // Auto-save the reverted state
-      // Pass the reverted state directly to save to avoid race condition with setInvoiceDetails
-      await handleSaveInvoice(revertedState);
-
-    } catch (error) {
-      console.error('Error undoing CIS:', error);
-      addNotification(`Error undoing CIS: ${error.message}`, 'error');
-      // Attempt to revert UI state even if save fails
-      setInvoiceDetails(prev => ({
-        ...prev,
-        lineItems: prev.originalLineItemsBeforeCIS || [],
-        amount: prev.originalGrossAmount || 0,
-        cisApplied: false,
-        cisDeduction: 0,
-        laborTotal: 0,
-        originalGrossAmount: 0,
-        cisRecordId: null,
-        originalLineItemsBeforeCIS: null
-      }));
-    }
-  };
-
-  // Create a safer export PDF function that ensures preview is visible
-  const safeExportPDF = async () => {
-    if (!checkLineItems()) return false; // Check for line items
-
-    try {
-      // First save the invoice
-      await handleSaveInvoice();
-      
-      // Get the invoice preview element
-      const invoicePreviewElement = document.querySelector('.invoice-preview');
-      
-      if (!invoicePreviewElement) {
-        throw new Error('Invoice preview element not found');
-      }
-      
-      // Add notification
-      addNotification('Invoice saved. Generating PDF...', 'info');
-      
-      // Configure options
-      const options = {
-        filename: `Invoice_${invoiceDetails.invoiceNumber || 'Untitled'}_${new Date().toISOString().split('T')[0]}.pdf`,
-        margin: [15, 15, 15, 15],
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-      
-      // Generate PDF using html2pdf - using explicit promise pattern
-      return new Promise((resolve, reject) => {
-        html2pdf()
-          .from(invoicePreviewElement)
-          .set(options)
-          .save()
-          .then(() => {
-            addNotification('PDF exported successfully!', 'success');
-            resolve(true);
-          })
-          .catch(err => {
-            console.error('PDF generation error in promise:', err);
-            addNotification(`Error generating PDF: ${err.message}`, 'error');
-            reject(err);
-          });
+      // --- Prepare the reverted state --- 
+      let revertedState = {}; 
+      setInvoiceDetails(prev => {
+          const originalItems = prev.originalLineItemsBeforeCIS || prev.lineItems;
+          const originalAmount = prev.originalGrossAmount || prev.amount;
+          revertedState = {
+              ...prev,
+              lineItems: originalItems, 
+              amount: originalAmount, 
+              cisApplied: false, // Signal backend to undo CIS
+              cisDeduction: 0,
+              laborTotal: 0, 
+              cisRecordId: null, // Clear the record ID
+              originalLineItemsBeforeCIS: null,
+              originalGrossAmount: 0,
+          };
+          return revertedState; 
       });
+
+      // --- Save the reverted invoice state --- 
+      // The backend /api/invoices POST should now handle CIS record deletion
+      if (Object.keys(revertedState).length > 0) {
+          console.log("Saving reverted invoice state (CIS undo)...");
+          const savedRevertedInvoice = await handleSaveInvoice(revertedState); 
+          if (savedRevertedInvoice) {
+              console.log("Reverted invoice state saved successfully. Backend handled CIS undo.");
+              // Update state again with potentially cleaned data from backend
+              setInvoiceDetails(savedRevertedInvoice);
+              addNotification('CIS successfully undone and invoice saved.', 'success');
+              
+              // Invalidate the query cache for CIS records
+              console.log("Invalidating cisRecordsAll query...");
+              queryClient.invalidateQueries('cisRecordsAll');
+          } else {
+              console.error("Failed to save reverted invoice state.");
+              addNotification('Failed to save invoice after undoing CIS.', 'error');
+              // Consider reverting the revert? More complex UI state management needed.
+          }
+      } else {
+          console.warn("Could not save reverted state as it was empty.");
+      }
+
     } catch (error) {
-      console.error('Error in safe PDF export:', error);
-      addNotification(`Error exporting PDF: ${error.message}`, 'error');
-      return false;
+      console.error("Error during CIS undo process:", error);
+      addNotification(`Error undoing CIS: ${error.message}`, 'error');
     }
   };
 
-  // Add handleDeleteInvoice function after handleApplyCIS
+  // Modify handleDeleteInvoice to call the backend CIS delete *after* invoice delete succeeds
   const handleDeleteInvoice = async () => {
-    // Show confirmation dialog before deletion
     if (window.confirm(`Are you sure you want to delete invoice ${invoiceDetails.invoiceNumber}? This action cannot be undone.`)) {
+      const invoiceIdToDelete = invoiceDetails.id;
+      const recordIdToDelete = invoiceDetails.cisRecordId; // Get CIS record ID *before* potentially losing state
+
       try {
-        // Check if CIS was applied and we have a record ID before deleting invoice
-        const cisApplied = invoiceDetails.cisApplied;
-        const recordIdToDelete = invoiceDetails.cisRecordId;
-        console.log('Attempting delete. Invoice State ID:', invoiceDetails.id, 'CIS Applied:', cisApplied, 'Record ID:', recordIdToDelete);
-
-        // === Use invoiceDetails.id to determine if it's a saved invoice ===
-        const invoiceIdToDelete = invoiceDetails.id;
-
-        // --- MODIFIED CONDITION: Only check if ID exists in the state --- 
-        if (invoiceIdToDelete) { 
-          // Delete the invoice if it exists in the database
-          await api.invoices.delete(invoiceIdToDelete); // Use the ID from state
-          
-          // *** Invalidate the invoices query cache ***
-          queryClient.invalidateQueries('invoices');
-          
+        // 1. Delete the Invoice via API
+        if (invoiceIdToDelete) {
+          console.log(`Attempting to delete invoice ${invoiceIdToDelete} via API...`);
+          await api.invoices.delete(invoiceIdToDelete);
+          queryClient.invalidateQueries('invoices'); // Invalidate cache
           addNotification('Invoice deleted successfully', 'success');
         } else {
-          // If no ID in state, treat as a draft
           addNotification('Invoice draft discarded', 'info');
+          // If it was just a draft, navigate away immediately
+          navigate('/invoices');
+          return;
         }
 
-        // AFTER successful invoice deletion or discard, attempt to delete CIS record
-        if (cisApplied && recordIdToDelete) { 
-          try {
-            const deleted = deleteCisRecord(recordIdToDelete);
-            if (deleted) {
-              console.log(`Associated CIS record ${recordIdToDelete} deleted from tracker.`);
-              addNotification('Associated CIS record removed from tracker.', 'info');
-            } else {
-              console.warn(`Could not find or delete associated CIS record ${recordIdToDelete} from tracker.`);
-              addNotification('Invoice deleted, but failed to remove associated CIS record from tracker.', 'warning');
+        // 2. If Invoice Deletion Successful, Delete Associated CIS Record via API
+        if (recordIdToDelete) { // Check if there was a linked CIS record
+            try {
+                console.log(`Attempting to delete associated CIS record ${recordIdToDelete} via API...`);
+                // *** Use the API call ***
+                const response = await api.cis.delete(recordIdToDelete);
+                 if (response.success) {
+                    console.log(`Associated CIS record ${recordIdToDelete} deleted from backend.`);
+                    addNotification('Associated CIS record removed.', 'info');
+                 } else {
+                    console.warn(`Failed to confirm deletion of associated CIS record ${recordIdToDelete} from backend:`, response);
+                    addNotification('Invoice deleted, but failed to remove associated CIS record.', 'warning');
+                 }
+            } catch (cisError) {
+                console.error('Error deleting associated CIS record via API:', cisError);
+                addNotification(`Invoice deleted, but encountered an error removing associated CIS record: ${cisError.message}`, 'error');
             }
-          } catch (cisError) {
-            console.error('Error deleting associated CIS record:', cisError);
-            addNotification('Invoice deleted, but encountered an error removing associated CIS record.', 'error');
-          }
         }
+        // Else: If no recordIdToDelete, do nothing further
 
-        // Navigate back to the invoices list regardless of CIS deletion outcome
+        // 3. Navigate away after all operations
         navigate('/invoices');
 
-      } catch (error) {
-        console.error('Error deleting invoice:', error);
+      } catch (error) { // Catches errors from invoice deletion mainly
+        console.error('Error during invoice deletion process:', error);
         addNotification(`Error deleting invoice: ${error.message}`, 'error');
+        // Don't navigate away if invoice deletion failed
       }
     }
   };
@@ -1014,7 +893,7 @@ const InvoiceBuilder = () => {
       await handleSaveInvoice();
       
       // Then export PDF and open email client
-      const exported = await safeExportPDF();
+      const exported = await handleExportPDF();
       
       if (exported) {
         // Then open email client
@@ -1163,7 +1042,6 @@ const InvoiceBuilder = () => {
               Undo CIS
             </Button>
           ) : (
-            // Only show Apply CIS button if CIS is enabled in settings
             settings?.cis?.enabled && (
               <Button
                 variant="primary"
@@ -1638,7 +1516,7 @@ const InvoiceBuilder = () => {
                 <div className="email-actions-group">
                   <Button
                     variant="secondary"
-                    onClick={safeExportPDF}
+                    onClick={handleExportPDF}
                   >
                     Export PDF Only
                   </Button>

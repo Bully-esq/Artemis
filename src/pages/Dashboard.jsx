@@ -7,6 +7,7 @@ import PageLayout from '../components/common/PageLayout';
 import Button from '../components/common/Button';
 import Loading from '../components/common/Loading';
 import ActionButtonContainer from '../components/common/ActionButtonContainer';
+import CisDownloader from '../components/cis/CisDownloader';
 
 // Contexts and Hooks
 import { useAppContext } from '../context/AppContext';
@@ -17,7 +18,7 @@ import api, { apiClient } from '../services/api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { addNotification } = useAppContext();
+  const { settings, addNotification } = useAppContext();
   const { isAuthenticated, token } = useAuth();
   const [period, setPeriod] = useState('month'); // 'week', 'month', 'year'
   const [retryCount, setRetryCount] = useState(0);
@@ -260,6 +261,14 @@ const Dashboard = () => {
             {metrics.conversionRate.toFixed(1)}% conversion rate
           </p>
         </div>
+
+        {/* Conditionally render CIS Downloader Card based on settings */}
+        {settings?.cis?.enabled && (
+          <div className="stat-card">
+            <p className="stat-label mb-2">CIS Records</p>
+            <CisDownloader compact />
+          </div>
+        )}
       </div>
 
       {/* Quick Actions */}
@@ -396,6 +405,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
     </PageLayout>
   );
 };

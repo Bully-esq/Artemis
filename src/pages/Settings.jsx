@@ -593,14 +593,6 @@ const Settings = () => {
                     value={localSettings.cis?.niNumber || ''}
                     onChange={(e) => handleChange('cis', 'niNumber', e.target.value)}
                   />
-
-                  <div className="mt-8 pt-5 border-t border-gray-200">
-                    <h3 className="text-lg font-medium text-gray-900 mb-3">CIS Deduction Records</h3>
-                    <p className="text-sm text-gray-500 mb-6">
-                      Download a spreadsheet of CIS deductions recorded for a selected tax year.
-                    </p>
-                    <CisDownloader />
-                  </div>
                 </>
               )}
             </div>

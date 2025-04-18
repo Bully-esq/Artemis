@@ -741,6 +741,35 @@ const mockActivities = [
   }
 ];
 
+// === CIS Records API ===
+const cisApi = {
+  create: async (recordData) => {
+    console.log('API Call: POST /cis-records', recordData);
+    const response = await apiClient.post('/cis-records', { record: recordData });
+    return response.data;
+  },
+  getAll: async (taxYear = null) => {
+    const url = taxYear ? `/cis-records?taxYear=${taxYear}` : '/cis-records';
+    console.log(`API Call: GET ${url}`);
+    const response = await apiClient.get(url);
+    return response.data;
+  },
+  delete: async (recordId) => {
+     console.log(`API Call: DELETE /cis-records/${recordId}`);
+     if (!recordId) {
+       console.error("API Error: Attempted to delete CIS record with null/undefined ID.");
+       throw new Error("Cannot delete CIS record without a valid ID.");
+     }
+    const response = await apiClient.delete(`/cis-records/${recordId}`);
+    
+    if (response.status === 204) {
+       console.log('API Success Response: (204 No Content)');
+       return { success: true };
+    }
+    return response.data;
+  },
+};
+
 // Export default API objects
 export default {
   quotes: quotesApi,
@@ -751,5 +780,6 @@ export default {
   settings: settingsApi,
   activities: activitiesApi,
   ping,
-  client: apiClient  // Also export apiClient via the default export
+  client: apiClient,  // Also export apiClient via the default export
+  cis: cisApi
 };
