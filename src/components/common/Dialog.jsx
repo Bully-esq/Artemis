@@ -73,26 +73,32 @@ const Dialog = ({
               <HeadlessDialog.Panel 
                  className={`w-full ${sizeClasses[size] || sizeClasses.md} transform overflow-hidden rounded-lg bg-[var(--card-background)] text-left align-middle shadow-xl transition-all ${panelClassName}`}
               >
-                {title && (
-                  <HeadlessDialog.Title
-                    as="h3"
-                    className="text-lg font-medium leading-6 text-[var(--text-primary)] px-4 py-3 sm:px-6 border-b border-[var(--border-color)]"
-                  >
-                    {title}
-                  </HeadlessDialog.Title>
-                )}
+                {(title || showCloseButton) && (
+                  <div className="flex justify-between items-center px-4 py-3 sm:px-6 border-b border-[var(--border-color)]">
+                    {title && (
+                      <HeadlessDialog.Title
+                        as="h3"
+                        className="text-lg font-medium leading-6 text-[var(--text-primary)]"
+                      >
+                        {title}
+                      </HeadlessDialog.Title>
+                    )}
 
-                {showCloseButton && (
-                  <button
-                     type="button"
-                     className="absolute top-2 right-2 p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)]"
-                     onClick={onClose}
-                     aria-label="Close"
-                  >
-                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                    {!title && showCloseButton && <span></span>}
+
+                    {showCloseButton && (
+                      <button
+                         type="button"
+                         className={`p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)]`}
+                         onClick={onClose}
+                         aria-label="Close"
+                      >
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 )}
                 
                 <div className="px-4 py-4 sm:px-6 sm:py-5">

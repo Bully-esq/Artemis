@@ -1,15 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
+import React, { useState, useReducer, useCallback, useMemo } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from 'react-query';
 import { useAppContext } from '../../context/AppContext';
 import api from '../../services/api';
-import pdfGenerator from '../../services/pdfGenerator';
 import { calculateQuoteData } from '../../utils/calculations';
 import html2pdf from 'html2pdf.js';
 
 // Components
 import PageLayout from '../common/PageLayout';
-import Button, { ActionButtons } from '../common/Button';
+import Button from '../common/Button';
 import Loading from '../common/Loading';
 import Tabs, { TabPanel } from '../common/Tabs'; // Assumed Tailwind
 import Dialog from '../common/Dialog'; // Assumed Tailwind (Headless UI)
@@ -37,173 +36,752 @@ const formatDateForInput = (dateString) => {
   }
 };
 
+const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
+
+// --- State Management (Reducer) ---
+const initialState = {
+  id: null,
+  client: { name: '', company: '', email: '', phone: '', address: '' },
+  date: new Date().toISOString().split('T')[0],
+  validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  paymentTerms: '1', // Default value, will be overridden by settings/fetched data
+  customTerms: '',
+  notes: '',
+  includeDrawingOption: false,
+  exclusions: [], // Default value, will be overridden by settings/fetched data
+  selectedItems: [],
+  hiddenCosts: [],
+  globalMarkup: 30, // Default value, will be overridden by settings/fetched data
+  distributionMethod: 'even', // Default value, will be overridden by settings/fetched data
+};
+
+function quoteReducer(state, action) {
+  switch (action.type) {
+    case 'INITIALIZE_QUOTE':
+      return { ...state, ...action.payload };
+    case 'UPDATE_FIELD':
+      return { ...state, [action.payload.field]: action.payload.value };
+    case 'UPDATE_CLIENT_FIELD':
+      return { ...state, client: { ...state.client, [action.payload.field]: action.payload.value } };
+    case 'SET_CLIENT':
+      return { ...state, client: action.payload };
+    case 'UPDATE_EXCLUSION': {
+      const newExclusions = [...state.exclusions];
+      newExclusions[action.payload.index] = action.payload.value;
+      return { ...state, exclusions: newExclusions };
+    }
+    case 'ADD_EXCLUSION':
+      return { ...state, exclusions: [...state.exclusions, ''] };
+    case 'REMOVE_EXCLUSION': {
+      const newExclusions = [...state.exclusions];
+      newExclusions.splice(action.payload.index, 1);
+      return { ...state, exclusions: newExclusions };
+    }
+    case 'ADD_ITEM': {
+       const existingItemIndex = state.selectedItems.findIndex(i => i.id === action.payload.item.id);
+       if (existingItemIndex > -1) {
+         // Update quantity if item exists
+         const updatedItems = state.selectedItems.map((item, index) =>
+           index === existingItemIndex ? { ...item, quantity: item.quantity + action.payload.item.quantity } : item
+         );
+         return { ...state, selectedItems: updatedItems };
+       } else {
+         // Add new item
+         return { ...state, selectedItems: [...state.selectedItems, action.payload.item] };
+       }
+    }
+    case 'ADD_ITEMS': { // Handle adding multiple items (from ItemSelector)
+        let updatedItems = [...state.selectedItems];
+        action.payload.items.forEach(itemToAdd => {
+            const existingItemIndex = updatedItems.findIndex(i => i.id === itemToAdd.id);
+            if (existingItemIndex > -1) {
+                const newItems = [...updatedItems];
+                newItems[existingItemIndex] = {
+                    ...newItems[existingItemIndex],
+                    quantity: newItems[existingItemIndex].quantity + (itemToAdd.quantity || 1) // Ensure quantity is added
+                };
+                updatedItems = newItems;
+            } else {
+                updatedItems.push({
+                    ...itemToAdd,
+                    quantity: itemToAdd.quantity || 1,
+                    markup: itemToAdd.markup ?? state.globalMarkup, // Use item markup or global
+                    hideInQuote: false,
+                    id: itemToAdd.id || generateId() // Ensure ID exists
+                });
+            }
+        });
+        return { ...state, selectedItems: updatedItems };
+    }
+    case 'UPDATE_ITEM': {
+      const newItems = [...state.selectedItems];
+      const updatedItem = action.payload.item;
+       // Ensure numeric conversion happens correctly, handling empty strings
+       const quantity = updatedItem.quantity === '' ? '' : (parseFloat(updatedItem.quantity) || 1);
+       const markup = updatedItem.markup === '' ? '' : (parseInt(updatedItem.markup) || 0);
+       newItems[action.payload.index] = {
+          ...updatedItem,
+          quantity: quantity,
+          markup: markup
+       };
+      return { ...state, selectedItems: newItems };
+    }
+    case 'REMOVE_ITEM': {
+      const newItems = [...state.selectedItems];
+      newItems.splice(action.payload.index, 1);
+      return { ...state, selectedItems: newItems };
+    }
+    case 'MOVE_ITEM': {
+        const newItems = [...state.selectedItems];
+        const { index, direction } = action.payload;
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= newItems.length) return state; // Boundary check
+        [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]]; // Swap
+        return { ...state, selectedItems: newItems };
+    }
+    case 'ADD_HIDDEN_COST':
+      return { ...state, hiddenCosts: [...state.hiddenCosts, action.payload.cost] };
+    case 'UPDATE_HIDDEN_COST': {
+        const newCosts = [...state.hiddenCosts];
+        newCosts[action.payload.index] = {
+            ...newCosts[action.payload.index],
+            ...action.payload.updates // Apply updates (e.g., { name: 'New Name' } or { amount: 100 })
+        };
+        return { ...state, hiddenCosts: newCosts };
+    }
+    case 'REMOVE_HIDDEN_COST': {
+      const newCosts = [...state.hiddenCosts];
+      newCosts.splice(action.payload.index, 1);
+      return { ...state, hiddenCosts: newCosts };
+    }
+    case 'SET_GLOBAL_MARKUP':
+      return { ...state, globalMarkup: action.payload.markup };
+    case 'SET_DISTRIBUTION_METHOD':
+      return { ...state, distributionMethod: action.payload.method };
+    default:
+      return state;
+  }
+}
+
+// --- Data Transformation ---
+function transformFetchedQuoteData(data, defaultSettings) {
+  if (!data) {
+    console.error("Quote data is null or undefined in transformation");
+    return null; // Or throw an error
+  }
+  
+  // Process selected items
+  const items = Array.isArray(data.selectedItems) ? data.selectedItems : [];
+  const selectedItems = items.map(item => ({
+    id: item.id || generateId(),
+    name: item.name || 'Unnamed Item',
+    cost: parseFloat(item.cost) || 0,
+    supplier: item.supplier || '',
+    quantity: parseFloat(item.quantity) || 1,
+    markup: parseInt(item.markup), // Keep potentially undefined to use global later if needed
+    hideInQuote: !!item.hideInQuote,
+    description: item.description || '',
+    category: item.category || ''
+  }));
+  
+  // Process hidden costs
+  const costs = Array.isArray(data.hiddenCosts) ? data.hiddenCosts : [];
+  const hiddenCosts = costs.map(cost => ({
+    id: cost.id || generateId(),
+    name: cost.name || 'Unnamed Cost',
+    amount: parseFloat(cost.amount) || 0
+  }));
+  
+  // Determine global markup
+  let globalMarkup = defaultSettings.defaultMarkup ?? 30;
+  if (typeof data.globalMarkup === 'number' && !isNaN(data.globalMarkup)) {
+    globalMarkup = data.globalMarkup;
+  }
+
+  // Determine distribution method
+  let distributionMethod = defaultSettings.defaultDistribution || 'even';
+  if (data.distributionMethod && ['even', 'proportional'].includes(data.distributionMethod)) {
+      distributionMethod = data.distributionMethod;
+  }
+  
+  return {
+    id: data.id,
+    client: {
+      name: data.client?.name || data.clientName || '',
+      company: data.client?.company || data.clientCompany || '',
+      email: data.client?.email || '',
+      phone: data.client?.phone || '',
+      address: data.client?.address || ''
+    },
+    date: data.date || new Date().toISOString().split('T')[0],
+    validUntil: data.validUntil || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    paymentTerms: data.paymentTerms || defaultSettings.defaultPaymentTerms || '1',
+    customTerms: data.customTerms || '',
+    notes: data.notes || '',
+    includeDrawingOption: !!data.includeDrawingOption,
+    exclusions: Array.isArray(data.exclusions) ? data.exclusions : defaultSettings.defaultExclusions || [],
+    selectedItems,
+    hiddenCosts,
+    globalMarkup,
+    distributionMethod
+  };
+}
+
+// --- Child Components ---
+
+// Client & Details Form
+const ClientDetailsForm = React.memo(({ client, dispatch, onShowContactSelector, saveAsContact, onSaveAsContactChange }) => {
+  const handleClientChange = useCallback((field, value) => {
+    dispatch({ type: 'UPDATE_CLIENT_FIELD', payload: { field, value } });
+  }, [dispatch]);
+
+  return (
+    <div className="bg-card-background shadow-sm sm:rounded-lg p-4 sm:p-6 border border-card-border transition-colors duration-300 ease-linear">
+      <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Client Information</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FormField
+          label="Client Name"
+          id="clientName"
+          value={client.name}
+          onChange={(e) => handleClientChange('name', e.target.value)}
+          placeholder="e.g., John Doe"
+          required
+        />
+        <FormField
+          label="Company Name (Optional)"
+          id="clientCompany"
+          value={client.company}
+          onChange={(e) => handleClientChange('company', e.target.value)}
+          placeholder="e.g., Acme Corp"
+        />
+        <FormField
+          label="Email Address"
+          id="clientEmail"
+          type="email"
+          value={client.email}
+          onChange={(e) => handleClientChange('email', e.target.value)}
+          placeholder="e.g., john.doe@example.com"
+        />
+        <FormField
+          label="Phone Number"
+          id="clientPhone"
+          type="tel"
+          value={client.phone}
+          onChange={(e) => handleClientChange('phone', e.target.value)}
+          placeholder="e.g., 01234 567890"
+        />
+        <FormField
+          label="Address (Optional)"
+          id="clientAddress"
+          type="textarea"
+          rows={3}
+          value={client.address}
+          onChange={(e) => handleClientChange('address', e.target.value)}
+          className="sm:col-span-2"
+          placeholder="e.g., 123 Main Street, Anytown, AT1 2BT"
+        />
+      </div>
+      <div className="mt-4 flex flex-col sm:flex-row sm:justify-end items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+        <FormField
+          label="Save as New Contact?"
+          id="saveAsContact"
+          type="checkbox"
+          checked={saveAsContact}
+          onChange={(e) => onSaveAsContactChange(e.target.checked)}
+          labelClassName="text-sm sm:order-first"
+          className="flex items-center sm:justify-end"
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onShowContactSelector}
+          icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
+          className="sm:w-auto dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+        >
+          Load Contact
+        </Button>
+      </div>
+    </div>
+  );
+});
+
+const QuoteMetaDetailsForm = React.memo(({ details, dispatch }) => {
+   const handleQuoteChange = useCallback((field, value) => {
+     dispatch({ type: 'UPDATE_FIELD', payload: { field, value } });
+   }, [dispatch]);
+
+   return (
+     <div className="bg-card-background shadow-sm sm:rounded-lg p-4 sm:p-6 border border-card-border transition-colors duration-300 ease-linear">
+       <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Quote Details</h3>
+       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+         <FormField
+           label="Quote Date"
+           id="quoteDate"
+           type="date"
+           value={formatDateForInput(details.date)}
+           onChange={(e) => handleQuoteChange('date', e.target.value)}
+           required
+         />
+         <FormField
+           label="Valid Until"
+           id="validUntil"
+           type="date"
+           value={formatDateForInput(details.validUntil)}
+           onChange={(e) => handleQuoteChange('validUntil', e.target.value)}
+           required
+         />
+         <FormField
+           label="Payment Terms"
+           id="paymentTerms"
+           type="select"
+           value={details.paymentTerms}
+           onChange={(e) => handleQuoteChange('paymentTerms', e.target.value)}
+           options={[
+             { value: '1', label: 'On Completion' },
+             { value: '2', label: 'Net 7 Days' },
+             { value: '3', label: 'Net 14 Days' },
+             { value: '4', label: 'Net 30 Days' },
+             { value: '5', label: '50% Deposit, 50% Completion' },
+             { value: 'custom', label: 'Custom (Specify Below)' },
+           ]}
+           className="sm:col-span-2"
+         />
+         {details.paymentTerms === 'custom' && (
+           <FormField
+             label="Custom Payment Terms"
+             id="customTerms"
+             type="textarea"
+             rows={2}
+             value={details.customTerms}
+             onChange={(e) => handleQuoteChange('customTerms', e.target.value)}
+             className="sm:col-span-2"
+             placeholder="Specify custom payment terms here..."
+           />
+         )}
+          <FormField
+             label="Include Drawing Option?"
+             id="includeDrawingOption"
+             type="checkbox"
+             checked={details.includeDrawingOption}
+             onChange={(e) => handleQuoteChange('includeDrawingOption', e.target.checked)}
+             helpText="Adds an optional line item for drawings/plans."
+             className="sm:col-span-2"
+           />
+       </div>
+     </div>
+   );
+});
+
+const CostingSettings = React.memo(({ globalMarkup, distributionMethod, dispatch }) => {
+  const handleMarkupChange = useCallback((e) => {
+      dispatch({ type: 'SET_GLOBAL_MARKUP', payload: { markup: parseFloat(e.target.value) || 0 } });
+  }, [dispatch]);
+
+  const handleDistributionChange = useCallback((e) => {
+      dispatch({ type: 'SET_DISTRIBUTION_METHOD', payload: { method: e.target.value } });
+  }, [dispatch]);
+
+  return (
+    <div className="bg-card-background shadow-sm sm:rounded-lg p-4 sm:p-6 border border-card-border transition-colors duration-300 ease-linear">
+      <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Costing & Markup</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+        <FormField
+          label="Global Markup %"
+          id="globalMarkup"
+          type="number"
+          value={globalMarkup}
+          onChange={handleMarkupChange}
+          min={0}
+          helpText="Applied to items without a specific markup."
+          required
+          inputClassName="text-right"
+        />
+        <FormField
+          label="Distribute Hidden Costs"
+          id="distributionMethod"
+          type="select"
+          value={distributionMethod}
+          onChange={handleDistributionChange}
+          options={[
+            { value: 'even', label: 'Evenly' },
+            { value: 'proportional', label: 'Proportionally' },
+          ]}
+          helpText="How to spread hidden costs across visible items."
+        />
+         <div></div> {/* Placeholder */}
+      </div>
+    </div>
+  );
+});
+
+const SelectedItemsList = React.memo(({ items, dispatch }) => {
+  const handleUpdateItem = useCallback((index, updatedItem) => {
+    dispatch({ type: 'UPDATE_ITEM', payload: { index, item: updatedItem } });
+  }, [dispatch]);
+
+  const handleRemoveItem = useCallback((index) => {
+    dispatch({ type: 'REMOVE_ITEM', payload: { index } });
+  }, [dispatch]);
+
+  const handleMoveItem = useCallback((index, direction) => {
+    dispatch({ type: 'MOVE_ITEM', payload: { index, direction } });
+  }, [dispatch]);
+
+  if (items.length === 0) {
+      return <p className="text-center text-gray-500 py-4">No items added yet.</p>;
+  }
+
+  return (
+      <ul className="divide-y divide-gray-200">
+          {items.map((item, index) => (
+              <li key={item.id || `item-${index}`} className="py-4">
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-3 lg:space-y-0 lg:space-x-4">
+                      <div className="flex-grow min-w-0">
+                          {/* Item Header */}
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
+                              <h4 className="text-base font-semibold text-gray-800 dark:text-white truncate mr-2 mb-1 sm:mb-0">
+                                  {item.name || 'Unnamed Item'}
+                                  {item.category && <span className="ml-2 text-xs font-medium text-gray-500 dark:text-gray-400">({item.category})</span>}
+                              </h4>
+                              {/* Item Actions (Move, Delete) */}
+                              <div className="flex items-center space-x-1 flex-shrink-0">
+                                <div className="flex flex-col">
+                                    <button
+                                        onClick={() => handleMoveItem(index, 'up')}
+                                        disabled={index === 0}
+                                        className="p-0.5 rounded text-gray-400 hover:text-indigo-600 dark:text-gray-500 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-400"
+                                        aria-label="Move item up"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
+                                    </button>
+                                    <button
+                                        onClick={() => handleMoveItem(index, 'down')}
+                                        disabled={index === items.length - 1}
+                                        className="p-0.5 rounded text-gray-400 hover:text-indigo-600 dark:text-gray-500 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-400"
+                                        aria-label="Move item down"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </button>
+                                </div>
+                                  <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      onClick={() => handleRemoveItem(index)}
+                                      className="text-red-500 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30"
+                                      aria-label="Remove item"
+                                  >
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                  </Button>
+                              </div>
+                          </div>
+                          {/* Item Description & Supplier */}
+                          {item.description && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{item.description}</p>
+                          )}
+                          {item.supplier && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Supplier: {item.supplier || 'N/A'}</p>
+                          )}
+                          {/* Item Fields */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              <FormField
+                                  label="Cost Price"
+                                  id={`item-cost-${index}`}
+                                  type="number"
+                                  value={item.cost}
+                                  onChange={(e) => handleUpdateItem(index, { ...item, cost: e.target.value })}
+                                  prefix="£"
+                                  step="0.01"
+                                  min={0}
+                                  required
+                                  labelSrOnly
+                                  placeholder="Cost"
+                              />
+                              <FormField
+                                  label="Quantity"
+                                  id={`item-quantity-${index}`}
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => handleUpdateItem(index, { ...item, quantity: e.target.value })}
+                                  min={0}
+                                  step="any"
+                                  required
+                                  labelSrOnly
+                                  placeholder="Quantity"
+                              />
+                              <FormField
+                                  label="Markup %"
+                                  id={`item-markup-${index}`}
+                                  type="number"
+                                  value={item.markup}
+                                  onChange={(e) => handleUpdateItem(index, { ...item, markup: e.target.value })}
+                                  suffix="%"
+                                  min={0}
+                                  placeholder="Global"
+                                  helpText="Overrides global markup."
+                                  labelSrOnly
+                              />
+                              <FormField
+                                  label="Hide in Quote"
+                                  id={`item-hide-${index}`}
+                                  type="checkbox"
+                                  checked={item.hideInQuote}
+                                  onChange={(e) => handleUpdateItem(index, { ...item, hideInQuote: e.target.checked })}
+                                  labelText="Hide in Quote"
+                                  className="flex items-center pt-1 sm:justify-self-end"
+                                  inputClassName="h-4 w-4"
+                                  labelClassName="text-sm ml-2 dark:text-gray-300"
+                              />
+                          </div>
+                      </div>
+                  </div>
+              </li>
+          ))}
+      </ul>
+  );
+});
+
+const HiddenCostsList = React.memo(({ costs, dispatch, onShowAddDialog }) => {
+  const handleUpdateCost = useCallback((index, updates) => {
+      dispatch({ type: 'UPDATE_HIDDEN_COST', payload: { index, updates } });
+  }, [dispatch]);
+
+  const handleRemoveCost = useCallback((index) => {
+    dispatch({ type: 'REMOVE_HIDDEN_COST', payload: { index } });
+  }, [dispatch]);
+
+  return (
+    <div className="bg-card-background shadow-sm sm:rounded-lg border border-card-border transition-colors duration-300 ease-linear">
+      <div className="px-4 sm:px-6 py-4 border-b border-card-border flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 dark:border-gray-700">
+        <h3 className="text-lg font-medium leading-6 text-text-primary">Additional Costs (Hidden)</h3>
+        <Button variant="outline" size="sm" onClick={onShowAddDialog} className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
+          Add Hidden Cost
+        </Button>
+      </div>
+      <div className="p-4 sm:p-6">
+        {costs.length === 0 ? (
+          <p className="text-center text-gray-500 py-4">No hidden costs added yet.</p>
+        ) : (
+          <ul className="divide-y divide-gray-200">
+            {costs.map((cost, index) => (
+              <li key={cost.id || `cost-${index}`} className="py-3 flex items-center justify-between space-x-4">
+                <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                  <FormField
+                    label="Cost Name"
+                    id={`hidden-cost-name-${index}`}
+                    value={cost.name}
+                    onChange={(e) => handleUpdateCost(index, { name: e.target.value })}
+                    placeholder="e.g., Labour, Travel"
+                    required
+                    labelSrOnly
+                  />
+                  <FormField
+                    label="Amount"
+                    id={`hidden-cost-amount-${index}`}
+                    type="number"
+                    value={cost.amount}
+                    onChange={(e) => handleUpdateCost(index, { amount: parseFloat(e.target.value) || 0 })}
+                    prefix="£"
+                    step="0.01"
+                    min={0}
+                    required
+                    labelSrOnly
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => handleRemoveCost(index)}
+                  className="text-red-500 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30 flex-shrink-0"
+                  aria-label="Remove hidden cost"
+                >
+                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+});
+
+const TotalsDisplay = React.memo(({ quoteData }) => (
+  <div className="bg-background-secondary shadow-sm sm:rounded-lg p-4 sm:p-6 border border-card-border transition-colors duration-300 ease-linear">
+    <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Calculated Totals</h3>
+    <dl className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 text-sm">
+      <div className="sm:col-span-1">
+        <dt className="font-medium text-gray-500">Subtotal (Visible Items)</dt>
+        <dd className="mt-1 text-gray-900 font-semibold">{formatCurrency(quoteData.subtotalVisible)}</dd>
+      </div>
+      <div className="sm:col-span-1">
+        <dt className="font-medium text-gray-500">Total Hidden Costs</dt>
+        <dd className="mt-1 text-gray-900">{formatCurrency(quoteData.totalHiddenCost)}</dd>
+      </div>
+      <div className="sm:col-span-1">
+        <dt className="font-medium text-gray-500">Total Markup Added</dt>
+        <dd className="mt-1 text-gray-900">{formatCurrency(quoteData.totalMarkup)}</dd>
+      </div>
+      <div className="sm:col-span-1">
+        <dt className="font-medium text-gray-500">Total Base Cost</dt>
+        <dd className="mt-1 text-gray-900">{formatCurrency(quoteData.totalBaseCost)}</dd>
+      </div>
+      {/* VAT Display (Conditional) */}
+       {quoteData.vatEnabled && (
+          <>
+             <div className="sm:col-span-1">
+                <dt className="font-medium text-gray-500">Total Before VAT</dt>
+                <dd className="mt-1 text-gray-900">{formatCurrency(quoteData.finalTotalBeforeVAT)}</dd>
+             </div>
+             <div className="sm:col-span-1">
+                <dt className="font-medium text-gray-500">VAT ({quoteData.vatRate}%)</dt>
+                <dd className="mt-1 text-gray-900">{formatCurrency(quoteData.vatAmount)}</dd>
+             </div>
+          </>
+       )}
+      <div className="col-span-2 md:col-span-2">
+        <dt className="font-medium text-gray-500">{quoteData.vatEnabled ? "Grand Total (Inc. VAT)" : "Final Quote Total"}</dt>
+        <dd className="mt-1 text-xl text-indigo-700 font-bold">{formatCurrency(quoteData.grandTotal)}</dd>
+      </div>
+    </dl>
+  </div>
+));
+
+const ExclusionsNotesSection = React.memo(({ exclusions, notes, dispatch }) => {
+  const handleExclusionsChange = useCallback((index, value) => {
+      dispatch({ type: 'UPDATE_EXCLUSION', payload: { index, value } });
+  }, [dispatch]);
+
+  const handleAddExclusion = useCallback(() => {
+      dispatch({ type: 'ADD_EXCLUSION' });
+  }, [dispatch]);
+
+  const handleRemoveExclusion = useCallback((index) => {
+      dispatch({ type: 'REMOVE_EXCLUSION', payload: { index } });
+  }, [dispatch]);
+
+  const handleNotesChange = useCallback((e) => {
+      dispatch({ type: 'UPDATE_FIELD', payload: { field: 'notes', value: e.target.value } });
+  }, [dispatch]);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Exclusions Card */}
+      <div className="bg-card-background shadow-sm sm:rounded-lg p-4 sm:p-6 border border-card-border transition-colors duration-300 ease-linear">
+        <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Exclusions</h3>
+        <p className="text-sm text-gray-500 mb-4">Items or services explicitly not included in the quote.</p>
+        <div className="space-y-3">
+          {exclusions.map((exclusion, index) => (
+            <div key={index} className="flex items-start space-x-2">
+              <FormField
+                label={`Exclusion ${index + 1}`}
+                id={`exclusion-${index}`}
+                type="textarea"
+                rows={2}
+                value={exclusion}
+                onChange={(e) => handleExclusionsChange(index, e.target.value)}
+                className="flex-grow"
+                labelSrOnly
+                placeholder="e.g., Removal of old materials"
+              />
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => handleRemoveExclusion(index)}
+                className="text-red-500 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30 mt-1"
+                aria-label="Remove exclusion"
+              >
+                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              </Button>
+            </div>
+          ))}
+        </div>
+        <Button
+          variant="link"
+          size="sm"
+          onClick={handleAddExclusion}
+          className="mt-3 text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+        >
+          + Add Exclusion
+        </Button>
+      </div>
+
+      {/* Notes Card */}
+      <div className="bg-card-background shadow-sm sm:rounded-lg p-4 sm:p-6 border border-card-border transition-colors duration-300 ease-linear">
+        <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Internal Notes</h3>
+         <FormField
+           label="Notes"
+           id="notes"
+           type="textarea"
+           rows={8}
+           value={notes}
+           onChange={handleNotesChange}
+           helpText="Internal notes for your reference, not shown to the client."
+           placeholder="Add any internal notes about this quote..."
+           labelSrOnly
+         />
+      </div>
+    </div>
+  );
+});
+
+// --- Main QuoteBuilder Component ---
 const QuoteBuilder = () => {
-  const { id } = useParams();
+  const { id: quoteIdFromUrl } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { addNotification, settings } = useAppContext();
   const queryClient = useQueryClient();
-  
-  // === STATE MANAGEMENT ===
-  const [activeTab, setActiveTab] = useState('details');
-  const [quoteDetails, setQuoteDetails] = useState({
-    id: id || null,
-    clientName: '',
-    clientCompany: '',
-    clientEmail: '',
-    clientPhone: '',
-    clientAddress: '',
-    date: new Date().toISOString().split('T')[0],
-    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    paymentTerms: settings?.quote?.defaultPaymentTerms || '1',
-    customTerms: '',
-    notes: '',
-    includeDrawingOption: false,
-    exclusions: settings?.quote?.defaultExclusions || [
-      'Boarding or fixing the underside of the new staircase.',
-      'Forming any under-stair cupboard or paneling.',
-      'Making good to any plastered walls or ceilings.',
-      'All components will arrive in their natural state, ready for fine sanding and finishing by others.'
-    ],
-    client: {
-      name: '',
-      company: '',
-      email: '',
-      phone: '',
-      address: ''
-    }
+
+  // Initialize state with defaults from settings
+  const [state, dispatch] = useReducer(quoteReducer, {
+      ...initialState,
+      paymentTerms: settings?.quote?.defaultPaymentTerms || '1',
+      exclusions: settings?.quote?.defaultExclusions || initialState.exclusions,
+      globalMarkup: settings?.quote?.defaultMarkup ?? initialState.globalMarkup,
+      distributionMethod: settings?.quote?.defaultDistribution || initialState.distributionMethod,
+      id: quoteIdFromUrl || null,
   });
-  const [selectedItems, setSelectedItems] = useState([]);
-  const [hiddenCosts, setHiddenCosts] = useState([]);
-  const [globalMarkup, setGlobalMarkup] = useState(settings?.quote?.defaultMarkup ?? 30);
-  const [distributionMethod, setDistributionMethod] = useState(settings?.quote?.defaultDistribution || 'even');
+
+  const [activeTab, setActiveTab] = useState('details');
   const [isSaving, setIsSaving] = useState(false);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [isPreviewing, setIsPreviewing] = useState(false);
-  
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false); // Keep for PDF button state
+
   // Dialog States
-  const [showItemDialog, setShowItemDialog] = useState(false);
-  const [showHiddenCostDialog, setShowHiddenCostDialog] = useState(false);
-  const [showContactSelector, setShowContactSelector] = useState(false);
-  const [showCustomItemForm, setShowCustomItemForm] = useState(false);
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
-  const [showMissingCompanyInfoDialog, setShowMissingCompanyInfoDialog] = useState(false);
-  
+  const [dialogs, setDialogs] = useState({
+      itemSelector: false,
+      hiddenCost: false,
+      contactSelector: false,
+      customItemForm: false,
+      emailOptions: false,
+      missingCompanyInfo: false,
+  });
+
   // Data for Dialogs
   const [newHiddenCost, setNewHiddenCost] = useState({ name: '', amount: '' });
-  const [customItem, setCustomItem] = useState({ name: '', cost: '', quantity: 1, category: '', description: '', markup: 0 });
+  const [customItem, setCustomItem] = useState({ name: '', cost: '', quantity: 1, category: '', description: '', markup: undefined }); // Use undefined for markup to default to global
   const [contactSearchTerm, setContactSearchTerm] = useState('');
-  const [itemSearchTerm, setItemSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  
-  // Debugging and alternative dialog handling
-  const [useAlternativeDialog, setUseAlternativeDialog] = useState(false);
-  
-  // Handle opening the item dialog with debugging
-  const handleOpenItemDialog = () => {
-    console.log("Opening item dialog, current state:", showItemDialog);
-    setShowItemDialog(true);
-    
-    // If dialog doesn't open after a short delay, switch to alternative
-    setTimeout(() => {
-      if (!document.querySelector('.dialog-overlay')) {
-        console.log("Dialog component might be failing, switching to alternative");
-        // setUseAlternativeDialog(true); // Avoid enabling alternative for now
-      }
-    }, 300);
-  };
-  
-  // Tracking user's choice to bypass company info check
-  const [bypassCompanyInfoCheck, setBypassCompanyInfoCheck] = useState(false);
-  
-  // Save as Contact state
-  const [saveAsContact, setSaveAsContact] = useState(false);
-  
+  // bypassCompanyInfoCheck state is removed, handled directly in dialog interaction
+  const [saveAsContact, setSaveAsContact] = useState(false); // State for the checkbox
+
+  // --- Data Fetching ---
   // Fetch quote if we have an ID
-  const { data: quote, isLoading: isLoadingQuote, refetch: refetchQuote } = useQuery(
-    ['quote', id],
-    () => {
-      console.log("Fetching quote with ID:", id);
-      return api.quotes.getById(id);
-    },
+  const { isLoading: isLoadingQuote, refetch: refetchQuote } = useQuery(
+    ['quote', quoteIdFromUrl],
+    () => api.quotes.getById(quoteIdFromUrl),
     {
-      enabled: !!id,
+      enabled: !!quoteIdFromUrl,
       retry: 1,
-      refetchOnMount: true,     // Add this to always refetch when component mounts
-      staleTime: 0,             // Add this to consider data always stale
+      refetchOnMount: true,
+      staleTime: 0,
       onSuccess: (data) => {
         try {
           console.log("API returned quote data:", data);
-          
-          if (!data) {
-            console.error("Quote data is null or undefined");
-            addNotification("Error loading quote: data is missing", "error");
-            return;
-          }
-          
-          // Set quote details from the data
-          setQuoteDetails({
-            id: data.id || id,
-            clientName: data.client?.name || data.clientName || '',
-            clientCompany: data.client?.company || data.clientCompany || '',
-            clientEmail: data.client?.email || '',
-            clientPhone: data.client?.phone || '',
-            clientAddress: data.client?.address || '',
-            date: data.date || new Date().toISOString().split('T')[0],
-            validUntil: data.validUntil || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            paymentTerms: data.paymentTerms || settings?.quote?.defaultPaymentTerms || '1',
-            customTerms: data.customTerms || '',
-            notes: data.notes || '',
-            includeDrawingOption: !!data.includeDrawingOption,
-            exclusions: Array.isArray(data.exclusions) ? data.exclusions : settings?.quote?.defaultExclusions || [],
-            client: {
-              name: data.client?.name || data.clientName || '',
-              company: data.client?.company || data.clientCompany || '',
-              email: data.client?.email || '',
-              phone: data.client?.phone || '',
-              address: data.client?.address || ''
-            }
-          });
-          
-          // Process selected items
-          const items = Array.isArray(data.selectedItems) ? data.selectedItems : [];
-          console.log("Processing selected items:", items.length > 0 ? items : "Empty array");
-          setSelectedItems(items.map(item => ({
-            id: item.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
-            name: item.name || 'Unnamed Item',
-            cost: parseFloat(item.cost) || 0,
-            supplier: item.supplier || '',
-            quantity: parseFloat(item.quantity) || 1,
-            markup: parseInt(item.markup) || 0,
-            hideInQuote: !!item.hideInQuote,
-            description: item.description || '',
-            category: item.category || ''
-          })));
-          
-          // Process hidden costs
-          const costs = Array.isArray(data.hiddenCosts) ? data.hiddenCosts : [];
-          console.log("Processing hidden costs:", costs.length > 0 ? costs : "Empty array");
-          setHiddenCosts(costs.map(cost => ({
-            id: cost.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
-            name: cost.name || 'Unnamed Cost',
-            amount: parseFloat(cost.amount) || 0
-          })));
-          
-          // Set global markup
-          if (typeof data.globalMarkup === 'number' && !isNaN(data.globalMarkup)) {
-            setGlobalMarkup(data.globalMarkup);
+          const transformedData = transformFetchedQuoteData(data, settings?.quote || {});
+          if (transformedData) {
+             dispatch({ type: 'INITIALIZE_QUOTE', payload: transformedData });
+             console.log("Quote data successfully processed and dispatched");
           } else {
-             setGlobalMarkup(settings?.quote?.defaultMarkup ?? 30); // Fallback
+             addNotification("Error processing quote: transformed data is invalid", "error");
           }
-          
-          // Set distribution method
-          if (data.distributionMethod && ['even', 'proportional'].includes(data.distributionMethod)) {
-            setDistributionMethod(data.distributionMethod);
-          } else {
-             setDistributionMethod(settings?.quote?.defaultDistribution || 'even'); // Fallback
-          }
-          
-          console.log("Quote data successfully processed");
         } catch (error) {
           console.error("Error processing quote data:", error);
           addNotification(`Error processing quote data: ${error.message}`, 'error');
@@ -212,1231 +790,500 @@ const QuoteBuilder = () => {
       onError: (error) => {
         console.error("Error loading quote:", error);
         addNotification(`Error loading quote: ${error.message}`, 'error');
+        // Consider navigating away or showing a more permanent error state
+        // navigate('/quotes');
       }
     }
   );
-  
+
   // Fetch catalog items
   const { data: catalogItems = [], isLoading: isLoadingCatalog } = useQuery(
     'catalog',
-    api.catalog.getAll
+    api.catalog.getAll,
+    { onError: (err) => addNotification(`Error loading catalog: ${err.message}`, 'error') }
   );
-  
+
   // Fetch suppliers
   const { data: suppliers = [], isLoading: isLoadingSuppliers } = useQuery(
     'suppliers',
-    api.suppliers.getAll
+    api.suppliers.getAll,
+    { onError: (err) => addNotification(`Error loading suppliers: ${err.message}`, 'error') }
   );
-  
-  // Calculate quote data (totals, etc.)
-  const quoteData = calculateQuoteData(
-    selectedItems, 
-    hiddenCosts, 
-    globalMarkup, 
-    distributionMethod,
-    settings?.vat?.enabled, // Pass VAT enabled status
-    settings?.vat?.rate     // Pass VAT rate
-  );
-  
-  // Filter catalog items based on search and category
-  const filteredCatalogItems = catalogItems.filter(item => {
-    // Search filter
-    const matchesSearch = !itemSearchTerm || 
-      (item.name && item.name.toLowerCase().includes(itemSearchTerm.toLowerCase())) ||
-      (item.description && item.description.toLowerCase().includes(itemSearchTerm.toLowerCase()));
-    
-    // Category filter - Ensure selectedCategory is defined
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    
-    return matchesSearch && matchesCategory;
-  });
-  
-  // Handle adding an item to the quote
-  const handleAddItem = (item) => {
-    // Check if item is already in the list
-    const existingItem = selectedItems.find(i => i.id === item.id);
-    
-    if (existingItem) {
-      // Update quantity if already exists
-      const updatedItems = selectedItems.map(i => 
-        i.id === item.id 
-          ? { ...i, quantity: i.quantity + 1 }
-          : i
-      );
-      setSelectedItems(updatedItems);
-    } else {
-      // Add new item with default properties
-      setSelectedItems([
-        ...selectedItems,
-        {
-          ...item,
-          quantity: 1,
-          markup: globalMarkup,
-          hideInQuote: false
-        }
-      ]);
-    }
-    
-    // Close dialog if open
-    // setShowItemDialog(false); // <-- Moved this logic
-  };
-  
-  // Handle removing an item from the quote
-  const handleRemoveItem = (index) => {
-    const newItems = [...selectedItems];
-    newItems.splice(index, 1);
-    setSelectedItems(newItems);
-  };
-  
-  // Fix the item fields to allow empty values during input
-  const handleUpdateItem = (index, updatedItem) => {
-    const newItems = [...selectedItems];
-    
-    // Allow empty string values for quantity and markup during input
-    // Only parse to numbers when the value isn't an empty string
-    newItems[index] = {
-      ...updatedItem,
-      quantity: updatedItem.quantity === '' ? '' : parseFloat(updatedItem.quantity) || 0.1,
-      markup: updatedItem.markup === '' ? '' : parseInt(updatedItem.markup) || 0
-    };
-    
-    setSelectedItems(newItems);
-  };
-  
-  // Handle client details change
-  const handleClientChange = (field, value) => {
-    setQuoteDetails(prev => ({
-      ...prev,
-      [field]: value,
-      client: {
-        ...prev.client,
-        [field]: value
-      }
-    }));
-  };
-  
-  // Handle quote details change
-  const handleQuoteChange = (field, value) => {
-    setQuoteDetails({
-      ...quoteDetails,
-      [field]: value
-    });
-  };
-  
-  // Handle exclusions change
-  const handleExclusionsChange = (index, value) => {
-    const newExclusions = [...quoteDetails.exclusions];
-    newExclusions[index] = value;
-    setQuoteDetails({
-      ...quoteDetails,
-      exclusions: newExclusions
-    });
-  };
-  
-  // Add new exclusion
-  const handleAddExclusion = () => {
-    setQuoteDetails(prev => ({
-      ...prev,
-      exclusions: [...prev.exclusions, ''] // Add empty exclusion string
-    }));
-  };
 
-  // Remove exclusion
-  const handleRemoveExclusion = (index) => {
-    const newExclusions = [...quoteDetails.exclusions];
-    newExclusions.splice(index, 1);
-    setQuoteDetails(prev => ({
-      ...prev,
-      exclusions: newExclusions
-    }));
-  };
-  
-  // Add hidden cost
-  const handleAddHiddenCost = () => {
-    if (!newHiddenCost.name.trim()) {
-      addNotification('Name is required for hidden cost', 'error');
-      return;
-    }
-    
-    setHiddenCosts([
-      ...hiddenCosts,
-      {
-        id: Date.now().toString(),
-        name: newHiddenCost.name,
-        amount: parseFloat(newHiddenCost.amount) || 0
-      }
-    ]);
-    
-    setNewHiddenCost({ name: '', amount: 0 });
-    setShowHiddenCostDialog(false);
-  };
-  
-  // Remove hidden cost
-  const handleRemoveHiddenCost = (index) => {
-    const newCosts = [...hiddenCosts];
-    newCosts.splice(index, 1);
-    setHiddenCosts(newCosts);
-  };
-  
-  // Add this new handler function for adding custom items
-  const handleAddCustomItem = () => {
-    if (!customItem.name.trim()) {
-      addNotification('Item name is required', 'error');
-      return;
-    }
-    
-    // Create new item with a unique ID
-    const newItem = {
-      ...customItem,
-      id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      cost: parseFloat(customItem.cost) || 0,
-      quantity: parseFloat(customItem.quantity) || 1,
-      markup: customItem.markup !== undefined ? customItem.markup : globalMarkup,
-      supplier: 'custom',
-      hideInQuote: false
-    };
-    
-    // Add to selected items
-    setSelectedItems([...selectedItems, newItem]);
-    
-    // Reset form for next use
-    setCustomItem({
-      name: '',
-      cost: '',
-      quantity: 1,
-      category: '',
-      description: '',
-      markup: globalMarkup
-    });
-    
-    // Show success notification
-    addNotification(`Added custom item: ${newItem.name}`, 'success');
-  };
-  
-  // Save quote function with additional debugging and error handling
-  const handleSaveQuote = async () => {
-    try {
-      console.log("Save quote button clicked - starting save process");
-      
-      // Show a saving notification
-      addNotification('Saving quote...', 'info');
-      
-      // Ensure the ID is retained or generated correctly
-      const quoteId = quoteDetails.id || Date.now().toString();
-      console.log("Using quote ID:", quoteId);
-      
-      // Save client as contact if checkbox is checked
-      if (saveAsContact && quoteDetails.client.name) {
-        try {
-          // Check if client has minimum required information
-          if (quoteDetails.client.name) {
-            console.log("Saving client as contact...");
-            
-            // Split the name into first and last name
-            const nameParts = quoteDetails.client.name.split(' ');
-            const firstName = nameParts[0] || '';
-            const lastName = nameParts.slice(1).join(' ') || '';
-            
-            // Prepare contact data
-            const contactData = {
-              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-              customerType: quoteDetails.client.company ? 'business' : 'individual',
-              firstName,
-              lastName,
-              company: quoteDetails.client.company || '',
-              email: quoteDetails.client.email || '',
-              phone: quoteDetails.client.phone || '',
-              address: quoteDetails.client.address || '',
-              notes: `Added from Quote ${quoteId} on ${new Date().toLocaleDateString()}`,
-              createdAt: new Date().toISOString()
-            };
-            
-            // Save contact
-            await api.contacts.save(contactData);
-            addNotification(`Saved ${contactData.firstName} ${contactData.lastName} as a contact`, 'success');
-            
-            // Invalidate contacts query to refresh contact list
-            queryClient.invalidateQueries('contacts');
-            
-            // Reset the checkbox
-            setSaveAsContact(false);
+  // --- Memoized Calculations ---
+  const quoteData = useMemo(() => calculateQuoteData(
+    state.selectedItems,
+    state.hiddenCosts,
+    state.globalMarkup,
+    state.distributionMethod,
+    settings?.vat?.enabled,
+    settings?.vat?.rate
+  ), [state.selectedItems, state.hiddenCosts, state.globalMarkup, state.distributionMethod, settings?.vat]);
+
+  // --- Dialog Management ---
+  const showDialog = useCallback((dialogName, show = true) => {
+      setDialogs(prev => ({ ...prev, [dialogName]: show }));
+  }, []);
+
+  // --- Event Handlers ---
+  const handleSelectContact = useCallback((contact) => {
+      dispatch({
+          type: 'SET_CLIENT',
+          payload: {
+              name: `${contact.firstName || ''} ${contact.lastName || ''}`.trim(),
+              company: contact.company || '',
+              email: contact.email || '',
+              phone: contact.phone || '',
+              address: contact.address || '',
           }
-        } catch (contactError) {
-          console.error("Error saving contact:", contactError);
-          addNotification(`Error saving contact: ${contactError.message}`, 'error');
-          // Continue with quote save even if contact save fails
-        }
+      });
+      showDialog('contactSelector', false);
+      setContactSearchTerm('');
+  }, [showDialog, dispatch]);
+
+  const handleAddItemFromCatalog = useCallback((itemsToAdd) => {
+       if (Array.isArray(itemsToAdd) && itemsToAdd.length > 0) {
+           dispatch({ type: 'ADD_ITEMS', payload: { items: itemsToAdd } });
+           addNotification(`Added ${itemsToAdd.length} item(s)`, 'success');
+       } else if (itemsToAdd && typeof itemsToAdd === 'object' && itemsToAdd.id) {
+            // Handle single item selection case if necessary
+            dispatch({ type: 'ADD_ITEM', payload: { item: { ...itemsToAdd, quantity: 1, markup: state.globalMarkup, hideInQuote: false, id: itemsToAdd.id || generateId() } } });
+            addNotification(`Added 1 item`, 'success');
+       }
+       showDialog('itemSelector', false);
+   }, [dispatch, addNotification, showDialog, state.globalMarkup]);
+
+
+  const handleAddCustomItem = useCallback(() => {
+      if (!customItem.name.trim()) {
+          addNotification('Item name is required', 'error');
+          return;
       }
-      
-      // Fix potential issues with quantity values
-      const sanitizedItems = Array.isArray(selectedItems) ? selectedItems.map(item => {
-        // Make sure quantity is converted to a number properly
-        let quantity = item.quantity;
-        if (quantity === '' || quantity === undefined || quantity === null) {
-          quantity = 1; // Default to 1 if empty
-        } else {
-          quantity = parseFloat(quantity) || 1; // Convert to float, default to 1 if NaN
-        }
-        
-        // Make sure markup is converted to a number properly
-        let markup = item.markup;
-        if (markup === '' || markup === undefined || markup === null) {
-          markup = 0; // Default to 0 if empty
-        } else {
-          markup = parseInt(markup) || 0; // Convert to int, default to 0 if NaN
-        }
-        
-        return {
-          ...item,
-          id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 9),
-          quantity: quantity,
-          markup: markup,
-          hideInQuote: !!item.hideInQuote
-        };
-      }) : [];
-      
-      // Sanitize hidden costs similarly
-      const sanitizedCosts = Array.isArray(hiddenCosts) ? hiddenCosts.map(cost => ({
+      const newItem = {
+          ...customItem,
+          id: generateId(),
+          cost: parseFloat(customItem.cost) || 0,
+          quantity: parseFloat(customItem.quantity) || 1,
+          markup: customItem.markup ?? state.globalMarkup, // Use explicit markup or global
+          supplier: 'custom',
+          hideInQuote: false
+      };
+      dispatch({ type: 'ADD_ITEM', payload: { item: newItem } });
+      addNotification(`Added custom item: ${newItem.name}`, 'success');
+      setCustomItem({ name: '', cost: '', quantity: 1, category: '', description: '', markup: undefined }); // Reset form
+      showDialog('customItemForm', false);
+  }, [customItem, state.globalMarkup, dispatch, addNotification, showDialog]);
+
+  const handleAddHiddenCost = useCallback(() => {
+      if (!newHiddenCost.name.trim()) {
+          addNotification('Name is required for hidden cost', 'error');
+          return;
+      }
+      dispatch({
+          type: 'ADD_HIDDEN_COST',
+          payload: {
+              cost: {
+                  id: generateId(),
+                  name: newHiddenCost.name,
+                  amount: parseFloat(newHiddenCost.amount) || 0
+              }
+          }
+      });
+      setNewHiddenCost({ name: '', amount: '' }); // Reset form
+      showDialog('hiddenCost', false);
+  }, [newHiddenCost, dispatch, addNotification, showDialog]);
+
+  // --- Save Logic ---
+  const sanitizeDataForSave = useCallback(() => {
+    const sanitizedItems = Array.isArray(state.selectedItems) ? state.selectedItems.map(item => ({
+        ...item,
+        id: item.id || generateId(),
+        quantity: parseFloat(item.quantity) || 1, // Ensure quantity is a number
+        markup: item.markup === '' || item.markup === undefined || item.markup === null ? state.globalMarkup : parseInt(item.markup) || 0, // Use global if empty/undefined, parse if exists
+        hideInQuote: !!item.hideInQuote
+    })) : [];
+
+    const sanitizedCosts = Array.isArray(state.hiddenCosts) ? state.hiddenCosts.map(cost => ({
         ...cost,
-        id: cost.id || Date.now().toString() + Math.random().toString(36).substring(2, 9),
+        id: cost.id || generateId(),
         amount: parseFloat(cost.amount) || 0
-      })) : [];
-      
-      // Sanitize and prepare data for saving
-      const quoteToSave = {
-        ...quoteDetails,
+    })) : [];
+
+    // Use current state ID if available, otherwise generate one for new quotes
+    const quoteId = state.id || generateId();
+
+    return {
+        ...state,
         id: quoteId,
-        // Client data with defaults
-        client: {
-          name: quoteDetails.client.name || '',
-          company: quoteDetails.client.company || '',
-          email: quoteDetails.client.email || '',
-          phone: quoteDetails.client.phone || '',
-          address: quoteDetails.client.address || ''
+        client: { // Ensure client data defaults if empty
+            name: state.client.name || '',
+            company: state.client.company || '',
+            email: state.client.email || '',
+            phone: state.client.phone || '',
+            address: state.client.address || ''
         },
         selectedItems: sanitizedItems,
         hiddenCosts: sanitizedCosts,
-        globalMarkup,
-        distributionMethod,
         savedAt: new Date().toISOString(),
-        // Add clientName and clientCompany for compatibility with quotes list
-        clientName: quoteDetails.client.name || '',
-        clientCompany: quoteDetails.client.company || ''
-      };
-      
+        // Add flat clientName/Company for list display compatibility
+        clientName: state.client.name || '',
+        clientCompany: state.client.company || ''
+    };
+  }, [state]);
+
+  const saveClientAsContactIfNeeded = useCallback(async (quoteToSave) => {
+      if (saveAsContact && quoteToSave.client.name) {
+          try {
+              console.log("Saving client as contact...");
+              const nameParts = quoteToSave.client.name.split(' ');
+              const contactData = {
+                  id: generateId(),
+                  customerType: quoteToSave.client.company ? 'business' : 'individual',
+                  firstName: nameParts[0] || '',
+                  lastName: nameParts.slice(1).join(' ') || '',
+                  company: quoteToSave.client.company || '',
+                  email: quoteToSave.client.email || '',
+                  phone: quoteToSave.client.phone || '',
+                  address: quoteToSave.client.address || '',
+                  notes: `Added from Quote ${quoteToSave.id} on ${new Date().toLocaleDateString()}`,
+                  createdAt: new Date().toISOString()
+              };
+              await api.contacts.save(contactData);
+              addNotification(`Saved ${contactData.firstName} ${contactData.lastName} as a contact`, 'success');
+              queryClient.invalidateQueries('contacts');
+              setSaveAsContact(false); // Reset checkbox after successful save
+          } catch (contactError) {
+              console.error("Error saving contact:", contactError);
+              addNotification(`Error saving contact: ${contactError.message}`, 'error');
+              // Decide if quote save should continue or stop
+              throw contactError; // Re-throw to potentially stop quote save
+          }
+      }
+  }, [saveAsContact, addNotification, queryClient]);
+
+  const handleSaveQuote = useCallback(async () => {
+      setIsSaving(true);
+      addNotification('Saving quote...', 'info');
+      const quoteToSave = sanitizeDataForSave();
       console.log("Saving quote data:", quoteToSave);
-      
-      // Call the API save function with more detailed error handling
+
       try {
-        const savedQuote = await api.quotes.save(quoteToSave);
-        console.log("Quote saved successfully:", savedQuote);
-        
-        // Show success notification with more details
-        addNotification(
-          `Quote for ${quoteDetails.client.name || 'client'} saved successfully ✓`,
-          'success',
-          5000 // 5 seconds duration
-        );
-        
-        // Navigate or refetch - DO NOT CHANGE THIS PART
-        if (!id) {
-          console.log("Navigating to new quote:", quoteId);
-          navigate(`/quotes/${quoteId}`);
-        } else {
-          console.log("Refetching existing quote");
-          refetchQuote();
-        }
-      } catch (apiError) {
-        console.error("API error during save:", apiError);
-        throw new Error(`API Error: ${apiError.message || 'Unknown API error'}`);
-      }
-    } catch (error) {
-      console.error("Error saving quote:", error);
-      
-      // Error notification
-      addNotification(`Error saving quote: ${error.message}`, 'error');
-    }
-  };
-  
-  // Update the handleExportPDF function
-  const handleExportPDF = async () => {
-    try {
-      // Get the quote preview element
-      const quotePreviewElement = document.querySelector('.quote-preview');
-      
-      if (!quotePreviewElement) {
-        throw new Error('Quote preview element not found');
-      }
-      
-      // Add notification
-      addNotification('Generating PDF...', 'info');
-      
-      // Add PDF export classes
-      quotePreviewElement.classList.add('pdf-export-mode');
-      // Add a new class specifically for ensuring A4 sizing
-      quotePreviewElement.classList.add('pdf-a4-format');
-      
-      // Configure options
-      const options = {
-        filename: `Quote_${quoteDetails.client.name || 'Untitled'}_${new Date().toISOString().split('T')[0]}.pdf`,
-        margin: [10, 10, 10, 10], // Reduced margins [top, right, bottom, left]
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 2,
-          useCORS: true,
-          logging: true
-        },
-        jsPDF: { 
-          unit: 'mm', 
-          format: 'a4', 
-          orientation: 'portrait'
-        }
-      };
-      
-      // Generate PDF
-      try {
-        await html2pdf()
-          .from(quotePreviewElement)
-          .set(options)
-          .save();
-        
-        addNotification('PDF exported successfully!', 'success');
+          await saveClientAsContactIfNeeded(quoteToSave); // Attempt to save contact first
+          const savedQuote = await api.quotes.save(quoteToSave); // Save the quote
+          console.log("Quote saved successfully:", savedQuote);
+
+          addNotification(
+              `Quote for ${quoteToSave.clientName || 'client'} saved successfully ✓`,
+              'success',
+              5000
+          );
+
+          // Navigate to the saved quote's page if it was a new quote
+          if (!quoteIdFromUrl) {
+              navigate(`/quotes/${quoteToSave.id}`, { replace: true }); // Use replace to avoid back button going to /new
+          } else {
+              refetchQuote(); // Refetch data for the existing quote
+          }
+      } catch (error) {
+          console.error("Error during save process:", error);
+          // Notification for contact or quote save error would have been shown already
+          if (! (error.message.includes("saving contact"))) { // Avoid duplicate notification if contact save failed
+             addNotification(`Error saving quote: ${error.message}`, 'error');
+          }
       } finally {
-        // Always remove the PDF export classes, even if there's an error
-        quotePreviewElement.classList.remove('pdf-export-mode');
-        quotePreviewElement.classList.remove('pdf-a4-format');
+          setIsSaving(false);
       }
-      
-    } catch (error) {
-      console.error('PDF generation error:', error);
-      addNotification(`Error generating PDF: ${error.message}`, 'error');
-      
-      // Make sure we remove the classes if there's an error
+  }, [state, sanitizeDataForSave, saveClientAsContactIfNeeded, addNotification, quoteIdFromUrl, navigate, refetchQuote]);
+
+
+  // --- PDF Export Logic ---
+   const exportPDF = useCallback(async (bypassCompanyCheck = false) => {
+      if (!bypassCompanyCheck && (!settings?.company?.name || !settings?.company?.address)) {
+          showDialog('missingCompanyInfo', true);
+          return;
+      }
+
+      if (activeTab !== 'preview') {
+          setActiveTab('preview');
+          // Wait briefly for preview tab to render
+          await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
       const quotePreviewElement = document.querySelector('.quote-preview');
-      if (quotePreviewElement) {
-        quotePreviewElement.classList.remove('pdf-export-mode');
-        quotePreviewElement.classList.remove('pdf-a4-format');
-      }
-    }
-  };
-
-  // Function to validate company information before email or export
-  const validateCompanyInfo = () => {
-    // If user has chosen to bypass company info check, return true
-    if (bypassCompanyInfoCheck) {
-      return true;
-    }
-    
-    if (!settings?.company?.name || !settings?.company?.address) {
-      setShowMissingCompanyInfoDialog(true);
-      return false;
-    }
-    return true;
-  };
-
-  // Create a safer export PDF function that ensures preview is visible
-  const safeExportPDF = async () => {
-    try {
-      // Check for missing company information before proceeding
-      // Skip this check if bypassCompanyInfoCheck is true
-      if (!bypassCompanyInfoCheck && (!settings?.company?.name || !settings?.company?.address)) {
-        setShowMissingCompanyInfoDialog(true);
-        return;
-      }
-      
-      // First, make sure we're on the preview tab
-      if (activeTab !== 'preview') {
-        setActiveTab('preview');
-        
-        // Wait for the tab change to take effect and DOM to update
-        await new Promise(resolve => setTimeout(resolve, 300));
+      if (!quotePreviewElement) {
+          addNotification('Quote preview element not found for PDF export.', 'error');
+          return;
       }
 
-      // Now execute the normal PDF export
-      return handleExportPDF();
-    } catch (error) {
-      console.error('Error in safe PDF export:', error);
-      addNotification(`Error exporting PDF: ${error.message}`, 'error');
-      return Promise.reject(error);
-    }
-  };
+      setIsGeneratingPdf(true);
+      addNotification('Generating PDF...', 'info');
+      quotePreviewElement.classList.add('pdf-export-mode', 'pdf-a4-format');
 
-  // Add a new function to export PDF without company info check
-  const exportPDFWithoutCompanyCheck = async () => {
-    try {
-      // First, make sure we're on the preview tab
-      if (activeTab !== 'preview') {
-        setActiveTab('preview');
-        
-        // Wait for the tab change to take effect and DOM to update
-        await new Promise(resolve => setTimeout(resolve, 300));
+      const options = {
+          filename: `Quote_${state.client.name || 'Untitled'}_${formatDateForInput(state.date)}.pdf`,
+          margin: [10, 10, 10, 10],
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false }, // Disable logging unless debugging
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      try {
+          await html2pdf().from(quotePreviewElement).set(options).save();
+          addNotification('PDF exported successfully!', 'success');
+      } catch (error) {
+          console.error('PDF generation error:', error);
+          addNotification(`Error generating PDF: ${error.message}`, 'error');
+      } finally {
+          quotePreviewElement.classList.remove('pdf-export-mode', 'pdf-a4-format');
+          setIsGeneratingPdf(false);
+          // Close the company info dialog if it was open and export was triggered from there
+          showDialog('missingCompanyInfo', false);
       }
+   }, [activeTab, settings?.company, state.client.name, state.date, addNotification, showDialog]);
 
-      // Now execute the normal PDF export
-      return handleExportPDF();
-    } catch (error) {
-      console.error('Error in export without company check:', error);
-      addNotification(`Error exporting PDF: ${error.message}`, 'error');
-      return Promise.reject(error);
-    }
-  };
 
-  // Modify handleEmailQuote to check company info first
-  const handleEmailQuote = () => {
-    if (validateCompanyInfo()) {
-      setShowEmailDialog(true);
-    }
-  };
+  // --- Email Logic ---
+  const handleEmailQuote = useCallback(() => {
+      if (!settings?.company?.name || !settings?.company?.address) {
+          showDialog('missingCompanyInfo', true); // Show warning if company info missing
+      } else {
+          showDialog('emailOptions', true); // Show email options if info is present
+      }
+  }, [settings?.company, showDialog]);
 
-  // Add these functions before the return statement in your component
+  const handleOpenEmailClient = useCallback(() => {
+      try {
+          const subject = encodeURIComponent(`Quotation for ${state.client.company || state.client.name}`);
+          const body = encodeURIComponent(`Dear ${state.client.name},
 
-  // Add this function for opening email client
-  const handleOpenEmailClient = () => {
-    try {
-      // Get client details
-      const subject = encodeURIComponent(`Quotation for ${quoteDetails.client.company || quoteDetails.client.name}`);
-      const body = encodeURIComponent(`Dear ${quoteDetails.client.name},\n\nPlease find attached our quotation as discussed.\n\nIf you have any questions, please do not hesitate to contact us.\n\nKind regards,\n${settings?.company?.name || 'Your Company'}`);
-      const clientEmail = quoteDetails.client.email || '';
-      
-      // Create mailto link and open it
-      const mailtoLink = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
-      window.location.href = mailtoLink;
-      
-      // Close dialog
-      setShowEmailDialog(false);
-      
-      // Show success notification
-      addNotification('Email client opened', 'success');
-    } catch (error) {
-      console.error('Error opening email client:', error);
-      addNotification(`Error opening email client: ${error.message}`, 'error');
-    }
-  };
+Please find attached our quotation as discussed.
 
-  // Add this function for exporting PDF and opening email
-  const handleExportAndOpenEmail = async () => {
-    try {
-      // First export the PDF
-      await safeExportPDF();
-      
-      // Then open email client
-      handleOpenEmailClient();
-      
-      // Close dialog
-      setShowEmailDialog(false);
-    } catch (error) {
-      console.error('Error in export and email:', error);
-      addNotification(`Error: ${error.message}`, 'error');
-    }
-  };
+If you have any questions, please do not hesitate to contact us.
 
-  // Debug company logo
-  useEffect(() => {
-    if (settings?.company?.logo) {
-      console.log('Company logo is available:', settings.company.logo.substring(0, 50) + '...');
-    } else {
-      console.log('Company logo is not available in settings');
-    }
-  }, [settings]);
+Kind regards,
+${settings?.company?.name || 'Your Company'}`);
+          const mailtoLink = `mailto:${state.client.email || ''}?subject=${subject}&body=${body}`;
+          window.location.href = mailtoLink;
+          showDialog('emailOptions', false);
+          addNotification('Email client opened', 'success');
+      } catch (error) {
+          console.error('Error opening email client:', error);
+          addNotification(`Error opening email client: ${error.message}`, 'error');
+      }
+  }, [state.client, settings?.company?.name, showDialog, addNotification]);
 
-  // Loading state
+  const handleExportAndOpenEmail = useCallback(async () => {
+       // Company info checked by handleEmailQuote before showing the dialog
+      try {
+          await exportPDF(); // Generate PDF first (uses safe export logic internally)
+          handleOpenEmailClient(); // Then open email
+      } catch (error) {
+          // Error notification handled within exportPDF or handleOpenEmailClient
+          console.error('Error in export and email:', error);
+      } finally {
+          showDialog('emailOptions', false);
+      }
+  }, [exportPDF, handleOpenEmailClient, showDialog]);
+
+  // --- Invoice Generation Logic ---
+   const handleGenerateInvoice = useCallback(async () => {
+       if (!state.id) {
+           addNotification('Please save the quote before generating an invoice.', 'warning');
+           // Optionally trigger save: await handleSaveQuote(); if(!state.id) return; // Re-check ID after save attempt
+           return;
+       }
+
+       try {
+           // Ensure the latest version is saved before navigating
+           // Optional: Could add a check here if there are unsaved changes
+           addNotification('Preparing invoice...', 'info');
+           // await handleSaveQuote(); // Can uncomment if strict save-before-invoice is needed
+
+           const { paymentTerms } = state;
+           const { grandTotal, vatEnabled, vatRate, vatAmount } = quoteData; // Get calculated totals
+
+           let amounts = [grandTotal];
+           let types = ['Full Amount']; // Default
+
+           // Determine invoice stages based on payment terms
+           if (paymentTerms === '5') { // 50% Deposit, 50% Completion (Example mapping)
+               amounts = [grandTotal * 0.5, grandTotal * 0.5];
+               types = ['Deposit (50%)', 'Final Payment (50%)'];
+           } else if (paymentTerms === 'custom') {
+               types = ['Custom Terms'];
+           }
+           // Add more conditions for other payment terms (1, 2, 3, 4) if needed
+
+           // Navigate to invoice builder with details for the *first* invoice stage
+           const params = new URLSearchParams({
+               quoteId: state.id,
+               amount: amounts[0].toFixed(2),
+               type: types[0],
+               total: grandTotal.toFixed(2),
+               vatEnabled: String(vatEnabled),
+               vatRate: String(vatRate),
+               vatAmount: vatAmount.toFixed(2)
+           });
+           navigate(`/invoices/new?${params.toString()}`);
+
+       } catch (error) {
+           console.error('Error preparing invoice navigation:', error);
+           addNotification(`Error preparing invoice: ${error.message}`, 'error');
+       }
+   }, [state.id, state.paymentTerms, quoteData, navigate, addNotification /*, handleSaveQuote*/]);
+
+
+  // --- Render Logic ---
   if (isLoadingQuote || isLoadingCatalog || isLoadingSuppliers) {
     return <Loading message="Loading quote builder..." />;
   }
-  
-  // Format currency
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP'
-    }).format(amount);
-  };
-  
-  // Get supplier name by ID
-  const getSupplierName = (supplierId) => {
-    const supplier = suppliers.find(s => s.id === supplierId);
-    return supplier ? supplier.name : 'Unknown Supplier';
-  };
-  
-  // Create invoice helper function inside component
-  const createInvoiceFromQuote = (quote, quoteData, amount, description, type) => {
-    // Generate invoice number with current year and random number
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
-    
-    // Set due date (14 days from now for deposit, 30 days for others)
-    const today = new Date();
-    const dueDate = new Date(today);
-    dueDate.setDate(dueDate.getDate() + (type === 'deposit' ? 14 : 30));
-    
-    // Get client details
-    const clientName = quote.client.name || '';
-    const clientCompany = quote.client.company || '';
-    
-    return {
-      id: Date.now().toString() + Math.floor(Math.random() * 1000),
-      invoiceNumber,
-      status: 'pending',
-      quoteId: quote.id,
-      invoiceDate: today.toISOString().split('T')[0],
-      dueDate: dueDate.toISOString().split('T')[0],
-      
-      // Client details
-      clientName,
-      clientCompany,
-      clientEmail: quote.client.email || '',
-      clientPhone: quote.client.phone || '',
-      clientAddress: quote.client.address || '',
-      
-      // Invoice details
-      amount: amount,
-      description: `${description} for ${clientCompany ? clientCompany : 'project'}`,
-      
-      // Notes
-      notes: `This invoice represents the ${description.toLowerCase()} as outlined in Quote Reference: ${quote.id || 'N/A'}.`,
-      
-      // Metadata
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      
-      // Type of invoice (useful for filtering)
-      invoiceType: type
-    };
-  };
-
-  // Replace the existing handleGenerateInvoice function with this one
-  const handleGenerateInvoice = async () => {
-    try {
-      // First, ensure the quote is saved
-      await handleSaveQuote();
-      
-      // Show a notification
-      addNotification('Navigating to invoice builder...', 'info');
-      
-      // Get the payment term type
-      const paymentTerms = quoteDetails.paymentTerms;
-      
-      // Calculate amounts based on payment terms
-      let amounts = [];
-      let types = [];
-      
-      if (paymentTerms === '1') {
-        // 50% deposit, 50% on completion
-        amounts = [quoteData.grandTotal * 0.5, quoteData.grandTotal * 0.5];
-        types = ['Deposit (50%)', 'Final Payment (50%)'];
-      } else if (paymentTerms === '2') {
-        // 50% deposit, 25% on joinery completion, 25% final
-        amounts = [
-          quoteData.grandTotal * 0.5, 
-          quoteData.grandTotal * 0.25, 
-          quoteData.grandTotal * 0.25
-        ];
-        types = ['Deposit (50%)', 'Interim Payment (25%)', 'Final Payment (25%)'];
-      } else if (paymentTerms === '4') {
-        // Full payment before delivery
-        amounts = [quoteData.grandTotal];
-        types = ['Full Payment'];
-      } else {
-        // Custom terms - create single invoice
-        amounts = [quoteData.grandTotal];
-        types = ['Custom'];
-      }
-      
-      // Navigate to invoice builder with the first invoice details
-      // Also pass VAT information so we don't double-apply VAT
-      navigate(`/invoices/new?quoteId=${quoteDetails.id}&amount=${amounts[0]}&type=${encodeURIComponent(types[0])}&total=${quoteData.grandTotal}&vatEnabled=${quoteData.vatEnabled}&vatRate=${quoteData.vatRate}&vatAmount=${quoteData.vatAmount}`);
-      
-    } catch (error) {
-      console.error('Error navigating to invoice builder:', error);
-      addNotification(`Error: ${error.message}`, 'error');
-    }
-  };
-
-  // Define the actions for the ActionButtons component
-  const headerActions = (
-    <ActionButtons 
-      actions={[
-        {
-          label: "Back to Quotes",
-          onClick: () => navigate('/quotes')
-        },
-        {
-          label: "Save Quote",
-          onClick: () => {
-            console.log("Save button clicked");
-            handleSaveQuote();
-          },
-          type: "button" // Explicitly set button type
-        },
-        {
-          label: "Email Quote",
-          onClick: handleEmailQuote
-        },
-        {
-          label: "Export PDF",
-          onClick: safeExportPDF
-        },
-        {
-          label: "Generate Invoice",
-          onClick: handleGenerateInvoice
-        }
-      ]}
-    />
-  );
-
-  // Add these new handler functions for moving items
-  const handleMoveItemUp = (index) => {
-    if (index === 0) return; // Already at the top
-    
-    const newItems = [...selectedItems];
-    // Swap with the item above
-    [newItems[index-1], newItems[index]] = [newItems[index], newItems[index-1]];
-    setSelectedItems(newItems);
-  };
-
-  const handleMoveItemDown = (index) => {
-    if (index === selectedItems.length - 1) return; // Already at the bottom
-    
-    const newItems = [...selectedItems];
-    // Swap with the item below
-    [newItems[index], newItems[index+1]] = [newItems[index+1], newItems[index]];
-    setSelectedItems(newItems);
-  };
 
   return (
-    <PageLayout title={id ? 'Edit Quote' : 'Create Quote'} subtitle={id ? `Ref: ${id}` : 'Create a new quote'}>
-      {isLoadingQuote ? (
-        <Loading message="Loading quote details..." />
-      ) : (
-        <>
-          <div className="mb-6">
-            <Tabs
-              tabs={[
-                { id: 'details', label: 'Client & Details' },
-                { id: 'items', label: 'Items & Costs' },
-                { id: 'exclusions', label: 'Exclusions & Notes' },
-                { id: 'preview', label: 'Preview' },
-              ]}
-              activeTab={activeTab}
-              onChange={setActiveTab}
-              variant="underline" // Or 'pills' or 'default' based on your preference
-            />
-          </div>
+    <PageLayout title={quoteIdFromUrl ? 'Edit Quote' : 'Create Quote'} subtitle={quoteIdFromUrl ? `Ref: ${state.id}` : 'Create a new quote'}>
+      {/* Tabs */}
+      <div className="mb-6">
+        <Tabs
+          tabs={[
+            { id: 'details', label: 'Client & Details' },
+            { id: 'items', label: 'Items & Costs' },
+            { id: 'exclusions', label: 'Exclusions & Notes' },
+            { id: 'preview', label: 'Preview' },
+          ]}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          variant="underline"
+        />
+      </div>
 
-          {/* Client & Details Tab */}
-          <TabPanel id="details" activeTab={activeTab}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              {/* Client Details Card */}
-              <div className="bg-card-background shadow-sm sm:rounded-lg p-6 border border-card-border transition-colors duration-300 ease-linear">
-                <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Client Information</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    label="Client Name"
-                    id="clientName"
-                    value={quoteDetails.clientName}
-                    onChange={(e) => handleClientChange('clientName', e.target.value)}
-                    placeholder="e.g., John Doe"
-                    required
-                  />
-                  <FormField
-                    label="Company Name (Optional)"
-                    id="clientCompany"
-                    value={quoteDetails.clientCompany}
-                    onChange={(e) => handleClientChange('clientCompany', e.target.value)}
-                    placeholder="e.g., Acme Corp"
-                  />
-                  <FormField
-                    label="Email Address"
-                    id="clientEmail"
-                    type="email"
-                    value={quoteDetails.clientEmail}
-                    onChange={(e) => handleClientChange('clientEmail', e.target.value)}
-                    placeholder="e.g., john.doe@example.com"
-                  />
-                  <FormField
-                    label="Phone Number"
-                    id="clientPhone"
-                    type="tel"
-                    value={quoteDetails.clientPhone}
-                    onChange={(e) => handleClientChange('clientPhone', e.target.value)}
-                    placeholder="e.g., 01234 567890"
-                  />
-                  <FormField
-                    label="Address (Optional)"
-                    id="clientAddress"
-                    type="textarea"
-                    rows={3}
-                    value={quoteDetails.clientAddress}
-                    onChange={(e) => handleClientChange('clientAddress', e.target.value)}
-                    className="sm:col-span-2"
-                    placeholder="e.g., 123 Main Street, Anytown, AT1 2BT"
-                  />
-                </div>
-                <div className="mt-4 flex justify-end items-center space-x-3">
-                   <FormField
-                      label="Save as New Contact?"
-                      id="saveAsContact"
-                      type="checkbox"
-                      checked={saveAsContact}
-                      onChange={(e) => setSaveAsContact(e.target.checked)}
-                      labelClassName="text-sm"
-                    />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowContactSelector(true)}
-                    icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
-                    className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
-                  >
-                    Load Contact
-                  </Button>
-                </div>
+      {/* Tab Panels */}
+      <TabPanel id="details" activeTab={activeTab}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <ClientDetailsForm
+              client={state.client}
+              dispatch={dispatch}
+              onShowContactSelector={() => showDialog('contactSelector')}
+              saveAsContact={saveAsContact}
+              onSaveAsContactChange={setSaveAsContact}
+          />
+          <QuoteMetaDetailsForm details={state} dispatch={dispatch} />
+        </div>
+      </TabPanel>
+
+      <TabPanel id="items" activeTab={activeTab}>
+         <div className="space-y-6">
+             <CostingSettings
+                 globalMarkup={state.globalMarkup}
+                 distributionMethod={state.distributionMethod}
+                 dispatch={dispatch}
+             />
+             {/* Selected Items Card */}
+             <div className="bg-card-background shadow-sm sm:rounded-lg border border-card-border transition-colors duration-300 ease-linear">
+                  <div className="px-4 sm:px-6 py-4 border-b border-card-border flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 dark:border-gray-700">
+                      <h3 className="text-lg font-medium leading-6 text-text-primary mb-2 sm:mb-0">Selected Items</h3>
+                      {/* Ensure buttons are always in a row */}
+                      <div className="flex flex-row gap-2">
+                          <Button variant="outline" size="sm" onClick={() => showDialog('itemSelector')} className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
+                              Add Catalog Item
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => showDialog('customItemForm')} className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
+                              Add Custom Item
+                          </Button>
+                      </div>
+                  </div>
+                  <div className="p-4 sm:p-6">
+                      <SelectedItemsList items={state.selectedItems} dispatch={dispatch} />
+                  </div>
               </div>
+              <HiddenCostsList
+                  costs={state.hiddenCosts}
+                  dispatch={dispatch}
+                  onShowAddDialog={() => showDialog('hiddenCost')}
+              />
+              <TotalsDisplay quoteData={quoteData} />
+         </div>
+      </TabPanel>
 
-              {/* Quote Details Card */}
-              <div className="bg-card-background shadow-sm sm:rounded-lg p-6 border border-card-border transition-colors duration-300 ease-linear">
-                <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Quote Details</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    label="Quote Date"
-                    id="quoteDate"
-                    type="date"
-                    value={formatDateForInput(quoteDetails.date)}
-                    onChange={(e) => handleQuoteChange('date', e.target.value)}
-                    required
-                  />
-                  <FormField
-                    label="Valid Until"
-                    id="validUntil"
-                    type="date"
-                    value={formatDateForInput(quoteDetails.validUntil)}
-                    onChange={(e) => handleQuoteChange('validUntil', e.target.value)}
-                    required
-                  />
-                  <FormField
-                    label="Payment Terms"
-                    id="paymentTerms"
-                    type="select"
-                    value={quoteDetails.paymentTerms}
-                    onChange={(e) => handleQuoteChange('paymentTerms', e.target.value)}
-                    options={[
-                      { value: '1', label: 'On Completion' },
-                      { value: '2', label: 'Net 7 Days' },
-                      { value: '3', label: 'Net 14 Days' },
-                      { value: '4', label: 'Net 30 Days' },
-                      { value: '5', label: '50% Deposit, 50% Completion' },
-                      { value: 'custom', label: 'Custom (Specify Below)' },
-                    ]}
-                    className="sm:col-span-2"
-                  />
-                  {quoteDetails.paymentTerms === 'custom' && (
-                    <FormField
-                      label="Custom Payment Terms"
-                      id="customTerms"
-                      type="textarea"
-                      rows={2}
-                      value={quoteDetails.customTerms}
-                      onChange={(e) => handleQuoteChange('customTerms', e.target.value)}
-                      className="sm:col-span-2"
-                      placeholder="Specify custom payment terms here..."
-                    />
-                  )}
-                   <FormField
-                      label="Include Drawing Option?"
-                      id="includeDrawingOption"
-                      type="checkbox"
-                      checked={quoteDetails.includeDrawingOption}
-                      onChange={(e) => handleQuoteChange('includeDrawingOption', e.target.checked)}
-                      helpText="Adds an optional line item for drawings/plans."
-                      className="sm:col-span-2"
-                    />
-                </div>
-              </div>
-            </div>
-          </TabPanel>
+      <TabPanel id="exclusions" activeTab={activeTab}>
+          <ExclusionsNotesSection
+              exclusions={state.exclusions}
+              notes={state.notes}
+              dispatch={dispatch}
+          />
+      </TabPanel>
 
-          {/* Items & Costs Tab */}
-          <TabPanel id="items" activeTab={activeTab}>
-            <div className="space-y-6">
-              {/* Global Settings Card */}
-              <div className="bg-card-background shadow-sm sm:rounded-lg p-6 border border-card-border transition-colors duration-300 ease-linear">
-                <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Costing & Markup</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-                  <FormField
-                    label="Global Markup %"
-                    id="globalMarkup"
-                    type="number"
-                    value={globalMarkup}
-                    onChange={(e) => setGlobalMarkup(parseFloat(e.target.value) || 0)}
-                    min={0}
-                    helpText="Applied to items without a specific markup."
-                    required
-                    inputClassName="text-right"
-                  />
-                  <FormField
-                    label="Distribute Hidden Costs"
-                    id="distributionMethod"
-                    type="select"
-                    value={distributionMethod}
-                    onChange={(e) => setDistributionMethod(e.target.value)}
-                    options={[
-                      { value: 'even', label: 'Evenly' },
-                      { value: 'proportional', label: 'Proportionally' },
-                    ]}
-                    helpText="How to spread hidden costs across visible items."
-                  />
-                   {/* Placeholder for potential future global settings */}
-                   <div></div>
-                </div>
-              </div>
-
-              {/* Selected Items Card */}
-              <div className="bg-card-background shadow-sm sm:rounded-lg border border-card-border transition-colors duration-300 ease-linear">
-                <div className="px-6 py-4 border-b border-card-border flex justify-between items-center dark:border-gray-700">
-                  <h3 className="text-lg font-medium leading-6 text-text-primary">Selected Items</h3>
-                  <div className="space-x-2">
-                     <Button variant="outline" size="sm" onClick={handleOpenItemDialog} className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
-                       Add Catalog Item
-                     </Button>
-                     <Button variant="outline" size="sm" onClick={() => setShowCustomItemForm(true)} className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
-                      Add Custom Item
-                     </Button>
-                   </div>
-                </div>
-                <div className="p-6">
-                  {selectedItems.length === 0 ? (
-                    <p className="text-center text-gray-500 py-4">No items added yet.</p>
-                  ) : (
-                    <ul className="divide-y divide-gray-200">
-                      {selectedItems.map((item, index) => (
-                        <li key={item.id || index} className="py-4">
-                          {/* Replicated QuoteItemCard structure with Tailwind */}
-                          <div className="flex flex-col md:flex-row md:items-start md:justify-between space-y-3 md:space-y-0 md:space-x-4">
-                            <div className="flex-grow min-w-0">
-                              <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-base font-semibold text-gray-800 dark:text-white truncate mr-2">
-                                  {item.name || 'Unnamed Item'}
-                                  {item.category && <span className="ml-2 text-xs font-medium text-gray-500 dark:text-gray-400">({item.category})</span>}
-                                </h4>
-                                 {/* Item Actions (Move, Delete) */}
-                                <div className="flex items-center space-x-1 flex-shrink-0">
-                                  {/* Reorder Buttons */} 
-                                  <div className="flex flex-col">
-                                    <button
-                                      onClick={() => handleMoveItemUp(index)}
-                                      disabled={index === 0}
-                                      className="p-0.5 rounded text-gray-400 hover:text-indigo-600 dark:text-gray-500 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-400"
-                                      aria-label="Move item up"
-                                    >
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
-                                    </button>
-                                    <button
-                                      onClick={() => handleMoveItemDown(index)}
-                                      disabled={index === selectedItems.length - 1}
-                                      className="p-0.5 rounded text-gray-400 hover:text-indigo-600 dark:text-gray-500 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-400"
-                                      aria-label="Move item down"
-                                    >
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                                    </button>
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    onClick={() => handleRemoveItem(index)}
-                                    className="text-red-500 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30"
-                                    aria-label="Remove item"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                  </Button>
-                                </div>
-                              </div>
-                              {item.description && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{item.description}</p>
-                              )}
-                               {item.supplier && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Supplier: {item.supplier || 'N/A'}</p>
-                               )}
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                <FormField
-                                  label="Cost Price"
-                                  id={`item-cost-${index}`}
-                                  type="number"
-                                  value={item.cost}
-                                  onChange={(e) => handleUpdateItem(index, { ...item, cost: parseFloat(e.target.value) || 0 })}
-                                  prefix="£"
-                                  step="0.01"
-                                  min={0}
-                                  required
-                                  labelSrOnly
-                                  placeholder="Cost"
-                                />
-                                <FormField
-                                  label="Quantity"
-                                  id={`item-quantity-${index}`}
-                                  type="number"
-                                  value={item.quantity}
-                                  onChange={(e) => handleUpdateItem(index, { ...item, quantity: parseFloat(e.target.value) || 0 })}
-                                  min={0}
-                                  step="any"
-                                  required
-                                  labelSrOnly
-                                  placeholder="Quantity"
-                                />
-                                <FormField
-                                  label="Markup %"
-                                  id={`item-markup-${index}`}
-                                  type="number"
-                                  value={item.markup}
-                                  onChange={(e) => handleUpdateItem(index, { ...item, markup: parseInt(e.target.value) || 0 })}
-                                  suffix="%"
-                                  min={0}
-                                  placeholder="Global"
-                                  helpText="Overrides global markup."
-                                  labelSrOnly
-                                />
-                                <FormField
-                                  label="Hide in Quote"
-                                  id={`item-hide-${index}`}
-                                  type="checkbox"
-                                  checked={item.hideInQuote}
-                                  onChange={(e) => handleUpdateItem(index, { ...item, hideInQuote: e.target.checked })}
-                                  labelSrOnly
-                                  labelText="Hide"
-                                  className="flex items-center justify-end pt-1"
-                                  labelClassName="text-sm ml-2 dark:text-gray-300"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-
-              {/* Hidden Costs Card */}
-              <div className="bg-card-background shadow-sm sm:rounded-lg border border-card-border transition-colors duration-300 ease-linear">
-                 <div className="px-6 py-4 border-b border-card-border flex justify-between items-center dark:border-gray-700">
-                   <h3 className="text-lg font-medium leading-6 text-text-primary">Additional Costs (Hidden)</h3>
-                   <Button variant="outline" size="sm" onClick={() => setShowHiddenCostDialog(true)} className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
-                     Add Hidden Cost
-                   </Button>
-                 </div>
-                 <div className="p-6">
-                    {hiddenCosts.length === 0 ? (
-                     <p className="text-center text-gray-500 py-4">No hidden costs added yet.</p>
-                   ) : (
-                     <ul className="divide-y divide-gray-200">
-                       {hiddenCosts.map((cost, index) => (
-                         <li key={cost.id || index} className="py-3 flex items-center justify-between space-x-4">
-                           {/* Replicated HiddenCostItem structure with Tailwind */}
-                           <div className="flex-grow grid grid-cols-2 gap-4 items-center">
-                             <FormField
-                               label="Cost Name"
-                               id={`hidden-cost-name-${index}`}
-                               value={cost.name}
-                               onChange={(e) => {
-                                 const updatedCosts = [...hiddenCosts];
-                                 updatedCosts[index].name = e.target.value;
-                                 setHiddenCosts(updatedCosts);
-                               }}
-                               placeholder="e.g., Labour, Travel"
-                               required
-                               labelSrOnly
-                             />
-                             <FormField
-                               label="Amount"
-                               id={`hidden-cost-amount-${index}`}
-                               type="number"
-                               value={cost.amount}
-                               onChange={(e) => {
-                                 const updatedCosts = [...hiddenCosts];
-                                 updatedCosts[index].amount = parseFloat(e.target.value) || 0;
-                                 setHiddenCosts(updatedCosts);
-                               }}
-                               prefix="£"
-                               step="0.01"
-                               min={0}
-                               required
-                               labelSrOnly
-                             />
-                           </div>
-                           <Button
-                             variant="ghost"
-                             size="icon-sm"
-                             onClick={() => handleRemoveHiddenCost(index)}
-                             className="text-red-500 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30 flex-shrink-0"
-                             aria-label="Remove hidden cost"
-                           >
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                           </Button>
-                         </li>
-                       ))}
-                     </ul>
-                   )}
-                 </div>
-              </div>
-
-               {/* Calculated Totals (Read Only) */}
-               <div className="bg-background-secondary shadow-sm sm:rounded-lg p-6 border border-card-border transition-colors duration-300 ease-linear">
-                 <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Calculated Totals</h3>
-                 <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
-                   <div className="sm:col-span-1">
-                     <dt className="font-medium text-gray-500">Subtotal (Visible Items)</dt>
-                     <dd className="mt-1 text-gray-900 font-semibold">{formatCurrency(quoteData.subtotalVisible)}</dd>
-                   </div>
-                   <div className="sm:col-span-1">
-                     <dt className="font-medium text-gray-500">Total Hidden Costs</dt>
-                     <dd className="mt-1 text-gray-900">{formatCurrency(quoteData.totalHiddenCosts)}</dd>
-                   </div>
-                   <div className="sm:col-span-1">
-                     <dt className="font-medium text-gray-500">Total Markup Added</dt>
-                     <dd className="mt-1 text-gray-900">{formatCurrency(quoteData.totalMarkup)}</dd>
-                   </div>
-                   <div className="sm:col-span-1">
-                      <dt className="font-medium text-gray-500">Total Base Cost</dt>
-                      <dd className="mt-1 text-gray-900">{formatCurrency(quoteData.totalBaseCost)}</dd>
-                    </div>
-                   <div className="sm:col-span-2">
-                     <dt className="font-medium text-gray-500">Final Quote Total</dt>
-                     <dd className="mt-1 text-xl text-indigo-700 font-bold">{formatCurrency(quoteData.finalTotal)}</dd>
-                   </div>
-                 </dl>
-              </div>
-            </div>
-          </TabPanel>
-
-          {/* Exclusions & Notes Tab */}
-          <TabPanel id="exclusions" activeTab={activeTab}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Exclusions Card */}
-              <div className="bg-card-background shadow-sm sm:rounded-lg p-6 border border-card-border transition-colors duration-300 ease-linear">
-                <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Exclusions</h3>
-                <p className="text-sm text-gray-500 mb-4">Items or services explicitly not included in the quote.</p>
-                <div className="space-y-3">
-                  {quoteDetails.exclusions.map((exclusion, index) => (
-                    <div key={index} className="flex items-start space-x-2">
-                      <FormField
-                        label={`Exclusion ${index + 1}`}
-                        id={`exclusion-${index}`}
-                        type="textarea"
-                        rows={2}
-                        value={exclusion}
-                        onChange={(e) => handleExclusionsChange(index, e.target.value)}
-                        className="flex-grow"
-                        labelSrOnly
-                        placeholder="e.g., Removal of old materials"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => handleRemoveExclusion(index)}
-                        className="text-red-500 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30 mt-1"
-                        aria-label="Remove exclusion"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <Button
-                  variant="link"
-                  size="sm"
-                  onClick={handleAddExclusion}
-                  className="mt-3 text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
-                >
-                  + Add Exclusion
-                </Button>
-              </div>
-
-              {/* Notes Card */}
-              <div className="bg-card-background shadow-sm sm:rounded-lg p-6 border border-card-border transition-colors duration-300 ease-linear">
-                <h3 className="text-lg font-medium leading-6 text-text-primary mb-4">Internal Notes</h3>
-                 <FormField
-                   label="Notes"
-                   id="notes"
-                   type="textarea"
-                   rows={8} // Increased rows for better usability
-                   value={quoteDetails.notes}
-                   onChange={(e) => handleQuoteChange('notes', e.target.value)}
-                   helpText="Internal notes for your reference, not shown to the client."
-                   placeholder="Add any internal notes about this quote..."
-                   labelSrOnly
-                 />
-              </div>
-            </div>
-          </TabPanel>
-
-          {/* Preview Tab */} 
-          <TabPanel id="preview" activeTab={activeTab}>
-             {/* Apply Tailwind classes to QuotePreview - Needs separate refactoring step if it's complex */}
-             <QuotePreview 
-               quoteDetails={quoteDetails} 
-               selectedItems={selectedItems} 
-               hiddenCosts={hiddenCosts} 
-               globalMarkup={globalMarkup}
-               distributionMethod={distributionMethod}
-               quoteData={quoteData}
+      <TabPanel id="preview" activeTab={activeTab}>
+           <QuotePreview
+               // Pass necessary props derived from state and calculations
+               quoteDetails={{
+                   ...state, // Pass all details managed by reducer
+                   clientName: state.client.name, // Ensure flat names are passed if needed by preview
+                   clientCompany: state.client.company,
+               }}
+               selectedItems={state.selectedItems} // Already sanitized? Check calculateQuoteData input needs
+               hiddenCosts={state.hiddenCosts}
+               globalMarkup={state.globalMarkup}
+               distributionMethod={state.distributionMethod}
+               quoteData={quoteData} // Pass calculated data
                settings={settings}
                formatCurrency={formatCurrency} // Pass helper
              />
-           </TabPanel>
+      </TabPanel>
 
-          {/* Action Buttons */}
-          <ActionButtonContainer>
+      {/* --- Action Buttons --- */}
+      <ActionButtonContainer>
+          <Button
+              variant="secondary"
+              onClick={() => navigate('/quotes')}
+              className="dark:bg-gray-600 dark:hover:bg-gray-500 dark:border-gray-600 dark:text-gray-100"
+          >
+              Cancel
+          </Button>
+          <Button
+              variant="primary"
+              onClick={handleSaveQuote}
+              isLoading={isSaving}
+              disabled={isSaving || isGeneratingPdf} // Disable save if saving or generating PDF
+              className="dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:text-white"
+          >
+              {quoteIdFromUrl ? 'Update Quote' : 'Save Quote'}
+          </Button>
+          {/* Actions available only when editing an existing quote */}
+          {quoteIdFromUrl && (
+            <>
               <Button
-                  variant="secondary"
-                  onClick={() => navigate('/quotes')}
-                  className="dark:bg-gray-600 dark:hover:bg-gray-500 dark:border-gray-600 dark:text-gray-100"
+                variant="outline"
+                onClick={() => exportPDF()} // Use the main export function
+                isLoading={isGeneratingPdf}
+                disabled={isGeneratingPdf || isSaving}
+                icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>}
+                className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
               >
-                  Cancel
+                Export PDF
               </Button>
               <Button
-                  variant="primary"
-                  onClick={handleSaveQuote}
-                  isLoading={isSaving}
-                  disabled={isSaving}
-                  className="dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:text-white"
-              >
-                  {id ? 'Update Quote' : 'Save Quote'}
-              </Button>
-              {id && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={safeExportPDF} // Use the safe version
-                    isLoading={isGeneratingPdf}
-                    disabled={isGeneratingPdf || isSaving}
-                    icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>}
-                    className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
-                  >
-                    Export PDF
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleEmailQuote}
-                    isLoading={isGeneratingPdf} // Assuming export happens first
-                    disabled={isGeneratingPdf || isSaving}
-                    icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
-                    className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
-                   >
-                     Email Quote
-                   </Button>
-                   <Button
-                      variant="outline"
-                      onClick={handleGenerateInvoice}
-                      className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
-                   >
-                      Generate Invoice
-                   </Button>
-                </>
-              )}
-          </ActionButtonContainer>
+                variant="outline"
+                onClick={handleEmailQuote}
+                disabled={isGeneratingPdf || isSaving}
+                icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
+                className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+               >
+                 Email Quote
+               </Button>
+               <Button
+                  variant="outline"
+                  onClick={handleGenerateInvoice}
+                  disabled={isSaving || isGeneratingPdf} // Disable if saving or generating PDF
+                  className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+               >
+                  Generate Invoice
+               </Button>
+            </>
+          )}
+      </ActionButtonContainer>
 
-          {/* Dialogs */}
-          {/* Ensure Dialog component uses Tailwind internally */}
-          <Dialog isOpen={showContactSelector} onClose={() => setShowContactSelector(false)} title="Select Contact">
-            <FormField
+      {/* --- Dialogs --- */}
+       <Dialog isOpen={dialogs.contactSelector} onClose={() => showDialog('contactSelector', false)} title="Select Contact">
+          <FormField
               label="Search Contacts"
               id="contactSearch"
               value={contactSearchTerm}
@@ -1444,197 +1291,100 @@ const QuoteBuilder = () => {
               placeholder="Search by name, company, email..."
               className="mb-4"
               labelSrOnly
-            />
-            <ContactSelector searchTerm={contactSearchTerm} onContactSelect={(contact) => {
-                handleClientChange('name', `${contact.firstName || ''} ${contact.lastName || ''}`.trim());
-                handleClientChange('company', contact.company || '');
-                handleClientChange('email', contact.email || '');
-                handleClientChange('phone', contact.phone || '');
-                handleClientChange('address', contact.address || '');
-                setShowContactSelector(false);
-                setContactSearchTerm('');
-              }} />
-          </Dialog>
+          />
+          <ContactSelector searchTerm={contactSearchTerm} onContactSelect={handleSelectContact} />
+       </Dialog>
 
-           {/* Catalog Item Selector Dialog */}
-           <Dialog isOpen={showItemDialog} onClose={() => setShowItemDialog(false)} title="Add Item from Catalog" size="3xl">
-              <p className="text-sm text-gray-600 mb-4">Select items from your catalog to add to the quote.</p>
-              {/* Needs CatalogItemSelector component refactored or implemented with Tailwind */}
-              {/* Use the correct ItemSelector component */}
-              <ItemSelector
-                onSelectItem={(selectedItemsFromDialog) => {
-                  if (Array.isArray(selectedItemsFromDialog)) {
-                    // Use functional update to correctly handle multiple additions
-                    setSelectedItems(currentSelectedItems => {
-                      let updatedItems = [...currentSelectedItems];
-                      
-                      selectedItemsFromDialog.forEach(itemToAdd => {
-                        const existingItemIndex = updatedItems.findIndex(i => i.id === itemToAdd.id);
-                        
-                        if (existingItemIndex > -1) {
-                          // Item exists, update quantity
-                          const newItems = [...updatedItems]; // Create a new array copy
-                          newItems[existingItemIndex] = {
-                            ...newItems[existingItemIndex],
-                            quantity: newItems[existingItemIndex].quantity + 1
-                          };
-                          updatedItems = newItems; // Update the working copy
-                        } else {
-                          // Item doesn't exist, add it with defaults
-                          updatedItems.push({
-                            ...itemToAdd,
-                            quantity: 1, // Set default quantity
-                            markup: globalMarkup, // Use global markup by default
-                            hideInQuote: false
-                          });
-                        }
-                      });
-                      
-                      return updatedItems; // Return the final list for this state update
-                    });
+       <Dialog isOpen={dialogs.itemSelector} onClose={() => showDialog('itemSelector', false)} title="Add Item from Catalog" size="3xl">
+           <p className="text-sm text-gray-600 mb-4">Select items from your catalog to add to the quote.</p>
+           <ItemSelector
+               onSelectItem={handleAddItemFromCatalog}
+               currentItems={state.selectedItems} // Pass current items
+               items={catalogItems} // Pass fetched catalog items
+               suppliers={suppliers} // Pass fetched suppliers
+               // Pass multiSelect prop if ItemSelector supports it
+               // multiSelect={true}
+           />
+       </Dialog>
 
-                    addNotification(`Added ${selectedItemsFromDialog.length} items`, 'success');
-                    
-                  } else if (selectedItemsFromDialog && typeof selectedItemsFromDialog === 'object' && selectedItemsFromDialog.isAddNew) {
-                    // Handle 'Add New Item' case (if implemented to open another dialog)
-                    console.log('Add New Item clicked in selector'); 
-                    // Potentially open the custom item form here
-                    // setShowCustomItemForm(true); // Example
-                    // Don't close the item selector dialog yet if opening another
-                    return; // Early exit, keep dialog open
-                  } else if (selectedItemsFromDialog && typeof selectedItemsFromDialog === 'object') {
-                    // Handle potential single item selection (legacy or specific case)
-                    handleAddItem({
-                      ...selectedItemsFromDialog,
-                      quantity: 1,
-                      markup: globalMarkup,
-                      hideInQuote: false
-                    });
-                  }
-                  // Close the dialog AFTER processing items
-                  setShowItemDialog(false);
-                }}
-                currentItems={selectedItems} // Pass current items to potentially disable already added ones
-                // Pass the actual catalog items and suppliers data
-                items={catalogItems} 
-                suppliers={suppliers}
-                // Example: itemsToDisplay={filteredCatalogItems}
-              />
-           </Dialog>
+       <Dialog isOpen={dialogs.customItemForm} onClose={() => showDialog('customItemForm', false)} title="Add Custom Item">
+            <form onSubmit={(e) => { e.preventDefault(); handleAddCustomItem(); }} className="space-y-4 p-1">
+                <FormField
+                    label="Item Name" id="customItemName" required
+                    value={customItem.name} onChange={(e) => setCustomItem(prev => ({ ...prev, name: e.target.value }))}
+                />
+                <FormField
+                    label="Category (Optional)" id="customItemCategory"
+                    value={customItem.category} onChange={(e) => setCustomItem(prev => ({ ...prev, category: e.target.value }))}
+                />
+                <FormField
+                    label="Description (Optional)" id="customItemDesc" type="textarea" rows={3}
+                    value={customItem.description} onChange={(e) => setCustomItem(prev => ({ ...prev, description: e.target.value }))}
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField
+                        label="Cost Price" id="customItemCost" type="number" prefix="£" step="0.01" min={0} required
+                        value={customItem.cost} onChange={(e) => setCustomItem(prev => ({ ...prev, cost: e.target.value }))}
+                    />
+                    <FormField
+                        label="Quantity" id="customItemQuantity" type="number" step="any" min={1} required // Min 1 quantity usually makes sense
+                        value={customItem.quantity} onChange={(e) => setCustomItem(prev => ({ ...prev, quantity: e.target.value }))}
+                    />
+                </div>
+                <FormField
+                    label="Markup % (Optional)" id="customItemMarkup" type="number" suffix="%" min={0}
+                    value={customItem.markup} onChange={(e) => setCustomItem(prev => ({ ...prev, markup: e.target.value }))}
+                    helpText="Leave blank or 0 to use global markup."
+                />
+                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <Button variant="secondary" onClick={() => showDialog('customItemForm', false)} type="button">Cancel</Button>
+                    <Button variant="primary" type="submit">Add Item</Button>
+                </div>
+            </form>
+       </Dialog>
 
-           {/* Custom Item Form Dialog */}
-            <Dialog isOpen={showCustomItemForm} onClose={() => setShowCustomItemForm(false)} title="Add Custom Item">
-              <form onSubmit={(e) => { e.preventDefault(); handleAddCustomItem(); }} className="space-y-4">
-                 <FormField
-                   label="Item Name"
-                   id="customItemName"
-                   value={customItem.name}
-                   onChange={(e) => setCustomItem({ ...customItem, name: e.target.value })}
-                   required
-                 />
-                  <FormField
-                   label="Category (Optional)"
-                   id="customItemCategory"
-                   value={customItem.category}
-                   onChange={(e) => setCustomItem({ ...customItem, category: e.target.value })}
-                 />
-                 <FormField
-                   label="Description (Optional)"
-                   id="customItemDesc"
-                   type="textarea"
-                   rows={3}
-                   value={customItem.description}
-                   onChange={(e) => setCustomItem({ ...customItem, description: e.target.value })}
-                 />
-                 <div className="grid grid-cols-2 gap-4">
-                   <FormField
-                     label="Cost Price"
-                     id="customItemCost"
-                     type="number"
-                     prefix="£"
-                     step="0.01"
-                     min={0}
-                     value={customItem.cost}
-                     onChange={(e) => setCustomItem({ ...customItem, cost: e.target.value })}
-                     required
-                   />
-                   <FormField
-                     label="Quantity"
-                     id="customItemQuantity"
-                     type="number"
-                     step="any"
-                     min={0}
-                     value={customItem.quantity}
-                     onChange={(e) => setCustomItem({ ...customItem, quantity: e.target.value })}
-                     required
-                   />
-                 </div>
-                 <FormField
-                   label="Markup % (Optional)"
-                   id="customItemMarkup"
-                   type="number"
-                   suffix="%"
-                   min={0}
-                   value={customItem.markup}
-                   onChange={(e) => setCustomItem({ ...customItem, markup: parseInt(e.target.value) || 0 })}
-                   helpText="Leave at 0 to use global markup."
-                 />
+       <Dialog isOpen={dialogs.hiddenCost} onClose={() => showDialog('hiddenCost', false)} title="Add Hidden Cost">
+            <form onSubmit={(e) => { e.preventDefault(); handleAddHiddenCost(); }} className="space-y-4 p-1">
+                <FormField
+                    label="Cost Name" id="newHiddenCostName" required
+                    value={newHiddenCost.name} onChange={(e) => setNewHiddenCost(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., Labour, Site Visit"
+                />
+                <FormField
+                    label="Amount" id="newHiddenCostAmount" type="number" prefix="£" step="0.01" min={0} required
+                    value={newHiddenCost.amount} onChange={(e) => setNewHiddenCost(prev => ({ ...prev, amount: e.target.value }))}
+                />
+                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <Button variant="secondary" onClick={() => showDialog('hiddenCost', false)} type="button">Cancel</Button>
+                    <Button variant="primary" type="submit">Add Cost</Button>
+                </div>
+            </form>
+       </Dialog>
 
-                 <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                   <Button variant="secondary" onClick={() => setShowCustomItemForm(false)} type="button" className="dark:bg-gray-600 dark:hover:bg-gray-500 dark:border-gray-600 dark:text-gray-100">
-                     Cancel
-                   </Button>
-                   <Button variant="primary" type="submit" className="dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:text-white">
-                     Add Item
-                   </Button>
-                 </div>
-               </form>
-             </Dialog>
-             
-            {/* Hidden Cost Dialog (If needed, currently inline) */}
-            {/* ... */}
+       <Dialog isOpen={dialogs.emailOptions} onClose={() => showDialog('emailOptions', false)} title="Email Quote">
+            <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">How would you like to proceed?</p>
+            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <Button variant="secondary" onClick={() => showDialog('emailOptions', false)}>Cancel</Button>
+                <Button variant="outline" onClick={handleExportAndOpenEmail} disabled={isGeneratingPdf}>
+                    {isGeneratingPdf ? 'Generating...' : 'Export PDF & Email'}
+                </Button>
+                <Button variant="primary" onClick={handleOpenEmailClient}>Open Email Client</Button>
+            </div>
+       </Dialog>
 
-            {/* Email Dialog (If needed) */}
-            <Dialog isOpen={showEmailDialog} onClose={() => setShowEmailDialog(false)} title="Email Quote">
-              {/* Content for emailing - potentially preview, recipients, message */}
-              <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">How would you like to proceed?</p>
-               <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                   <Button variant="secondary" onClick={() => setShowEmailDialog(false)} className="dark:bg-gray-600 dark:hover:bg-gray-500 dark:border-gray-600 dark:text-gray-100">
-                      Cancel
-                   </Button>
-                   <Button variant="outline" onClick={handleExportAndOpenEmail} className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
-                     Export PDF & Email
-                   </Button>
-                   <Button variant="primary" onClick={handleOpenEmailClient} className="dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:text-white">
-                      Open Email Client
-                   </Button>
-                 </div>
-            </Dialog>
-
-           {/* Missing Company Info Dialog */}
-            <Dialog isOpen={showMissingCompanyInfoDialog} onClose={() => setShowMissingCompanyInfoDialog(false)} title="Missing Company Information">
-              <p className="mb-4 text-sm text-gray-700 dark:text-gray-300">
-                Your company details (name, address, etc.) are needed for the PDF header.
-                Please update them in <Link to="/settings/company" className="text-indigo-600 hover:underline font-medium">Company Settings</Link>.
-              </p>
-              <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
+       <Dialog isOpen={dialogs.missingCompanyInfo} onClose={() => showDialog('missingCompanyInfo', false)} title="Missing Company Information">
+            <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
                 Alternatively, you can export the PDF without the company header information for now.
-              </p>
-               <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                   <Button variant="secondary" onClick={() => setShowMissingCompanyInfoDialog(false)} className="dark:bg-gray-600 dark:hover:bg-gray-500 dark:border-gray-600 dark:text-gray-100">
-                      Cancel Export
-                   </Button>
-                   <Button variant="outline" onClick={exportPDFWithoutCompanyCheck} className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
-                      Export Anyway
-                   </Button>
-                   <Button variant="primary" onClick={() => { setShowMissingCompanyInfoDialog(false); navigate('/settings/company'); }} className="dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:text-white">
-                      Go to Settings
-                   </Button>
-                 </div>
-            </Dialog>
+            </p>
+            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <Button variant="secondary" onClick={() => showDialog('missingCompanyInfo', false)}>Cancel Export</Button>
+                <Button variant="outline" onClick={() => exportPDF(true)} disabled={isGeneratingPdf}>
+                    {isGeneratingPdf ? 'Generating...' : 'Export Anyway'}
+                </Button>
+                <Button variant="primary" onClick={() => { showDialog('missingCompanyInfo', false); navigate('/settings/company'); }}>Go to Settings</Button>
+            </div>
+       </Dialog>
 
-        </>
-      )}
     </PageLayout>
   );
 }

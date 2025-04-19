@@ -90,28 +90,33 @@ export function calculateQuoteData(
       };
     });
     
+    // Calculate total base cost (visible items + hidden costs)
+    const totalBaseCost = visibleBaseCost + totalHiddenCost;
+    
     // Calculate profit percentage
-    const totalCostBeforeMarkup = visibleBaseCost + totalHiddenCost;
-    const profitPercentage = totalCostBeforeMarkup > 0 ? 
-      (totalMarkup / totalCostBeforeMarkup) * 100 : 0;
+    const profitPercentage = totalBaseCost > 0 ? 
+      (totalMarkup / totalBaseCost) * 100 : 0;
     
     // Calculate VAT if enabled
-    const vatAmount = vatEnabled ? (visibleTotal * (vatRate / 100)) : 0;
+    const finalTotalBeforeVAT = visibleTotal;
+    const vatAmount = vatEnabled ? (finalTotalBeforeVAT * (vatRate / 100)) : 0;
     
     // Add VAT to the grand total if enabled
-    const grandTotal = vatEnabled ? (visibleTotal + vatAmount) : visibleTotal;
+    const grandTotal = vatEnabled ? (finalTotalBeforeVAT + vatAmount) : finalTotalBeforeVAT;
     
     // Return all calculated values
     return {
       visibleItems,
       hiddenItems,
       visibleItemsCount: visibleItems.length,
+      subtotalVisible: visibleBaseCost,
       visibleBaseCost,
       hiddenItemsCost,
       manualHiddenCosts,
       totalHiddenCost,
+      totalBaseCost,
       totalMarkup,
-      visibleTotal,
+      finalTotalBeforeVAT,
       vatEnabled,
       vatRate,
       vatAmount,
